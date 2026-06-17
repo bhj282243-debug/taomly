@@ -3,7 +3,9 @@ from typing import List, Optional, Literal
 from datetime import datetime
 
 
+# ──────────────────────────────────────────
 # ПРОДУКТЫ
+# ──────────────────────────────────────────
 class ProductResponse(BaseModel):
     id: int
     name: str
@@ -17,7 +19,9 @@ class ProductResponse(BaseModel):
         from_attributes = True
 
 
+# ──────────────────────────────────────────
 # КАТЕГОРИИ
+# ──────────────────────────────────────────
 class CategoryResponse(BaseModel):
     id: int
     name: str
@@ -28,7 +32,9 @@ class CategoryResponse(BaseModel):
         from_attributes = True
 
 
-# ЗАКАЗ — создание
+# ──────────────────────────────────────────
+# ЗАКАЗЫ — создание
+# ──────────────────────────────────────────
 class OrderItemCreate(BaseModel):
     product_id: int
     quantity: int = Field(..., ge=1)
@@ -48,6 +54,7 @@ class OrderCreate(BaseModel):
     items: List[OrderItemCreate]
 
 
+# ЗАКАЗЫ — ответ
 class OrderItemResponse(BaseModel):
     id: int
     name: str
@@ -65,6 +72,8 @@ class OrderResponse(BaseModel):
     total_amount: int
     client_name: str
     client_phone: str
+    address: Optional[str] = None
+    comment: Optional[str] = None
     items: List[OrderItemResponse] = Field(default_factory=list)
     created_at: datetime
 
@@ -72,7 +81,21 @@ class OrderResponse(BaseModel):
         from_attributes = True
 
 
+# ЗАКАЗЫ — обновление статуса
+class OrderStatusUpdate(BaseModel):
+    status: Literal[
+        "new",
+        "accepted",
+        "preparing",
+        "delivering",
+        "completed",
+        "cancelled",
+    ]
+
+
+# ──────────────────────────────────────────
 # БРОНЬ — создание
+# ──────────────────────────────────────────
 class ReservationCreate(BaseModel):
     restaurant_id: int
     client_name: str
@@ -86,13 +109,24 @@ class ReservationResponse(BaseModel):
     id: int
     status: str
     client_name: str
+    client_phone: str
+    guests_count: int
     reservation_time: datetime
+    comment: Optional[str] = None
+    created_at: datetime
 
     class Config:
         from_attributes = True
 
 
+# БРОНЬ — обновление статуса
+class ReservationStatusUpdate(BaseModel):
+    status: Literal["new", "confirmed", "completed", "cancelled"]
+
+
+# ──────────────────────────────────────────
 # ВЫЗОВ ОФИЦИАНТА
+# ──────────────────────────────────────────
 class WaiterCallCreate(BaseModel):
     restaurant_id: int
     table_id: int
@@ -101,7 +135,13 @@ class WaiterCallCreate(BaseModel):
 class WaiterCallResponse(BaseModel):
     id: int
     status: str
+    table_id: int
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+
+# ВЫЗОВ ОФИЦИАНТА — обновление статуса
+class WaiterCallStatusUpdate(BaseModel):
+    status: Literal["active", "closed"]
