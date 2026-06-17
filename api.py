@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 from database import engine
 import models
+from routers import menu, orders
 
 load_dotenv()
 
@@ -35,6 +36,10 @@ async def lifespan(app: FastAPI):
     bot.remove_webhook()
 
 app = FastAPI(lifespan=lifespan)
+
+app.include_router(menu.router, prefix="/api/menu", tags=["menu"])
+app.include_router(orders.router, prefix="/api/orders", tags=["orders"])
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
