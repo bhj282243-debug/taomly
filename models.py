@@ -144,19 +144,6 @@ class Reservation(Base):
 class WaiterCall(Base):
     __tablename__ = "waiter_calls"
     __table_args__ = (
-        CheckConstraint("status IN ('active','closed')", name="check_waiter_call_status"),
-    )
-    id = Column(BigInteger, primary_key=True)
-    restaurant_id = Column(BigInteger, ForeignKey("restaurants.id"), nullable=False)
-    table_id = Column(BigInteger, ForeignKey("restaurant_tables.id"), nullable=False)
-    status = Column(String(20), default="active")
-    created_at = Column(TIMESTAMP, server_default=func.now())
-
-    restaurant = relationship("Restaurant")
-    table = relationship("RestaurantTable")
-class WaiterCall(Base):
-    __tablename__ = "waiter_calls"
-    __table_args__ = (
         CheckConstraint("status IN ('active','accepted','completed','cancelled')", name="check_waiter_call_status"),
     )
     id = Column(BigInteger, primary_key=True)
