@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 from database import engine
 import models
-from routers import menu, orders, reservations
+from routers import menu, orders, reservations, waiter_calls
 
 load_dotenv()
 
@@ -39,6 +39,7 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(menu.router, prefix="/api/menu", tags=["menu"])
 app.include_router(orders.router, prefix="/api/orders", tags=["orders"])
 app.include_router(reservations.router, prefix="/api/reservations", tags=["reservations"])
+app.include_router(waiter_calls.router, prefix="/api/waiter-calls", tags=["waiter-calls"])
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
