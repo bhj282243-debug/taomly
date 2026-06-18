@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 from database import engine
 import models
-from routers import menu, orders
+from routers import menu, orders, reservations
 
 load_dotenv()
 
@@ -22,7 +22,6 @@ if not BOT_TOKEN:
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# TODO: replace with Alembic migrations
 models.Base.metadata.create_all(bind=engine)
 
 @asynccontextmanager
@@ -39,6 +38,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.include_router(menu.router, prefix="/api/menu", tags=["menu"])
 app.include_router(orders.router, prefix="/api/orders", tags=["orders"])
+app.include_router(reservations.router, prefix="/api/reservations", tags=["reservations"])
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
