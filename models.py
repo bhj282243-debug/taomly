@@ -17,6 +17,7 @@ class Restaurant(Base):
     phone = Column(String(50))
     address = Column(Text)
     is_active = Column(Boolean, default=True)
+    is_waiter_call_enabled = Column(Boolean, default=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     categories = relationship("Category", back_populates="restaurant")
@@ -87,7 +88,7 @@ class Order(Base):
     __tablename__ = "orders"
     __table_args__ = (
         CheckConstraint("order_type IN ('delivery','takeaway','dine_in')", name="check_order_type"),
-        CheckConstraint("status IN ('new','accepted','preparing','delivering','completed','cancelled')", name="check_order_status"),
+        CheckConstraint("status IN ('new','accepted','preparing','ready_for_delivery','delivering','completed','cancelled')", name="check_order_status"),
     )
     id = Column(BigInteger, primary_key=True)
     restaurant_id = Column(BigInteger, ForeignKey("restaurants.id"), nullable=False)
