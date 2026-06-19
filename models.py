@@ -113,6 +113,9 @@ class Order(Base):
 
 class OrderItem(Base):
     __tablename__ = "order_items"
+    __table_args__ = (
+        CheckConstraint("quantity > 0", name="check_order_item_quantity"),
+    )
     id = Column(BigInteger, primary_key=True)
     order_id = Column(BigInteger, ForeignKey("orders.id", ondelete="CASCADE"))
     product_id = Column(BigInteger, ForeignKey("products.id", ondelete="SET NULL"))
@@ -128,6 +131,7 @@ class Reservation(Base):
     __tablename__ = "reservations"
     __table_args__ = (
         CheckConstraint("status IN ('new','confirmed','completed','cancelled')", name="check_reservation_status"),
+        CheckConstraint("guests_count > 0", name="check_reservation_guests"),
     )
     id = Column(BigInteger, primary_key=True)
     restaurant_id = Column(BigInteger, ForeignKey("restaurants.id"), nullable=False)
