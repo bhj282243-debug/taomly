@@ -87,6 +87,7 @@ class OrderStatusUpdate(BaseModel):
         "new",
         "accepted",
         "preparing",
+        "ready_for_delivery",
         "delivering",
         "completed",
         "cancelled",
@@ -144,4 +145,4 @@ class WaiterCallResponse(BaseModel):
 
 # ВЫЗОВ ОФИЦИАНТА — обновление статуса
 class WaiterCallStatusUpdate(BaseModel):
-    status: Literal["active", "closed"]
+    status: Literal["active", "accepted", "completed", "cancelled"]
