@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 from database import engine
 import models
-from routers import menu, orders, reservations, waiter_calls
+from routers import menu, orders, reservations, waiter_calls, restaurants
 
 load_dotenv()
 
@@ -22,10 +22,9 @@ if not BOT_TOKEN:
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 bot = telebot.TeleBot(BOT_TOKEN)
 
-models.Base.metadata.create_all(bind=engine)
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    models.Base.metadata.create_all(bind=engine)
     bot.remove_webhook()
     if WEBHOOK_URL:
         bot.set_webhook(url=f"{WEBHOOK_URL}/webhook")
@@ -40,6 +39,7 @@ app.include_router(menu.router, prefix="/api/menu", tags=["menu"])
 app.include_router(orders.router, prefix="/api/orders", tags=["orders"])
 app.include_router(reservations.router, prefix="/api/reservations", tags=["reservations"])
 app.include_router(waiter_calls.router, prefix="/api/waiter-calls", tags=["waiter-calls"])
+app.include_router(restaurants.router)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
