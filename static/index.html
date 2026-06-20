@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Taomly</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -27,7 +28,6 @@
     overflow-x: hidden;
   }
 
-  /* HEADER */
   .header {
     background: var(--warm-white);
     padding: 16px 16px 0;
@@ -96,7 +96,6 @@
     color: white;
   }
 
-  /* MAIN */
   .main { padding: 16px 16px 120px; }
 
   .category-section { margin-bottom: 28px; }
@@ -114,7 +113,6 @@
     gap: 10px;
   }
 
-  /* PRODUCT CARD */
   .product-card {
     background: var(--card-bg);
     border-radius: 16px;
@@ -227,7 +225,6 @@
     text-align: center;
   }
 
-  /* CART BAR */
   .cart-bar {
     position: fixed;
     bottom: 0;
@@ -272,12 +269,11 @@
     font-weight: 700;
   }
 
-  /* SCREENS */
   .screen {
     display: none;
     position: fixed;
     inset: 0;
-    background: var(--cream);
+ращ background: var(--cream);
     z-index: 300;
     overflow-y: auto;
     animation: slideUp 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
@@ -322,7 +318,6 @@
     color: var(--brown);
   }
 
-  /* CART SCREEN */
   .cart-items {
     padding: 16px;
     display: flex;
@@ -426,7 +421,6 @@
 
   .form-input:focus { border-color: var(--accent); }
   .form-input::placeholder { color: var(--text-muted); }
-
   .form-textarea { resize: none; height: 80px; }
 
   .summary-card {
@@ -474,7 +468,6 @@
   .checkout-btn:active { transform: scale(0.98); }
   .checkout-btn:disabled { background: var(--text-muted); cursor: not-allowed; }
 
-  /* SUCCESS */
   #successScreen.active {
     display: flex;
     flex-direction: column;
@@ -545,7 +538,6 @@
     cursor: pointer;
   }
 
-  /* LOADING */
   .loading {
     display: flex;
     flex-direction: column;
@@ -579,7 +571,6 @@
 </head>
 <body>
 
-<!-- MENU SCREEN -->
 <div id="menuScreen">
   <div class="header">
     <div class="restaurant-info">
@@ -596,7 +587,6 @@
   </div>
 </div>
 
-<!-- CART SCREEN -->
 <div id="cartScreen" class="screen">
   <div class="screen-header">
     <button class="back-btn" onclick="closeCart()">←</button>
@@ -604,7 +594,6 @@
   </div>
 
   <div class="cart-items" id="cartItemsList"></div>
-
   <div class="divider"></div>
 
   <div class="order-type-section">
@@ -623,7 +612,7 @@
 
   <div class="form-section">
     <input class="form-input" type="text" id="clientName" placeholder="Ismingiz" />
-    <input class="form-input" type="tel" id="clientPhone" placeholder="Telefon raqam" />
+    <input class="form-input" type="tel" id="clientPhone" placeholder="+998 XX XXX XX XX" value="+998" />
     <input class="form-input" type="text" id="clientAddress" placeholder="Manzil (yetkazib berish uchun)" />
     <textarea class="form-input form-textarea" id="clientComment" placeholder="Izoh (ixtiyoriy)"></textarea>
   </div>
@@ -642,7 +631,6 @@
   <button class="checkout-btn" id="checkoutBtn" onclick="submitOrder()">Buyurtma berish</button>
 </div>
 
-<!-- SUCCESS SCREEN -->
 <div id="successScreen" class="screen" style="display:none;">
   <div class="success-anim">✓</div>
   <div class="success-title">Buyurtma qabul qilindi!</div>
@@ -654,7 +642,6 @@
   <button class="back-to-menu-btn" onclick="backToMenu()">Menyuga qaytish</button>
 </div>
 
-<!-- CART BAR -->
 <div class="cart-bar" id="cartBar">
   <button class="cart-btn" onclick="openCart()">
     <div class="cart-btn-left">
@@ -855,18 +842,19 @@ async function submitOrder() {
   const comment = document.getElementById('clientComment').value.trim();
 
   if (!name) { alert('Ismingizni kiriting'); return; }
-  if (!phone) { alert('Telefon raqamingizni kiriting'); return; }
+  if (!phone || phone === '+998') { alert('Telefon raqamingizni kiriting'); return; }
   if (orderType === 'delivery' && !address) { alert('Manzilni kiriting'); return; }
 
   const btn = document.getElementById('checkoutBtn');
   btn.disabled = true;
   btn.textContent = 'Yuborilmoqda...';
 
-  const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+  const tg = window.Telegram?.WebApp;
+  const tgUser = tg?.initDataUnsafe?.user;
 
   const payload = {
     restaurant_id: restaurant.id,
-    client_telegram_id: tgUser?.id || 0,
+    client_telegram_id: tgUser?.id || null,
     client_name: name,
     client_phone: phone,
     order_type: orderType,
@@ -903,7 +891,7 @@ function showSuccess(orderId) {
 
 function backToMenu() {
   document.getElementById('successScreen').classList.remove('active');
-  document.getElementById('cartScreen').classList.remove('active');
+  document.getElementById('cartScreen').classList.remove('remove');
   renderMenu();
 }
 
