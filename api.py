@@ -55,6 +55,10 @@ def health():
 def serve_app():
     return FileResponse("static/index.html")
 
+@app.get("/admin")
+def serve_admin():
+    return FileResponse("static/admin.html")
+
 @app.post("/webhook")
 def webhook(update: dict):
     try:
