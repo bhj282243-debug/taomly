@@ -5,6 +5,7 @@ from typing import List
 from database import get_db
 from models import Order, OrderItem, Product, Restaurant
 from schemas import OrderCreate, OrderResponse, OrderStatusUpdate
+import handlers
 
 router = APIRouter()
 
@@ -18,16 +19,11 @@ VALID_STATUS_TRANSITIONS = {
 }
 
 
-# ──────────────────────────────────────────
-# POST /api/orders/  — создать заказ
-# ──────────────────────────────────────────
 @router.post("/", response_model=OrderResponse)
 def create_order(data: OrderCreate, db: Session = Depends(get_db)):
-    # Проверяем что заказ не пустой
     if not data.items:
         raise HTTPException(status_code=400, detail="Заказ не содержит товаров")
 
-    # Проверяем ресторан
     restaurant = db.query(Restaurant).filter(
         Restaurant.id == data.restaurant_id,
         Restaurant.is_active == True
@@ -35,7 +31,6 @@ def create_order(data: OrderCreate, db: Session = Depends(get_db)):
     if not restaurant:
         raise HTTPException(status_code=404, detail="Ресторан не найден")
 
-    # Проверяем товары и считаем сумму
     total = 0
     order_items_data = []
 
@@ -44,17 +39,10 @@ def create_order(data: OrderCreate, db: Session = Depends(get_db)):
             Product.id == item.product_id,
             Product.restaurant_id == data.restaurant_id
         ).first()
-
         if not product:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Продукт {item.product_id} не найден"
-            )
+            raise HTTPException(status_code=404, detail=f"Продукт {item.product_id} не найден")
         if not product.is_available:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Продукт '{product.name}' недоступен"
-            )
+            raise HTTPException(status_code=400, detail=f"Продукт '{product.name}' недоступен")
 
         total += product.price * item.quantity
         order_items_data.append({
@@ -64,7 +52,6 @@ def create_order(data: OrderCreate, db: Session = Depends(get_db)):
             "quantity": item.quantity,
         })
 
-    # Создаём заказ
     order = Order(
         restaurant_id=data.restaurant_id,
         client_telegram_id=data.client_telegram_id,
@@ -80,9 +67,8 @@ def create_order(data: OrderCreate, db: Session = Depends(get_db)):
         status="new",
     )
     db.add(order)
-    db.flush()  # получаем order.id до commit
+    db.flush()
 
-    # Создаём позиции заказа
     for item_data in order_items_data:
         db.add(OrderItem(order_id=order.id, **item_data))
 
@@ -93,12 +79,19 @@ def create_order(data: OrderCreate, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=500, detail="Ошибка при сохранении заказа")
 
+    # Уведомление персоналу
+    db.refresh(order)
+    order_with_items = (
+        db.query(Order)
+        .options(joinedload(Order.items))
+        .filter(Order.id == order.id)
+        .first()
+    )
+    handlers.notify_new_order(order_with_items, order_with_items.items)
+
     return order
 
 
-# ──────────────────────────────────────────
-# GET /api/orders/{order_id}  — получить заказ
-# ──────────────────────────────────────────
 @router.get("/{order_id}", response_model=OrderResponse)
 def get_order(order_id: int, db: Session = Depends(get_db)):
     order = (
@@ -112,14 +105,9 @@ def get_order(order_id: int, db: Session = Depends(get_db)):
     return order
 
 
-# ──────────────────────────────────────────
-# GET /api/orders/restaurant/{restaurant_id}  — список заказов ресторана
-# ──────────────────────────────────────────
 @router.get("/restaurant/{restaurant_id}", response_model=List[OrderResponse])
 def get_restaurant_orders(restaurant_id: int, db: Session = Depends(get_db)):
-    restaurant = db.query(Restaurant).filter(
-        Restaurant.id == restaurant_id
-    ).first()
+    restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
     if not restaurant:
         raise HTTPException(status_code=404, detail="Ресторан не найден")
 
@@ -133,9 +121,6 @@ def get_restaurant_orders(restaurant_id: int, db: Session = Depends(get_db)):
     return orders
 
 
-# ──────────────────────────────────────────
-# PATCH /api/orders/{order_id}/status  — изменить статус
-# ──────────────────────────────────────────
 @router.patch("/{order_id}/status", response_model=OrderResponse)
 def update_order_status(
     order_id: int,
@@ -161,4 +146,9 @@ def update_order_status(
     order.status = data.status
     db.commit()
     db.refresh(order)
+
+    # Уведомление клиенту при принятии
+    if data.status == "accepted":
+        handlers.notify_client_accepted(order)
+
     return order
