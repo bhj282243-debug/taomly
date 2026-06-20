@@ -1,6 +1,917 @@
 <!DOCTYPE html>
-<html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Taomly</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --cream: #FAF7F2;
+    --warm-white: #FFFFFF;
+    --brown: #5C3D2E;
+    --accent: #C8703A;
+    --accent-light: #E8956D;
+    --text: #2C1810;
+    --text-muted: #9B7B6E;
+    --border: #EDE8E1;
+    --card-bg: #FFFFFF;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--warm-white);
+    padding: 16px 16px 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 1px 0 var(--border);
+  }
+
+  .restaurant-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 14px;
+  }
+
+  .restaurant-logo {
+    width: 44px;
+    height: 44px;
+    background: var(--accent);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+
+  .restaurant-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--brown);
+  }
+
+  .restaurant-address {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .categories-scroll {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 12px;
+    scrollbar-width: none;
+  }
+  .categories-scroll::-webkit-scrollbar { display: none; }
+
+  .cat-btn {
+    flex-shrink: 0;
+    padding: 7px 16px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .cat-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  /* MAIN */
+  .main { padding: 16px 16px 120px; }
+
+  .category-section { margin-bottom: 28px; }
+
+  .category-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--brown);
+    margin-bottom: 12px;
+  }
+
+  .products-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* PRODUCT CARD */
+  .product-card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    transition: transform 0.15s;
+  }
+
+  .product-card:active { transform: scale(0.98); }
+
+  .product-img {
+    width: 76px;
+    height: 76px;
+    border-radius: 12px;
+    background: var(--cream);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    overflow: hidden;
+  }
+
+  .product-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+  }
+
+  .product-info { flex: 1; min-width: 0; }
+
+  .product-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+
+  .product-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    margin-bottom: 8px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .product-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .product-price {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .add-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: var(--accent);
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.1s;
+  }
+
+  .add-btn:active { transform: scale(0.88); }
+
+  .qty-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .qty-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: none;
+    background: var(--cream);
+    color: var(--accent);
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .qty-num {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    min-width: 20px;
+    text-align: center;
+  }
+
+  /* CART BAR */
+  .cart-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 12px 16px;
+    background: var(--warm-white);
+    border-top: 1px solid var(--border);
+    z-index: 200;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .cart-bar.visible { transform: translateY(0); }
+
+  .cart-btn {
+    width: 100%;
+    padding: 15px 20px;
+    background: var(--accent);
+    border: none;
+    border-radius: 16px;
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .cart-btn-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .cart-count-badge {
+    background: rgba(255,255,255,0.25);
+    border-radius: 8px;
+    padding: 3px 9px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  /* SCREENS */
+  .screen {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--cream);
+    z-index: 300;
+    overflow-y: auto;
+    animation: slideUp 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
+  }
+
+  .screen.active { display: block; }
+
+  @keyframes slideUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .screen-header {
+    background: var(--warm-white);
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 1px 0 var(--border);
+  }
+
+  .back-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--brown);
+  }
+
+  .screen-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--brown);
+  }
+
+  /* CART SCREEN */
+  .cart-items {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .cart-item {
+    background: var(--card-bg);
+    border-radius: 14px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+
+  .cart-item-emoji {
+    font-size: 28px;
+    width: 44px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .cart-item-info { flex: 1; }
+
+  .cart-item-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .cart-item-price {
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-top: 3px;
+  }
+
+  .divider { height: 8px; background: var(--cream); }
+
+  .order-type-section { padding: 16px; }
+
+  .section-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+  }
+
+  .order-type-btns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .type-btn {
+    padding: 14px 10px;
+    border-radius: 14px;
+    border: 2px solid var(--border);
+    background: var(--card-bg);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .type-btn.active {
+    border-color: var(--accent);
+    background: #FFF5EE;
+  }
+
+  .type-btn-icon { font-size: 24px; margin-bottom: 4px; }
+
+  .type-btn-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .form-section {
+    padding: 0 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1.5px solid var(--border);
+    background: var(--card-bg);
+    font-size: 15px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
+  }
+
+  .form-input:focus { border-color: var(--accent); }
+  .form-input::placeholder { color: var(--text-muted); }
+
+  .form-textarea { resize: none; height: 80px; }
+
+  .summary-card {
+    margin: 0 16px 16px;
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  .summary-row.total {
+    border-top: 1px solid var(--border);
+    margin-top: 6px;
+    padding-top: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .summary-row.total span:last-child { color: var(--accent); }
+
+  .checkout-btn {
+    margin: 0 16px 32px;
+    width: calc(100% - 32px);
+    padding: 16px;
+    background: var(--accent);
+    border: none;
+    border-radius: 16px;
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+
+  .checkout-btn:active { transform: scale(0.98); }
+  .checkout-btn:disabled { background: var(--text-muted); cursor: not-allowed; }
+
+  /* SUCCESS */
+  #successScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 32px;
+    text-align: center;
+  }
+
+  .success-anim {
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-light));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    margin-bottom: 24px;
+    animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .success-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--brown);
+    margin-bottom: 10px;
+  }
+
+  .success-subtitle {
+    font-size: 15px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 32px;
+  }
+
+  .success-order-id {
+    background: var(--card-bg);
+    border-radius: 14px;
+    padding: 14px 24px;
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 32px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+
+  .success-order-id strong {
+    color: var(--accent);
+    font-size: 22px;
+    display: block;
+    margin-top: 4px;
+  }
+
+  .back-to-menu-btn {
+    padding: 15px 40px;
+    background: var(--accent);
+    border: none;
+    border-radius: 16px;
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  /* LOADING */
+  .loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 16px;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  .spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-msg {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+</style>
+</head>
 <body>
-<h1>Taomly</h1>
+
+<!-- MENU SCREEN -->
+<div id="menuScreen">
+  <div class="header">
+    <div class="restaurant-info">
+      <div class="restaurant-logo">🍽️</div>
+      <div>
+        <div class="restaurant-name" id="restaurantName">Yuklanmoqda...</div>
+        <div class="restaurant-address" id="restaurantAddress"></div>
+      </div>
+    </div>
+    <div class="categories-scroll" id="categoriesNav"></div>
+  </div>
+  <div class="main" id="menuContent">
+    <div class="loading"><div class="spinner"></div>Menyu yuklanmoqda...</div>
+  </div>
+</div>
+
+<!-- CART SCREEN -->
+<div id="cartScreen" class="screen">
+  <div class="screen-header">
+    <button class="back-btn" onclick="closeCart()">←</button>
+    <span class="screen-title">Savat</span>
+  </div>
+
+  <div class="cart-items" id="cartItemsList"></div>
+
+  <div class="divider"></div>
+
+  <div class="order-type-section">
+    <div class="section-label">Buyurtma turi</div>
+    <div class="order-type-btns">
+      <div class="type-btn active" id="typeDelivery" onclick="selectType('delivery')">
+        <div class="type-btn-icon">🛵</div>
+        <div class="type-btn-label">Yetkazib berish</div>
+      </div>
+      <div class="type-btn" id="typeTakeaway" onclick="selectType('takeaway')">
+        <div class="type-btn-icon">🥡</div>
+        <div class="type-btn-label">Olib ketish</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <input class="form-input" type="text" id="clientName" placeholder="Ismingiz" />
+    <input class="form-input" type="tel" id="clientPhone" placeholder="Telefon raqam" />
+    <input class="form-input" type="text" id="clientAddress" placeholder="Manzil (yetkazib berish uchun)" />
+    <textarea class="form-input form-textarea" id="clientComment" placeholder="Izoh (ixtiyoriy)"></textarea>
+  </div>
+
+  <div class="summary-card">
+    <div class="summary-row">
+      <span id="summaryCount">0 ta taom</span>
+      <span id="summarySubtotal">0 so'm</span>
+    </div>
+    <div class="summary-row total">
+      <span>Jami</span>
+      <span id="summaryTotal">0 so'm</span>
+    </div>
+  </div>
+
+  <button class="checkout-btn" id="checkoutBtn" onclick="submitOrder()">Buyurtma berish</button>
+</div>
+
+<!-- SUCCESS SCREEN -->
+<div id="successScreen" class="screen">
+  <div class="success-anim">✓</div>
+  <div class="success-title">Buyurtma qabul qilindi!</div>
+  <div class="success-subtitle">Tez orada siz bilan bog'lanamiz va buyurtmangizni tasdiqlaymiz.</div>
+  <div class="success-order-id">
+    Buyurtma raqami
+    <strong id="successOrderId">#0000</strong>
+  </div>
+  <button class="back-to-menu-btn" onclick="backToMenu()">Menyuga qaytish</button>
+</div>
+
+<!-- CART BAR -->
+<div class="cart-bar" id="cartBar">
+  <button class="cart-btn" onclick="openCart()">
+    <div class="cart-btn-left">
+      <span>🛒 Savat</span>
+      <span class="cart-count-badge" id="cartCountBadge">0</span>
+    </div>
+    <span id="cartTotalBar">0 so'm</span>
+  </button>
+</div>
+
+<script>
+const RESTAURANT_SLUG = 'chinar';
+const API_BASE = '';
+
+let restaurant = null;
+let cart = {};
+let orderType = 'delivery';
+
+const catEmoji = ['🍲','🍖','🔥','🥗','🍵','🥘','🍜','🫕'];
+
+function fmt(p) {
+  return p.toLocaleString('uz-UZ') + ' so\'m';
+}
+
+async function loadMenu() {
+  try {
+    const res = await fetch(`${API_BASE}/api/restaurants/${RESTAURANT_SLUG}`);
+    if (!res.ok) throw new Error('Server xatosi');
+    restaurant = await res.json();
+    document.getElementById('restaurantName').textContent = restaurant.name;
+    document.getElementById('restaurantAddress').textContent = restaurant.address || '';
+    renderCategories();
+    renderMenu();
+  } catch (e) {
+    document.getElementById('menuContent').innerHTML =
+      `<div class="error-msg">❌ Menyu yuklanmadi.<br>Qayta urinib ko'ring.</div>`;
+  }
+}
+
+function renderCategories() {
+  const nav = document.getElementById('categoriesNav');
+  nav.innerHTML = '';
+  restaurant.categories.forEach((cat, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = cat.name;
+    btn.onclick = () => {
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const el = document.getElementById('cat-' + cat.id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    nav.appendChild(btn);
+  });
+}
+
+function renderMenu() {
+  const content = document.getElementById('menuContent');
+  content.innerHTML = '';
+  restaurant.categories.forEach((cat, ci) => {
+    if (!cat.products || cat.products.length === 0) return;
+    const sec = document.createElement('div');
+    sec.className = 'category-section';
+    sec.id = 'cat-' + cat.id;
+    const emoji = catEmoji[ci % catEmoji.length];
+    sec.innerHTML = `<div class="category-title">${emoji} ${cat.name}</div><div class="products-grid" id="grid-${cat.id}"></div>`;
+    content.appendChild(sec);
+    const grid = sec.querySelector('#grid-' + cat.id);
+    cat.products.forEach(p => grid.appendChild(makeCard(p, emoji)));
+  });
+}
+
+function makeCard(p, emoji) {
+  const div = document.createElement('div');
+  div.className = 'product-card';
+  div.id = 'card-' + p.id;
+  const qty = cart[p.id]?.qty || 0;
+  div.innerHTML = `
+    <div class="product-img">${p.photo_url ? `<img src="${p.photo_url}" alt="${p.name}">` : emoji}</div>
+    <div class="product-info">
+      <div class="product-name">${p.name}</div>
+      ${p.description ? `<div class="product-desc">${p.description}</div>` : ''}
+      <div class="product-footer">
+        <div class="product-price">${fmt(p.price)}</div>
+        <div id="ctrl-${p.id}">${ctrlHtml(p, qty)}</div>
+      </div>
+    </div>`;
+  return div;
+}
+
+function ctrlHtml(p, qty) {
+  if (qty === 0) {
+    return `<button class="add-btn" onclick="addItem(${p.id})">+</button>`;
+  }
+  return `<div class="qty-control">
+    <button class="qty-btn" onclick="changeQty(${p.id},-1)">−</button>
+    <span class="qty-num">${qty}</span>
+    <button class="qty-btn" onclick="changeQty(${p.id},1)">+</button>
+  </div>`;
+}
+
+function findProduct(id) {
+  for (const cat of restaurant.categories) {
+    const p = cat.products.find(p => p.id === id);
+    if (p) return p;
+  }
+  return null;
+}
+
+function addItem(id) {
+  const p = findProduct(id);
+  if (!p) return;
+  cart[id] = { id, name: p.name, price: p.price, qty: 1 };
+  refreshCtrl(id);
+  updateBar();
+}
+
+function changeQty(id, delta) {
+  if (!cart[id]) return;
+  cart[id].qty += delta;
+  if (cart[id].qty <= 0) delete cart[id];
+  refreshCtrl(id);
+  updateBar();
+}
+
+function refreshCtrl(id) {
+  const el = document.getElementById('ctrl-' + id);
+  if (!el) return;
+  const p = findProduct(id);
+  if (!p) return;
+  el.innerHTML = ctrlHtml(p, cart[id]?.qty || 0);
+}
+
+function cartItems() { return Object.values(cart); }
+function cartTotal() { return cartItems().reduce((s, i) => s + i.price * i.qty, 0); }
+function cartCount() { return cartItems().reduce((s, i) => s + i.qty, 0); }
+
+function updateBar() {
+  const n = cartCount();
+  document.getElementById('cartCountBadge').textContent = n;
+  document.getElementById('cartTotalBar').textContent = fmt(cartTotal());
+  document.getElementById('cartBar').classList.toggle('visible', n > 0);
+}
+
+function openCart() {
+  renderCart();
+  document.getElementById('cartScreen').classList.add('active');
+}
+
+function closeCart() {
+  document.getElementById('cartScreen').classList.remove('active');
+}
+
+function selectType(type) {
+  orderType = type;
+  document.getElementById('typeDelivery').classList.toggle('active', type === 'delivery');
+  document.getElementById('typeTakeaway').classList.toggle('active', type === 'takeaway');
+  document.getElementById('clientAddress').style.display = type === 'delivery' ? 'block' : 'none';
+}
+
+function renderCart() {
+  const list = document.getElementById('cartItemsList');
+  list.innerHTML = '';
+  cartItems().forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'cart-item';
+    div.innerHTML = `
+      <div class="cart-item-emoji">🍽️</div>
+      <div class="cart-item-info">
+        <div class="cart-item-name">${item.name}</div>
+        <div class="cart-item-price">${item.qty} × ${fmt(item.price)}</div>
+      </div>
+      <div class="qty-control">
+        <button class="qty-btn" onclick="cartChangeQty(${item.id},-1)">−</button>
+        <span class="qty-num">${item.qty}</span>
+        <button class="qty-btn" onclick="cartChangeQty(${item.id},1)">+</button>
+      </div>`;
+    list.appendChild(div);
+  });
+  const n = cartCount();
+  const total = cartTotal();
+  document.getElementById('summaryCount').textContent = n + ' ta taom';
+  document.getElementById('summarySubtotal').textContent = fmt(total);
+  document.getElementById('summaryTotal').textContent = fmt(total);
+  document.getElementById('clientAddress').style.display = orderType === 'delivery' ? 'block' : 'none';
+}
+
+function cartChangeQty(id, delta) {
+  changeQty(id, delta);
+  if (cartCount() === 0) { closeCart(); return; }
+  renderCart();
+}
+
+async function submitOrder() {
+  const name = document.getElementById('clientName').value.trim();
+  const phone = document.getElementById('clientPhone').value.trim();
+  const address = document.getElementById('clientAddress').value.trim();
+  const comment = document.getElementById('clientComment').value.trim();
+
+  if (!name) { alert('Ismingizni kiriting'); return; }
+  if (!phone) { alert('Telefon raqamingizni kiriting'); return; }
+  if (orderType === 'delivery' && !address) { alert('Manzilni kiriting'); return; }
+
+  const btn = document.getElementById('checkoutBtn');
+  btn.disabled = true;
+  btn.textContent = 'Yuborilmoqda...';
+
+  const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+
+  const payload = {
+    restaurant_id: restaurant.id,
+    client_telegram_id: tgUser?.id || 0,
+    client_name: name,
+    client_phone: phone,
+    order_type: orderType,
+    address: orderType === 'delivery' ? address : null,
+    comment: comment || null,
+    items: cartItems().map(i => ({ product_id: i.id, quantity: i.qty }))
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Xato yuz berdi');
+    }
+    const order = await res.json();
+    showSuccess(order.id);
+  } catch (e) {
+    alert('Xato: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Buyurtma berish';
+  }
+}
+
+function showSuccess(orderId) {
+  document.getElementById('successOrderId').textContent = '#' + String(orderId).padStart(4, '0');
+  document.getElementById('successScreen').classList.add('active');
+  cart = {};
+  updateBar();
+}
+
+function backToMenu() {
+  document.getElementById('successScreen').classList.remove('active');
+  document.getElementById('cartScreen').classList.remove('active');
+  renderMenu();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const tg = window.Telegram?.WebApp;
+  if (tg) { tg.ready(); tg.expand(); }
+  loadMenu();
+});
+</script>
 </body>
 </html>
