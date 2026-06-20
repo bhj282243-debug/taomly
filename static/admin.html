@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taomly Admin</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --cream: #FAF7F2;
+    --brown: #5C3D2E;
+    --accent: #C8703A;
+    --border: #EDE8E1;
+    --card: #FFFFFF;
+    --muted: #9B7B6E;
+    --text: #2C1810;
+  }
+  body { font-family: -apple-system, sans-serif; background: var(--cream); color: var(--text); }
+
+  .header {
+    background: var(--card);
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .header h1 { font-size: 18px; color: var(--brown); }
+  .refresh-btn {
+    padding: 8px 16px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 0;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tab {
+    flex-shrink: 0;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .content { padding: 16px; max-width: 600px; margin: 0 auto; }
+
+  .order-card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+
+  .order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .order-id { font-size: 16px; font-weight: 700; color: var(--brown); }
+
+  .status-badge {
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .status-new { background: #FFF3E0; color: #E65100; }
+  .status-accepted { background: #E8F5E9; color: #2E7D32; }
+  .status-preparing { background: #E3F2FD; color: #1565C0; }
+  .status-delivering { background: #F3E5F5; color: #6A1B9A; }
+  .status-completed { background: #F5F5F5; color: #616161; }
+  .status-cancelled { background: #FFEBEE; color: #C62828; }
+
+  .order-type {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .client-info { margin-bottom: 10px; }
+  .client-name { font-size: 14px; font-weight: 600; }
+  .client-phone { font-size: 13px; color: var(--accent); }
+  .client-address { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  .items-list {
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+    margin-bottom: 10px;
+  }
+  .item-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 3px 0;
+    color: var(--text);
+  }
+
+  .order-total {
+    display: flex;
+    justify-content: space-between;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+    margin-bottom: 12px;
+  }
+  .order-total span:last-child { color: var(--accent); }
+
+  .action-btns { display: flex; gap: 8px; }
+
+  .btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-accept { background: var(--accent); color: white; }
+  .btn-cancel { background: var(--border); color: var(--muted); }
+  .btn-next { background: #3B82F6; color: white; }
+
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    font-size: 15px;
+  }
+
+  .loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+
+  .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .order-time { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🍽️ Taomly Admin</h1>
+  <button class="refresh-btn" onclick="loadOrders()">↻ Yangilash</button>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="filterOrders('new')" id="tab-new">🔴 Yangi</div>
+  <div class="tab" onclick="filterOrders('accepted')" id="tab-accepted">✅ Qabul</div>
+  <div class="tab" onclick="filterOrders('preparing')" id="tab-preparing">👨‍🍳 Tayyorlanmoqda</div>
+  <div class="tab" onclick="filterOrders('delivering')" id="tab-delivering">🛵 Yetkazilmoqda</div>
+  <div class="tab" onclick="filterOrders('completed')" id="tab-completed">✔️ Bajarildi</div>
+</div>
+
+<div class="content" id="content">
+  <div class="loading"><div class="spinner"></div>Yuklanmoqda...</div>
+</div>
+
+<script>
+const RESTAURANT_ID = 1;
+const API = '';
+
+let allOrders = [];
+let currentFilter = 'new';
+
+const STATUS_LABELS = {
+  new: '🔴 Yangi',
+  accepted: '✅ Qabul qilindi',
+  preparing: '👨‍🍳 Tayyorlanmoqda',
+  delivering: '🛵 Yetkazilmoqda',
+  completed: '✔️ Bajarildi',
+  cancelled: '❌ Bekor qilindi',
+};
+
+const TYPE_LABELS = {
+  delivery: '🛵 Yetkazib berish',
+  takeaway: '🥡 Olib ketish',
+  dine_in: '🍽️ Zal',
+};
+
+const NEXT_STATUS = {
+  new: 'accepted',
+  accepted: 'preparing',
+  preparing: 'delivering',
+  delivering: 'completed',
+};
+
+const NEXT_LABELS = {
+  new: '✅ Qabul qilish',
+  accepted: '👨‍🍳 Tayyorlashni boshlash',
+  preparing: '🛵 Yetkazishga berish',
+  delivering: '✔️ Bajarildi',
+};
+
+function fmt(p) {
+  return Number(p).toLocaleString('uz-UZ') + ' so\'m';
+}
+
+function timeAgo(dateStr) {
+  const diff = Math.floor((Date.now() - new Date(dateStr)) / 60000);
+  if (diff < 1) return 'Hozirgina';
+  if (diff < 60) return diff + ' daqiqa oldin';
+  return Math.floor(diff / 60) + ' soat oldin';
+}
+
+async function loadOrders() {
+  try {
+    const res = await fetch(`${API}/api/orders/restaurant/${RESTAURANT_ID}`);
+    if (!res.ok) throw new Error('Xato');
+    allOrders = await res.json();
+    renderOrders();
+  } catch (e) {
+    document.getElementById('content').innerHTML =
+      `<div class="empty">❌ Yuklab bo'lmadi. Qayta urinib ko'ring.</div>`;
+  }
+}
+
+function filterOrders(status) {
+  currentFilter = status;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + status).classList.add('active');
+  renderOrders();
+}
+
+function renderOrders() {
+  const filtered = allOrders.filter(o => o.status === currentFilter);
+  const content = document.getElementById('content');
+
+  if (filtered.length === 0) {
+    content.innerHTML = `<div class="empty">📭 Bu bo'limda buyurtmalar yo'q</div>`;
+    return;
+  }
+
+  content.innerHTML = '';
+  filtered.forEach(order => {
+    content.appendChild(makeCard(order));
+  });
+}
+
+function makeCard(order) {
+  const div = document.createElement('div');
+  div.className = 'order-card';
+  div.id = 'order-' + order.id;
+
+  const itemsHtml = (order.items || []).map(i =>
+    `<div class="item-row"><span>${i.name} × ${i.quantity}</span><span>${fmt(i.price * i.quantity)}</span></div>`
+  ).join('');
+
+  const addressHtml = order.address ? `<div class="client-address">📍 ${order.address}</div>` : '';
+  const commentHtml = order.comment ? `<div class="client-address">💬 ${order.comment}</div>` : '';
+
+  const nextStatus = NEXT_STATUS[order.status];
+  const actionBtns = nextStatus ? `
+    <div class="action-btns">
+      <button class="btn btn-accept" onclick="changeStatus(${order.id}, '${nextStatus}')">
+        ${NEXT_LABELS[order.status]}
+      </button>
+      ${order.status === 'new' ? `<button class="btn btn-cancel" onclick="changeStatus(${order.id}, 'cancelled')">❌ Bekor</button>` : ''}
+    </div>` : '';
+
+  div.innerHTML = `
+    <div class="order-header">
+      <span class="order-id">#${String(order.id).padStart(4,'0')}</span>
+      <span class="status-badge status-${order.status}">${STATUS_LABELS[order.status]}</span>
+    </div>
+    <div class="order-type">${TYPE_LABELS[order.order_type] || order.order_type} · <span class="order-time">${timeAgo(order.created_at)}</span></div>
+    <div class="client-info">
+      <div class="client-name">👤 ${order.client_name}</div>
+      <div class="client-phone">📞 ${order.client_phone}</div>
+      ${addressHtml}
+      ${commentHtml}
+    </div>
+    <div class="items-list">${itemsHtml}</div>
+    <div class="order-total"><span>Jami</span><span>${fmt(order.total_amount)}</span></div>
+    ${actionBtns}
+  `;
+  return div;
+}
+
+async function changeStatus(orderId, newStatus) {
+  try {
+    const res = await fetch(`${API}/api/orders/${orderId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    });
+    if (!res.ok) throw new Error('Xato');
+    await loadOrders();
+  } catch (e) {
+    alert('Xato: ' + e.message);
+  }
+}
+
+// Автообновление каждые 30 секунд
+loadOrders();
+setInterval(loadOrders, 30000);
+</script>
+</body>
+</html>
