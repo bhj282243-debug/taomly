@@ -475,7 +475,7 @@
   .checkout-btn:disabled { background: var(--text-muted); cursor: not-allowed; }
 
   /* SUCCESS */
-  #successScreen {
+  #successScreen.active {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -643,7 +643,7 @@
 </div>
 
 <!-- SUCCESS SCREEN -->
-<div id="successScreen" class="screen">
+<div id="successScreen" class="screen" style="display:none;">
   <div class="success-anim">✓</div>
   <div class="success-title">Buyurtma qabul qilindi!</div>
   <div class="success-subtitle">Tez orada siz bilan bog'lanamiz va buyurtmangizni tasdiqlaymiz.</div>
