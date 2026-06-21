@@ -42,9 +42,9 @@ class OrderItemCreate(BaseModel):
 
 class OrderCreate(BaseModel):
     restaurant_id: int
-    client_telegram_id: int
-    client_name: str
-    client_phone: str
+    client_telegram_id: Optional[int] = None
+    client_name: Optional[str] = None
+    client_phone: Optional[str] = None
     order_type: Literal["delivery", "takeaway", "dine_in"]
     address: Optional[str] = None
     location_lat: Optional[float] = None
@@ -70,8 +70,8 @@ class OrderResponse(BaseModel):
     status: str
     order_type: str
     total_amount: int
-    client_name: str
-    client_phone: str
+    client_name: Optional[str] = None
+    client_phone: Optional[str] = None
     address: Optional[str] = None
     comment: Optional[str] = None
     items: List[OrderItemResponse] = Field(default_factory=list)
