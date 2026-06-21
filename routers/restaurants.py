@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from database import get_db
-from models import Restaurant, Category, Product
+from models import Restaurant, Category, Product, RestaurantTable
 
 router = APIRouter(prefix="/api/restaurants", tags=["restaurants"])
 
@@ -53,4 +53,34 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
             }
             for cat in categories
         ],
+    }
+
+
+@router.get("/{slug}/table/{table_number}")
+def get_table_by_number(slug: str, table_number: str, db: Session = Depends(get_db)):
+    restaurant = (
+        db.query(Restaurant)
+        .filter(Restaurant.slug == slug, Restaurant.is_active == True)
+        .first()
+    )
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Ресторан не найден")
+
+    table = (
+        db.query(RestaurantTable)
+        .filter(
+            RestaurantTable.restaurant_id == restaurant.id,
+            RestaurantTable.table_number == table_number
+        )
+        .first()
+    )
+    if not table:
+        raise HTTPException(status_code=404, detail="Stol topilmadi")
+
+    return {
+        "restaurant_id": restaurant.id,
+        "restaurant_name": restaurant.name,
+        "slug": restaurant.slug,
+        "table_id": table.id,
+        "table_number": table.table_number,
     }
