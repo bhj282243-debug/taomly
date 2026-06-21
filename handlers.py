@@ -7,14 +7,33 @@ logger = logging.getLogger(__name__)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# ID сотрудников "Чинор" (пока оба — ты)
-DISPATCHER_ID = 331294063   # доставка и самовывоз
-MANAGER_ID    = 331294063   # заказы в зале
+# ID сотрудников "Чинор"
+DISPATCHER_ID = 331294063
+MANAGER_ID    = 331294063
+
+
+@bot.message_handler(commands=['start'])
+def handle_start(message):
+    """Приветствие с кнопкой открытия меню."""
+    markup = telebot.types.InlineKeyboardMarkup()
+    markup.add(
+        telebot.types.InlineKeyboardButton(
+            text="🍽️ Menyuni ochish",
+            web_app=telebot.types.WebAppInfo(url="https://taomly.onrender.com/app")
+        )
+    )
+    bot.send_message(
+        message.chat.id,
+        "👋 *Taomly*ga xush kelibsiz!\n\n"
+        "Quyi tugmani bosib menyu va buyurtma berishingiz mumkin 👇",
+        parse_mode="Markdown",
+        reply_markup=markup
+    )
 
 
 def notify_new_order(order, items):
     """Уведомление персоналу о новом заказе."""
-    
+
     order_type_labels = {
         "delivery":  "🛵 Yetkazib berish",
         "takeaway":  "🥡 Olib ketish",
@@ -22,12 +41,10 @@ def notify_new_order(order, items):
     }
     type_label = order_type_labels.get(order.order_type, order.order_type)
 
-    # Список блюд
     items_text = ""
     for item in items:
         items_text += f"  • {item.name} × {item.quantity} — {int(item.price * item.quantity):,} so'm\n"
 
-    # Адрес или стол
     location_text = ""
     if order.order_type == "delivery" and order.address:
         location_text = f"📍 Manzil: {order.address}\n"
@@ -36,12 +53,17 @@ def notify_new_order(order, items):
 
     comment_text = f"💬 Izoh: {order.comment}\n" if order.comment else ""
 
+    client_text = ""
+    if order.client_name:
+        client_text += f"👤 {order.client_name}\n"
+    if order.client_phone:
+        client_text += f"📞 {order.client_phone}\n"
+
     message = (
         f"🔔 YANGI BUYURTMA #{order.id}\n"
         f"{'─' * 28}\n"
         f"{type_label}\n"
-        f"👤 {order.client_name}\n"
-        f"📞 {order.client_phone}\n"
+        f"{client_text}"
         f"{location_text}"
         f"{comment_text}"
         f"{'─' * 28}\n"
@@ -50,7 +72,6 @@ def notify_new_order(order, items):
         f"💰 Jami: {int(order.total_amount):,} so'm"
     )
 
-    # Кому отправить
     if order.order_type == "dine_in":
         target_id = MANAGER_ID
     else:
@@ -65,7 +86,7 @@ def notify_new_order(order, items):
 
 def notify_client_accepted(order):
     """Уведомление клиенту — заказ принят."""
-    
+
     if not order.client_telegram_id:
         return
 
