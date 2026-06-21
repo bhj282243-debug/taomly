@@ -108,21 +108,9 @@
   }
 
   .main { padding: 16px 16px 120px; }
-
   .category-section { margin-bottom: 28px; }
-
-  .category-title {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--brown);
-    margin-bottom: 12px;
-  }
-
-  .products-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
+  .category-title { font-size: 16px; font-weight: 700; color: var(--brown); margin-bottom: 12px; }
+  .products-grid { display: flex; flex-direction: column; gap: 10px; }
 
   .product-card {
     background: var(--card-bg);
@@ -134,12 +122,10 @@
     box-shadow: 0 1px 4px rgba(0,0,0,0.06);
     transition: transform 0.15s;
   }
-
   .product-card:active { transform: scale(0.98); }
 
   .product-img {
-    width: 76px;
-    height: 76px;
+    width: 76px; height: 76px;
     border-radius: 12px;
     background: var(--cream);
     flex-shrink: 0;
@@ -149,147 +135,58 @@
     font-size: 32px;
     overflow: hidden;
   }
-
-  .product-img img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 12px;
-  }
+  .product-img img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
 
   .product-info { flex: 1; min-width: 0; }
-
-  .product-name {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 4px;
-    line-height: 1.3;
-  }
-
+  .product-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; line-height: 1.3; }
   .product-desc {
-    font-size: 12px;
-    color: var(--text-muted);
-    line-height: 1.4;
-    margin-bottom: 8px;
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 8px;
+    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   }
-
-  .product-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .product-price {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--accent);
-  }
+  .product-footer { display: flex; align-items: center; justify-content: space-between; }
+  .product-price { font-size: 15px; font-weight: 700; color: var(--accent); }
 
   .add-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
-    background: var(--accent);
-    border: none;
-    color: white;
-    font-size: 20px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 32px; height: 32px; border-radius: 10px;
+    background: var(--accent); border: none; color: white; font-size: 20px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
     transition: transform 0.1s;
   }
-
   .add-btn:active { transform: scale(0.88); }
 
-  .qty-control {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
+  .qty-control { display: flex; align-items: center; gap: 8px; }
   .qty-btn {
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    border: none;
-    background: var(--cream);
-    color: var(--accent);
-    font-size: 18px;
-    font-weight: 700;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 28px; height: 28px; border-radius: 8px; border: none;
+    background: var(--cream); color: var(--accent); font-size: 18px; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
   }
-
-  .qty-num {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--text);
-    min-width: 20px;
-    text-align: center;
-  }
+  .qty-num { font-size: 15px; font-weight: 700; color: var(--text); min-width: 20px; text-align: center; }
 
   .cart-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 12px 16px;
-    background: var(--warm-white);
-    border-top: 1px solid var(--border);
-    z-index: 200;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    padding: 12px 16px; background: var(--warm-white);
+    border-top: 1px solid var(--border); z-index: 200;
     transform: translateY(100%);
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
-
   .cart-bar.visible { transform: translateY(0); }
 
   .cart-btn {
-    width: 100%;
-    padding: 15px 20px;
-    background: var(--accent);
-    border: none;
-    border-radius: 16px;
-    color: white;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    width: 100%; padding: 15px 20px; background: var(--accent);
+    border: none; border-radius: 16px; color: white; font-size: 15px; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; justify-content: space-between;
   }
-
-  .cart-btn-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
+  .cart-btn-left { display: flex; align-items: center; gap: 10px; }
   .cart-count-badge {
-    background: rgba(255,255,255,0.25);
-    border-radius: 8px;
-    padding: 3px 9px;
-    font-size: 13px;
-    font-weight: 700;
+    background: rgba(255,255,255,0.25); border-radius: 8px;
+    padding: 3px 9px; font-size: 13px; font-weight: 700;
   }
 
   .screen {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: var(--cream);
-    z-index: 300;
-    overflow-y: auto;
+    display: none; position: fixed; inset: 0;
+    background: var(--cream); z-index: 300; overflow-y: auto;
     animation: slideUp 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
   }
-
   .screen.active { display: block; }
 
   @keyframes slideUp {
@@ -298,314 +195,129 @@
   }
 
   .screen-header {
-    background: var(--warm-white);
-    padding: 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    background: var(--warm-white); padding: 16px;
+    display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0; z-index: 10;
     box-shadow: 0 1px 0 var(--border);
   }
-
   .back-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    border: 1.5px solid var(--border);
-    background: transparent;
-    font-size: 18px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--brown);
+    width: 36px; height: 36px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: transparent;
+    font-size: 18px; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; color: var(--brown);
   }
+  .screen-title { font-size: 17px; font-weight: 700; color: var(--brown); }
 
-  .screen-title {
-    font-size: 17px;
-    font-weight: 700;
-    color: var(--brown);
-  }
-
-  .cart-items {
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
+  .cart-items { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
   .cart-item {
-    background: var(--card-bg);
-    border-radius: 14px;
-    padding: 12px 14px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    background: var(--card-bg); border-radius: 14px; padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.05);
   }
-
-  .cart-item-emoji {
-    font-size: 28px;
-    width: 44px;
-    text-align: center;
-    flex-shrink: 0;
-  }
-
+  .cart-item-emoji { font-size: 28px; width: 44px; text-align: center; flex-shrink: 0; }
   .cart-item-info { flex: 1; }
-
-  .cart-item-name {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text);
-  }
-
-  .cart-item-price {
-    font-size: 13px;
-    color: var(--accent);
-    font-weight: 600;
-    margin-top: 3px;
-  }
+  .cart-item-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .cart-item-price { font-size: 13px; color: var(--accent); font-weight: 600; margin-top: 3px; }
 
   .divider { height: 8px; background: var(--cream); }
 
   .order-type-section { padding: 16px; }
-
   .section-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 10px;
+    font-size: 13px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;
   }
-
-  .order-type-btns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-
+  .order-type-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .type-btn {
-    padding: 14px 10px;
-    border-radius: 14px;
-    border: 2px solid var(--border);
-    background: var(--card-bg);
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
+    padding: 14px 10px; border-radius: 14px;
+    border: 2px solid var(--border); background: var(--card-bg);
+    text-align: center; cursor: pointer; transition: all 0.2s;
   }
-
-  .type-btn.active {
-    border-color: var(--accent);
-    background: #FFF5EE;
-  }
-
+  .type-btn.active { border-color: var(--accent); background: #FFF5EE; }
   .type-btn-icon { font-size: 24px; margin-bottom: 4px; }
+  .type-btn-label { font-size: 13px; font-weight: 600; color: var(--text); }
 
-  .type-btn-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text);
-  }
-
-  /* Баннер стола — показывается вместо выбора типа при dine_in */
   .table-info-banner {
-    margin: 16px 16px 0;
-    padding: 14px 16px;
-    background: #FFF5EE;
-    border: 2px solid var(--accent);
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    margin: 16px 16px 0; padding: 14px 16px;
+    background: #FFF5EE; border: 2px solid var(--accent);
+    border-radius: 14px; display: flex; align-items: center; gap: 12px;
   }
-
   .table-info-banner-icon { font-size: 28px; }
-
   .table-info-banner-text { flex: 1; }
+  .table-info-banner-title { font-size: 14px; font-weight: 700; color: var(--brown); }
+  .table-info-banner-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 
-  .table-info-banner-title {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--brown);
-  }
-
-  .table-info-banner-sub {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-top: 2px;
-  }
-
-  .form-section {
-    padding: 0 16px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
+  .form-section { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
   .form-input {
-    width: 100%;
-    padding: 14px 16px;
-    border-radius: 14px;
-    border: 1.5px solid var(--border);
-    background: var(--card-bg);
-    font-size: 15px;
-    color: var(--text);
-    outline: none;
-    transition: border-color 0.2s;
-    font-family: inherit;
+    width: 100%; padding: 14px 16px; border-radius: 14px;
+    border: 1.5px solid var(--border); background: var(--card-bg);
+    font-size: 15px; color: var(--text); outline: none;
+    transition: border-color 0.2s; font-family: inherit;
   }
-
   .form-input:focus { border-color: var(--accent); }
   .form-input::placeholder { color: var(--text-muted); }
   .form-textarea { resize: none; height: 80px; }
 
   .summary-card {
-    margin: 0 16px 16px;
-    background: var(--card-bg);
-    border-radius: 16px;
-    padding: 16px;
+    margin: 0 16px 16px; background: var(--card-bg);
+    border-radius: 16px; padding: 16px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.05);
   }
-
   .summary-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 0;
-    font-size: 14px;
-    color: var(--text-muted);
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; font-size: 14px; color: var(--text-muted);
   }
-
   .summary-row.total {
-    border-top: 1px solid var(--border);
-    margin-top: 6px;
-    padding-top: 12px;
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--text);
+    border-top: 1px solid var(--border); margin-top: 6px; padding-top: 12px;
+    font-size: 16px; font-weight: 700; color: var(--text);
   }
-
   .summary-row.total span:last-child { color: var(--accent); }
 
   .checkout-btn {
-    margin: 0 16px 32px;
-    width: calc(100% - 32px);
-    padding: 16px;
-    background: var(--accent);
-    border: none;
-    border-radius: 16px;
-    color: white;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: transform 0.1s;
+    margin: 0 16px 32px; width: calc(100% - 32px); padding: 16px;
+    background: var(--accent); border: none; border-radius: 16px;
+    color: white; font-size: 16px; font-weight: 700;
+    cursor: pointer; transition: transform 0.1s;
   }
-
   .checkout-btn:active { transform: scale(0.98); }
   .checkout-btn:disabled { background: var(--text-muted); cursor: not-allowed; }
 
   #successScreen.active {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    padding: 32px;
-    text-align: center;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 100vh; padding: 32px; text-align: center;
   }
-
   .success-anim {
-    width: 100px;
-    height: 100px;
+    width: 100px; height: 100px;
     background: linear-gradient(135deg, var(--accent), var(--accent-light));
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 48px;
-    margin-bottom: 24px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 48px; margin-bottom: 24px;
     animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
-
-  @keyframes popIn {
-    from { transform: scale(0); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-  }
-
-  .success-title {
-    font-size: 24px;
-    font-weight: 800;
-    color: var(--brown);
-    margin-bottom: 10px;
-  }
-
-  .success-subtitle {
-    font-size: 15px;
-    color: var(--text-muted);
-    line-height: 1.5;
-    margin-bottom: 32px;
-  }
-
+  @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .success-title { font-size: 24px; font-weight: 800; color: var(--brown); margin-bottom: 10px; }
+  .success-subtitle { font-size: 15px; color: var(--text-muted); line-height: 1.5; margin-bottom: 32px; }
   .success-order-id {
-    background: var(--card-bg);
-    border-radius: 14px;
-    padding: 14px 24px;
-    font-size: 14px;
-    color: var(--text-muted);
-    margin-bottom: 32px;
+    background: var(--card-bg); border-radius: 14px; padding: 14px 24px;
+    font-size: 14px; color: var(--text-muted); margin-bottom: 32px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   }
-
-  .success-order-id strong {
-    color: var(--accent);
-    font-size: 22px;
-    display: block;
-    margin-top: 4px;
-  }
-
+  .success-order-id strong { color: var(--accent); font-size: 22px; display: block; margin-top: 4px; }
   .back-to-menu-btn {
-    padding: 15px 40px;
-    background: var(--accent);
-    border: none;
-    border-radius: 16px;
-    color: white;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
+    padding: 15px 40px; background: var(--accent); border: none;
+    border-radius: 16px; color: white; font-size: 15px; font-weight: 700; cursor: pointer;
   }
 
   .loading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 60vh;
-    gap: 16px;
-    color: var(--text-muted);
-    font-size: 14px;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 60vh; gap: 16px;
+    color: var(--text-muted); font-size: 14px;
   }
-
   .spinner {
-    width: 36px;
-    height: 36px;
-    border: 3px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
+    width: 36px; height: 36px; border: 3px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }
-
   @keyframes spin { to { transform: rotate(360deg); } }
-
-  .error-msg {
-    text-align: center;
-    padding: 40px 20px;
-    color: var(--text-muted);
-    font-size: 14px;
-    line-height: 1.6;
-  }
+  .error-msg { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px; line-height: 1.6; }
 </style>
 </head>
 <body>
@@ -632,11 +344,9 @@
     <button class="back-btn" onclick="closeCart()">←</button>
     <span class="screen-title">Savat</span>
   </div>
-
   <div class="cart-items" id="cartItemsList"></div>
   <div class="divider"></div>
 
-  <!-- Выбор типа заказа — скрывается при dine_in -->
   <div class="order-type-section" id="orderTypeSection">
     <div class="section-label">Buyurtma turi</div>
     <div class="order-type-btns">
@@ -651,7 +361,6 @@
     </div>
   </div>
 
-  <!-- Баннер стола — показывается только при dine_in -->
   <div class="table-info-banner" id="tableBanner" style="display:none;">
     <div class="table-info-banner-icon">🪑</div>
     <div class="table-info-banner-text">
@@ -660,7 +369,7 @@
     </div>
   </div>
 
-  <div class="form-section" style="margin-top: 16px;">
+  <div class="form-section">
     <input class="form-input" type="text" id="clientName" placeholder="Ismingiz" />
     <input class="form-input" type="tel" id="clientPhone" placeholder="+998 XX XXX XX XX" value="+998" />
     <input class="form-input" type="text" id="clientAddress" placeholder="Manzil (yetkazib berish uchun)" />
@@ -677,14 +386,13 @@
       <span id="summaryTotal">0 so'm</span>
     </div>
   </div>
-
   <button class="checkout-btn" id="checkoutBtn" onclick="submitOrder()">Buyurtma berish</button>
 </div>
 
 <div id="successScreen" class="screen" style="display:none;">
   <div class="success-anim">✓</div>
   <div class="success-title">Buyurtma qabul qilindi!</div>
-  <div class="success-subtitle" id="successSubtitle">Tez orada siz bilan bog'lanamiz va buyurtmangizni tasdiqlaymiz.</div>
+  <div class="success-subtitle" id="successSubtitle">Tez orada siz bilan bog'lanamiz.</div>
   <div class="success-order-id">
     Buyurtma raqami
     <strong id="successOrderId">#0000</strong>
@@ -704,51 +412,52 @@
 
 <script>
 const API_BASE = '';
+const DEFAULT_SLUG = 'chinar';
 
 let restaurant = null;
 let cart = {};
 let orderType = 'delivery';
-let tableNumber = null;   // номер стола из QR (например "3")
-let tableDbId = null;     // реальный ID стола из БД
-let restaurantSlug = 'chinar'; // fallback
+let tableNumber = null;
+let tableDbId = null;
+let restaurantSlug = DEFAULT_SLUG;
 
 const catEmoji = ['🍲','🍖','🔥','🥗','🍵','🥘','🍜','🫕'];
 
-// ─── ПАРСИНГ startapp ────────────────────────────────────────
-function parseStartApp() {
+// ─── ПАРСИНГ ПАРАМЕТРОВ ──────────────────────────────────────
+// Поддерживает оба варианта:
+// 1. URL параметры: ?slug=chinar&table=5 (веб QR)
+// 2. Telegram startapp: startapp=chinar_5 (Telegram Mini App)
+function parseParams() {
+  // Сначала пробуем URL параметры (веб вариант)
+  const urlParams = new URLSearchParams(window.location.search);
+  const slugParam = urlParams.get('slug');
+  const tableParam = urlParams.get('table');
+
+  if (slugParam) {
+    restaurantSlug = slugParam;
+    if (tableParam) {
+      tableNumber = tableParam;
+      orderType = 'dine_in';
+    }
+    return;
+  }
+
+  // Потом пробуем Telegram startapp
   const tg = window.Telegram?.WebApp;
   const startParam = tg?.initDataUnsafe?.start_param || '';
-
   if (startParam) {
-    // Формат: chinar_3 или chinar
     const parts = startParam.split('_');
-    if (parts.length >= 2) {
-      // Последний элемент — номер стола, остальное — slug
+    if (parts.length >= 2 && !isNaN(parts[parts.length - 1])) {
       tableNumber = parts[parts.length - 1];
       restaurantSlug = parts.slice(0, -1).join('_');
-
-      // Проверяем что tableNumber — число
-      if (isNaN(tableNumber)) {
-        // Нет номера стола — весь startParam это slug
-        restaurantSlug = startParam;
-        tableNumber = null;
-      }
+      orderType = 'dine_in';
     } else {
       restaurantSlug = startParam;
-      tableNumber = null;
     }
   }
-
-  // Если есть стол — ставим dine_in
-  if (tableNumber) {
-    orderType = 'dine_in';
-  }
 }
 
-// ─── ЗАГРУЗКА МЕНЮ ───────────────────────────────────────────
-function fmt(p) {
-  return p.toLocaleString('uz-UZ') + ' so\'m';
-}
+function fmt(p) { return p.toLocaleString('uz-UZ') + ' so\'m'; }
 
 async function loadMenu() {
   try {
@@ -759,13 +468,10 @@ async function loadMenu() {
     document.getElementById('restaurantName').textContent = restaurant.name;
     document.getElementById('restaurantAddress').textContent = restaurant.address || '';
 
-    // Показываем бейдж стола в хедере
     if (tableNumber) {
       const badge = document.getElementById('tableBadge');
       badge.textContent = '🪑 Stol №' + tableNumber;
       badge.style.display = 'inline-block';
-
-      // Ищем table_id в БД по номеру стола
       await resolveTableId();
     }
 
@@ -778,15 +484,13 @@ async function loadMenu() {
 }
 
 async function resolveTableId() {
-  // Получаем ID стола из БД по номеру
   try {
     const res = await fetch(`${API_BASE}/api/restaurants/${restaurantSlug}/table/${tableNumber}`);
     if (res.ok) {
       const data = await res.json();
-      tableDbId = data.id;
+      tableDbId = data.table_id;
     }
   } catch (e) {
-    // Если эндпоинт не найден — оставляем null
     tableDbId = null;
   }
 }
@@ -843,9 +547,7 @@ function makeCard(p, emoji) {
 }
 
 function ctrlHtml(p, qty) {
-  if (qty === 0) {
-    return `<button class="add-btn" onclick="addItem(${p.id})">+</button>`;
-  }
+  if (qty === 0) return `<button class="add-btn" onclick="addItem(${p.id})">+</button>`;
   return `<div class="qty-control">
     <button class="qty-btn" onclick="changeQty(${p.id},-1)">−</button>
     <span class="qty-num">${qty}</span>
@@ -932,13 +634,10 @@ function renderCart() {
     list.appendChild(div);
   });
 
-  const n = cartCount();
-  const total = cartTotal();
-  document.getElementById('summaryCount').textContent = n + ' ta taom';
-  document.getElementById('summarySubtotal').textContent = fmt(total);
-  document.getElementById('summaryTotal').textContent = fmt(total);
+  document.getElementById('summaryCount').textContent = cartCount() + ' ta taom';
+  document.getElementById('summarySubtotal').textContent = fmt(cartTotal());
+  document.getElementById('summaryTotal').textContent = fmt(cartTotal());
 
-  // dine_in — скрываем выбор типа, показываем баннер стола
   if (orderType === 'dine_in') {
     document.getElementById('orderTypeSection').style.display = 'none';
     document.getElementById('clientAddress').style.display = 'none';
@@ -1008,19 +707,13 @@ async function submitOrder() {
 
 function showSuccess(orderId) {
   document.getElementById('successOrderId').textContent = '#' + String(orderId).padStart(4, '0');
-
-  // Текст успеха зависит от типа заказа
   if (orderType === 'dine_in') {
-    document.getElementById('successSubtitle').textContent =
-      'Buyurtmangiz qabul qilindi! Tez orada stolga yetkaziladi 🍽️';
+    document.getElementById('successSubtitle').textContent = 'Buyurtmangiz qabul qilindi! Tez orada stolga yetkaziladi 🍽️';
   } else if (orderType === 'takeaway') {
-    document.getElementById('successSubtitle').textContent =
-      'Buyurtmangiz qabul qilindi! Tayyor bo\'lganda xabar beramiz 🥡';
+    document.getElementById('successSubtitle').textContent = 'Buyurtmangiz qabul qilindi! Tayyor bo\'lganda xabar beramiz 🥡';
   } else {
-    document.getElementById('successSubtitle').textContent =
-      'Buyurtmangiz qabul qilindi! Tez orada yetkaziladi 🛵';
+    document.getElementById('successSubtitle').textContent = 'Buyurtmangiz qabul qilindi! Tez orada yetkaziladi 🛵';
   }
-
   document.getElementById('successScreen').classList.add('active');
   cart = {};
   updateBar();
@@ -1035,7 +728,7 @@ function backToMenu() {
 window.addEventListener('DOMContentLoaded', () => {
   const tg = window.Telegram?.WebApp;
   if (tg) { tg.ready(); tg.expand(); }
-  parseStartApp();
+  parseParams();
   loadMenu();
 });
 </script>
