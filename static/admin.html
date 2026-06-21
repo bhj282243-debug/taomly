@@ -40,9 +40,29 @@
     cursor: pointer;
   }
 
+  .main-tabs {
+    display: flex;
+    background: var(--card);
+    border-bottom: 2px solid var(--border);
+  }
+  .main-tab {
+    flex: 1;
+    padding: 14px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--muted);
+    cursor: pointer;
+    text-align: center;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+  }
+  .main-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
   .tabs {
     display: flex;
-    gap: 0;
     background: var(--card);
     border-bottom: 1px solid var(--border);
     overflow-x: auto;
@@ -68,16 +88,13 @@
     margin-bottom: 12px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   }
-
   .order-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 10px;
   }
-
   .order-id { font-size: 16px; font-weight: 700; color: var(--brown); }
-
   .status-badge {
     padding: 4px 10px;
     border-radius: 8px;
@@ -90,45 +107,29 @@
   .status-delivering { background: #F3E5F5; color: #6A1B9A; }
   .status-completed { background: #F5F5F5; color: #616161; }
   .status-cancelled { background: #FFEBEE; color: #C62828; }
-
-  .order-type {
-    font-size: 13px;
-    color: var(--muted);
-    margin-bottom: 8px;
-  }
-
+  .order-type { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
   .client-info { margin-bottom: 10px; }
   .client-name { font-size: 14px; font-weight: 600; }
   .client-phone { font-size: 13px; color: var(--accent); }
   .client-address { font-size: 13px; color: var(--muted); margin-top: 2px; }
-
-  .items-list {
-    border-top: 1px solid var(--border);
-    padding-top: 10px;
-    margin-bottom: 10px;
-  }
+  .items-list { border-top: 1px solid var(--border); padding-top: 10px; margin-bottom: 10px; }
   .item-row {
     display: flex;
     justify-content: space-between;
     font-size: 13px;
     padding: 3px 0;
-    color: var(--text);
   }
-
   .order-total {
     display: flex;
     justify-content: space-between;
     font-size: 15px;
     font-weight: 700;
-    color: var(--text);
     border-top: 1px solid var(--border);
     padding-top: 10px;
     margin-bottom: 12px;
   }
   .order-total span:last-child { color: var(--accent); }
-
   .action-btns { display: flex; gap: 8px; }
-
   .btn {
     flex: 1;
     padding: 12px;
@@ -142,21 +143,158 @@
   .btn:active { transform: scale(0.97); }
   .btn-accept { background: var(--accent); color: white; }
   .btn-cancel { background: var(--border); color: var(--muted); }
-  .btn-next { background: #3B82F6; color: white; }
+  .order-time { font-size: 12px; color: var(--muted); }
 
-  .empty {
-    text-align: center;
-    padding: 60px 20px;
-    color: var(--muted);
+  /* MENU */
+  .menu-content { padding: 16px; max-width: 600px; margin: 0 auto; }
+  .add-product-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 14px;
     font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 16px;
   }
+  .category-block { margin-bottom: 24px; }
+  .category-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--brown);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .product-row {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .product-row-info { flex: 1; }
+  .product-row-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .product-row-price { font-size: 13px; color: var(--accent); font-weight: 600; }
+  .product-row-actions { display: flex; gap: 6px; align-items: center; }
 
-  .loading {
+  .toggle-btn {
+    width: 44px;
+    height: 24px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .toggle-btn.on { background: #4CAF50; }
+  .toggle-btn.off { background: #ccc; }
+  .toggle-btn::after {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    background: white;
+    border-radius: 50%;
+    top: 3px;
+    transition: left 0.2s;
+  }
+  .toggle-btn.on::after { left: 23px; }
+  .toggle-btn.off::after { left: 3px; }
+
+  .icon-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    background: var(--card);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .icon-btn:active { background: var(--cream); }
+
+  .unavailable .product-row-name { color: var(--muted); }
+  .unavailable .product-row-price { color: var(--muted); }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 1000;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: var(--card);
+    border-radius: 20px 20px 0 0;
+    padding: 24px 20px 40px;
+    width: 100%;
+    max-width: 600px;
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .modal-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--brown);
+    margin-bottom: 20px;
     text-align: center;
-    padding: 60px 20px;
-    color: var(--muted);
   }
+  .modal-input {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1.5px solid var(--border);
+    font-size: 15px;
+    color: var(--text);
+    background: var(--cream);
+    outline: none;
+    margin-bottom: 12px;
+    font-family: inherit;
+  }
+  .modal-input:focus { border-color: var(--accent); }
+  .modal-select {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1.5px solid var(--border);
+    font-size: 15px;
+    color: var(--text);
+    background: var(--cream);
+    outline: none;
+    margin-bottom: 12px;
+    font-family: inherit;
+  }
+  .modal-btns { display: flex; gap: 10px; margin-top: 8px; }
+  .modal-btn {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .modal-btn-save { background: var(--accent); color: white; }
+  .modal-btn-cancel { background: var(--border); color: var(--muted); }
 
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 15px; }
+  .loading { text-align: center; padding: 60px 20px; color: var(--muted); }
   .spinner {
     width: 32px; height: 32px;
     border: 3px solid var(--border);
@@ -166,36 +304,106 @@
     margin: 0 auto 12px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-
-  .order-time { font-size: 12px; color: var(--muted); }
 </style>
 </head>
 <body>
 
 <div class="header">
   <h1>🍽️ Taomly Admin</h1>
-  <button class="refresh-btn" onclick="loadOrders()">↻ Yangilash</button>
+  <button class="refresh-btn" onclick="refreshCurrent()">↻ Yangilash</button>
 </div>
 
-<div class="tabs">
-  <div class="tab active" onclick="filterOrders('new')" id="tab-new">🔴 Yangi</div>
-  <div class="tab" onclick="filterOrders('accepted')" id="tab-accepted">✅ Qabul</div>
-  <div class="tab" onclick="filterOrders('preparing')" id="tab-preparing">👨‍🍳 Tayyorlanmoqda</div>
-  <div class="tab" onclick="filterOrders('delivering')" id="tab-delivering">🛵 Yetkazilmoqda</div>
-  <div class="tab" onclick="filterOrders('completed')" id="tab-completed">✔️ Bajarildi</div>
+<div class="main-tabs">
+  <div class="main-tab active" id="mtab-orders" onclick="switchPage('orders')">📋 Buyurtmalar</div>
+  <div class="main-tab" id="mtab-menu" onclick="switchPage('menu')">🍽️ Menyu</div>
+  <div class="main-tab" id="mtab-analytics" onclick="switchPage('analytics')" style="color:#ccc;pointer-events:none;">📊 Analitika</div>
 </div>
 
-<div class="content" id="content">
-  <div class="loading"><div class="spinner"></div>Yuklanmoqda...</div>
+<!-- ORDERS PAGE -->
+<div class="page active" id="page-orders">
+  <div class="tabs">
+    <div class="tab active" onclick="filterOrders('new')" id="tab-new">🔴 Yangi</div>
+    <div class="tab" onclick="filterOrders('accepted')" id="tab-accepted">✅ Qabul</div>
+    <div class="tab" onclick="filterOrders('preparing')" id="tab-preparing">👨‍🍳 Tayyorlanmoqda</div>
+    <div class="tab" onclick="filterOrders('delivering')" id="tab-delivering">🛵 Yetkazilmoqda</div>
+    <div class="tab" onclick="filterOrders('completed')" id="tab-completed">✔️ Bajarildi</div>
+  </div>
+  <div class="content" id="orders-content">
+    <div class="loading"><div class="spinner"></div>Yuklanmoqda...</div>
+  </div>
+</div>
+
+<!-- MENU PAGE -->
+<div class="page" id="page-menu">
+  <div class="menu-content">
+    <button class="add-product-btn" onclick="openAddModal()">+ Yangi taom qo'shish</button>
+    <div id="menu-content">
+      <div class="loading"><div class="spinner"></div>Yuklanmoqda...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ANALYTICS PAGE -->
+<div class="page" id="page-analytics">
+  <div class="content">
+    <div class="empty">📊 Tez orada...</div>
+  </div>
+</div>
+
+<!-- EDIT PRICE MODAL -->
+<div class="modal-overlay" id="editPriceModal">
+  <div class="modal">
+    <div class="modal-title">💰 Narxni o'zgartirish</div>
+    <input class="modal-input" type="number" id="newPriceInput" placeholder="Yangi narx (so'm)" />
+    <div class="modal-btns">
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal('editPriceModal')">Bekor</button>
+      <button class="modal-btn modal-btn-save" onclick="savePrice()">Saqlash</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD PRODUCT MODAL -->
+<div class="modal-overlay" id="addProductModal">
+  <div class="modal">
+    <div class="modal-title">➕ Yangi taom qo'shish</div>
+    <select class="modal-select" id="newProductCategory"></select>
+    <input class="modal-input" type="text" id="newProductName" placeholder="Taom nomi" />
+    <input class="modal-input" type="number" id="newProductPrice" placeholder="Narxi (so'm)" />
+    <input class="modal-input" type="text" id="newProductDesc" placeholder="Tavsif (ixtiyoriy)" />
+    <div class="modal-btns">
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal('addProductModal')">Bekor</button>
+      <button class="modal-btn modal-btn-save" onclick="saveNewProduct()">Qo'shish</button>
+    </div>
+  </div>
 </div>
 
 <script>
 const RESTAURANT_ID = 1;
+const RESTAURANT_SLUG = 'chinar';
 const API = '';
 
 let allOrders = [];
 let currentFilter = 'new';
+let menuData = null;
+let editingProductId = null;
+let currentPage = 'orders';
 
+function switchPage(page) {
+  currentPage = page;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.getElementById('mtab-' + page).classList.add('active');
+  if (page === 'orders') loadOrders();
+  if (page === 'menu') loadMenu();
+}
+
+function refreshCurrent() {
+  if (currentPage === 'orders') loadOrders();
+  if (currentPage === 'menu') loadMenu();
+}
+
+// ─── ORDERS ──────────────────────────────────────────────────
 const STATUS_LABELS = {
   new: '🔴 Yangi',
   accepted: '✅ Qabul qilindi',
@@ -204,20 +412,17 @@ const STATUS_LABELS = {
   completed: '✔️ Bajarildi',
   cancelled: '❌ Bekor qilindi',
 };
-
 const TYPE_LABELS = {
   delivery: '🛵 Yetkazib berish',
   takeaway: '🥡 Olib ketish',
   dine_in: '🍽️ Zal',
 };
-
 const NEXT_STATUS = {
   new: 'accepted',
   accepted: 'preparing',
   preparing: 'delivering',
   delivering: 'completed',
 };
-
 const NEXT_LABELS = {
   new: '✅ Qabul qilish',
   accepted: '👨‍🍳 Tayyorlashni boshlash',
@@ -225,9 +430,7 @@ const NEXT_LABELS = {
   delivering: '✔️ Bajarildi',
 };
 
-function fmt(p) {
-  return Number(p).toLocaleString('uz-UZ') + ' so\'m';
-}
+function fmt(p) { return Number(p).toLocaleString('uz-UZ') + ' so\'m'; }
 
 function timeAgo(dateStr) {
   const diff = Math.floor((Date.now() - new Date(dateStr)) / 60000);
@@ -243,8 +446,8 @@ async function loadOrders() {
     allOrders = await res.json();
     renderOrders();
   } catch (e) {
-    document.getElementById('content').innerHTML =
-      `<div class="empty">❌ Yuklab bo'lmadi. Qayta urinib ko'ring.</div>`;
+    document.getElementById('orders-content').innerHTML =
+      `<div class="empty">❌ Yuklab bo'lmadi.</div>`;
   }
 }
 
@@ -257,40 +460,29 @@ function filterOrders(status) {
 
 function renderOrders() {
   const filtered = allOrders.filter(o => o.status === currentFilter);
-  const content = document.getElementById('content');
-
+  const content = document.getElementById('orders-content');
   if (filtered.length === 0) {
     content.innerHTML = `<div class="empty">📭 Bu bo'limda buyurtmalar yo'q</div>`;
     return;
   }
-
   content.innerHTML = '';
-  filtered.forEach(order => {
-    content.appendChild(makeCard(order));
-  });
+  filtered.forEach(order => content.appendChild(makeOrderCard(order)));
 }
 
-function makeCard(order) {
+function makeOrderCard(order) {
   const div = document.createElement('div');
   div.className = 'order-card';
-  div.id = 'order-' + order.id;
-
   const itemsHtml = (order.items || []).map(i =>
     `<div class="item-row"><span>${i.name} × ${i.quantity}</span><span>${fmt(i.price * i.quantity)}</span></div>`
   ).join('');
-
   const addressHtml = order.address ? `<div class="client-address">📍 ${order.address}</div>` : '';
   const commentHtml = order.comment ? `<div class="client-address">💬 ${order.comment}</div>` : '';
-
   const nextStatus = NEXT_STATUS[order.status];
   const actionBtns = nextStatus ? `
     <div class="action-btns">
-      <button class="btn btn-accept" onclick="changeStatus(${order.id}, '${nextStatus}')">
-        ${NEXT_LABELS[order.status]}
-      </button>
+      <button class="btn btn-accept" onclick="changeStatus(${order.id}, '${nextStatus}')">${NEXT_LABELS[order.status]}</button>
       ${order.status === 'new' ? `<button class="btn btn-cancel" onclick="changeStatus(${order.id}, 'cancelled')">❌ Bekor</button>` : ''}
     </div>` : '';
-
   div.innerHTML = `
     <div class="order-header">
       <span class="order-id">#${String(order.id).padStart(4,'0')}</span>
@@ -300,13 +492,11 @@ function makeCard(order) {
     <div class="client-info">
       <div class="client-name">👤 ${order.client_name}</div>
       <div class="client-phone">📞 ${order.client_phone}</div>
-      ${addressHtml}
-      ${commentHtml}
+      ${addressHtml}${commentHtml}
     </div>
     <div class="items-list">${itemsHtml}</div>
     <div class="order-total"><span>Jami</span><span>${fmt(order.total_amount)}</span></div>
-    ${actionBtns}
-  `;
+    ${actionBtns}`;
   return div;
 }
 
@@ -324,9 +514,136 @@ async function changeStatus(orderId, newStatus) {
   }
 }
 
-// Автообновление каждые 30 секунд
+// ─── MENU ────────────────────────────────────────────────────
+async function loadMenu() {
+  document.getElementById('menu-content').innerHTML =
+    `<div class="loading"><div class="spinner"></div>Yuklanmoqda...</div>`;
+  try {
+    const res = await fetch(`${API}/api/menu/${RESTAURANT_ID}/all`);
+    if (!res.ok) throw new Error('Xato');
+    menuData = await res.json();
+    renderMenu();
+  } catch (e) {
+    document.getElementById('menu-content').innerHTML =
+      `<div class="empty">❌ Menyu yuklanmadi.</div>`;
+  }
+}
+
+function renderMenu() {
+  const content = document.getElementById('menu-content');
+  content.innerHTML = '';
+  if (!menuData || menuData.length === 0) {
+    content.innerHTML = `<div class="empty">📭 Menyu bo'sh</div>`;
+    return;
+  }
+  menuData.forEach(cat => {
+    if (!cat.products || cat.products.length === 0) return;
+    const block = document.createElement('div');
+    block.className = 'category-block';
+    block.innerHTML = `<div class="category-name">${cat.name}</div>`;
+    cat.products.forEach(p => block.appendChild(makeProductRow(p)));
+    content.appendChild(block);
+  });
+}
+
+function makeProductRow(p) {
+  const div = document.createElement('div');
+  div.className = 'product-row' + (p.is_available ? '' : ' unavailable');
+  div.id = 'product-' + p.id;
+  div.innerHTML = `
+    <div class="product-row-info">
+      <div class="product-row-name">${p.name}</div>
+      <div class="product-row-price">${fmt(p.price)}</div>
+    </div>
+    <div class="product-row-actions">
+      <button class="toggle-btn ${p.is_available ? 'on' : 'off'}" onclick="toggleProduct(${p.id}, ${p.is_available})"></button>
+      <button class="icon-btn" onclick="openEditPrice(${p.id}, ${p.price})">✏️</button>
+    </div>`;
+  return div;
+}
+
+async function toggleProduct(productId, currentAvailable) {
+  try {
+    const res = await fetch(`${API}/api/menu/product/${productId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_available: !currentAvailable })
+    });
+    if (!res.ok) throw new Error('Xato');
+    await loadMenu();
+  } catch (e) {
+    alert('Xato: ' + e.message);
+  }
+}
+
+function openEditPrice(productId, currentPrice) {
+  editingProductId = productId;
+  document.getElementById('newPriceInput').value = currentPrice;
+  document.getElementById('editPriceModal').classList.add('active');
+}
+
+async function savePrice() {
+  const newPrice = parseInt(document.getElementById('newPriceInput').value);
+  if (!newPrice || newPrice <= 0) { alert('Narxni to\'g\'ri kiriting'); return; }
+  try {
+    const res = await fetch(`${API}/api/menu/product/${editingProductId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ price: newPrice })
+    });
+    if (!res.ok) throw new Error('Xato');
+    closeModal('editPriceModal');
+    await loadMenu();
+  } catch (e) {
+    alert('Xato: ' + e.message);
+  }
+}
+
+function openAddModal() {
+  if (!menuData) return;
+  const select = document.getElementById('newProductCategory');
+  select.innerHTML = menuData.map(c =>
+    `<option value="${c.id}">${c.name}</option>`
+  ).join('');
+  document.getElementById('newProductName').value = '';
+  document.getElementById('newProductPrice').value = '';
+  document.getElementById('newProductDesc').value = '';
+  document.getElementById('addProductModal').classList.add('active');
+}
+
+async function saveNewProduct() {
+  const categoryId = parseInt(document.getElementById('newProductCategory').value);
+  const name = document.getElementById('newProductName').value.trim();
+  const price = parseInt(document.getElementById('newProductPrice').value);
+  const description = document.getElementById('newProductDesc').value.trim();
+  if (!name) { alert('Taom nomini kiriting'); return; }
+  if (!price || price <= 0) { alert('Narxni kiriting'); return; }
+  try {
+    const res = await fetch(`${API}/api/menu/product/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category_id: categoryId, name, price, description: description || null, is_available: true })
+    });
+    if (!res.ok) throw new Error('Xato');
+    closeModal('addProductModal');
+    await loadMenu();
+  } catch (e) {
+    alert('Xato: ' + e.message);
+  }
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('active');
+  });
+});
+
 loadOrders();
-setInterval(loadOrders, 30000);
+setInterval(() => { if (currentPage === 'orders') loadOrders(); }, 30000);
 </script>
 </body>
 </html>
