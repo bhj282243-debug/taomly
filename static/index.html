@@ -67,6 +67,17 @@
     margin-top: 2px;
   }
 
+  .table-badge {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 2px 10px;
+    background: var(--accent);
+    color: white;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
   .categories-scroll {
     display: flex;
     gap: 8px;
@@ -399,6 +410,34 @@
     color: var(--text);
   }
 
+  /* Баннер стола — показывается вместо выбора типа при dine_in */
+  .table-info-banner {
+    margin: 16px 16px 0;
+    padding: 14px 16px;
+    background: #FFF5EE;
+    border: 2px solid var(--accent);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .table-info-banner-icon { font-size: 28px; }
+
+  .table-info-banner-text { flex: 1; }
+
+  .table-info-banner-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--brown);
+  }
+
+  .table-info-banner-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
   .form-section {
     padding: 0 16px 16px;
     display: flex;
@@ -578,6 +617,7 @@
       <div>
         <div class="restaurant-name" id="restaurantName">Yuklanmoqda...</div>
         <div class="restaurant-address" id="restaurantAddress"></div>
+        <div id="tableBadge" style="display:none;" class="table-badge"></div>
       </div>
     </div>
     <div class="categories-scroll" id="categoriesNav"></div>
@@ -596,7 +636,8 @@
   <div class="cart-items" id="cartItemsList"></div>
   <div class="divider"></div>
 
-  <div class="order-type-section">
+  <!-- Выбор типа заказа — скрывается при dine_in -->
+  <div class="order-type-section" id="orderTypeSection">
     <div class="section-label">Buyurtma turi</div>
     <div class="order-type-btns">
       <div class="type-btn active" id="typeDelivery" onclick="selectType('delivery')">
@@ -610,7 +651,16 @@
     </div>
   </div>
 
-  <div class="form-section">
+  <!-- Баннер стола — показывается только при dine_in -->
+  <div class="table-info-banner" id="tableBanner" style="display:none;">
+    <div class="table-info-banner-icon">🪑</div>
+    <div class="table-info-banner-text">
+      <div class="table-info-banner-title" id="tableBannerTitle">Stol №1</div>
+      <div class="table-info-banner-sub">Buyurtma stolga yetkaziladi</div>
+    </div>
+  </div>
+
+  <div class="form-section" style="margin-top: 16px;">
     <input class="form-input" type="text" id="clientName" placeholder="Ismingiz" />
     <input class="form-input" type="tel" id="clientPhone" placeholder="+998 XX XXX XX XX" value="+998" />
     <input class="form-input" type="text" id="clientAddress" placeholder="Manzil (yetkazib berish uchun)" />
@@ -634,7 +684,7 @@
 <div id="successScreen" class="screen" style="display:none;">
   <div class="success-anim">✓</div>
   <div class="success-title">Buyurtma qabul qilindi!</div>
-  <div class="success-subtitle">Tez orada siz bilan bog'lanamiz va buyurtmangizni tasdiqlaymiz.</div>
+  <div class="success-subtitle" id="successSubtitle">Tez orada siz bilan bog'lanamiz va buyurtmangizni tasdiqlaymiz.</div>
   <div class="success-order-id">
     Buyurtma raqami
     <strong id="successOrderId">#0000</strong>
@@ -653,31 +703,91 @@
 </div>
 
 <script>
-const RESTAURANT_SLUG = 'chinar';
 const API_BASE = '';
 
 let restaurant = null;
 let cart = {};
 let orderType = 'delivery';
+let tableNumber = null;   // номер стола из QR (например "3")
+let tableDbId = null;     // реальный ID стола из БД
+let restaurantSlug = 'chinar'; // fallback
 
 const catEmoji = ['🍲','🍖','🔥','🥗','🍵','🥘','🍜','🫕'];
 
+// ─── ПАРСИНГ startapp ────────────────────────────────────────
+function parseStartApp() {
+  const tg = window.Telegram?.WebApp;
+  const startParam = tg?.initDataUnsafe?.start_param || '';
+
+  if (startParam) {
+    // Формат: chinar_3 или chinar
+    const parts = startParam.split('_');
+    if (parts.length >= 2) {
+      // Последний элемент — номер стола, остальное — slug
+      tableNumber = parts[parts.length - 1];
+      restaurantSlug = parts.slice(0, -1).join('_');
+
+      // Проверяем что tableNumber — число
+      if (isNaN(tableNumber)) {
+        // Нет номера стола — весь startParam это slug
+        restaurantSlug = startParam;
+        tableNumber = null;
+      }
+    } else {
+      restaurantSlug = startParam;
+      tableNumber = null;
+    }
+  }
+
+  // Если есть стол — ставим dine_in
+  if (tableNumber) {
+    orderType = 'dine_in';
+  }
+}
+
+// ─── ЗАГРУЗКА МЕНЮ ───────────────────────────────────────────
 function fmt(p) {
   return p.toLocaleString('uz-UZ') + ' so\'m';
 }
 
 async function loadMenu() {
   try {
-    const res = await fetch(`${API_BASE}/api/restaurants/${RESTAURANT_SLUG}`);
+    const res = await fetch(`${API_BASE}/api/restaurants/${restaurantSlug}`);
     if (!res.ok) throw new Error('Server xatosi');
     restaurant = await res.json();
+
     document.getElementById('restaurantName').textContent = restaurant.name;
     document.getElementById('restaurantAddress').textContent = restaurant.address || '';
+
+    // Показываем бейдж стола в хедере
+    if (tableNumber) {
+      const badge = document.getElementById('tableBadge');
+      badge.textContent = '🪑 Stol №' + tableNumber;
+      badge.style.display = 'inline-block';
+
+      // Ищем table_id в БД по номеру стола
+      await resolveTableId();
+    }
+
     renderCategories();
     renderMenu();
   } catch (e) {
     document.getElementById('menuContent').innerHTML =
       `<div class="error-msg">❌ Menyu yuklanmadi.<br>Qayta urinib ko'ring.</div>`;
+  }
+}
+
+async function resolveTableId() {
+  // Получаем ID стола из БД по номеру
+  try {
+    const res = await fetch(`${API_BASE}/api/restaurants/${restaurantSlug}/table/${tableNumber}`);
+    if (res.ok) {
+      const data = await res.json();
+      tableDbId = data.id;
+    }
+  } catch (e) {
+    // Если эндпоинт не найден — оставляем null
+    tableDbId = null;
   }
 }
 
@@ -821,12 +931,25 @@ function renderCart() {
       </div>`;
     list.appendChild(div);
   });
+
   const n = cartCount();
   const total = cartTotal();
   document.getElementById('summaryCount').textContent = n + ' ta taom';
   document.getElementById('summarySubtotal').textContent = fmt(total);
   document.getElementById('summaryTotal').textContent = fmt(total);
-  document.getElementById('clientAddress').style.display = orderType === 'delivery' ? 'block' : 'none';
+
+  // dine_in — скрываем выбор типа, показываем баннер стола
+  if (orderType === 'dine_in') {
+    document.getElementById('orderTypeSection').style.display = 'none';
+    document.getElementById('clientAddress').style.display = 'none';
+    const banner = document.getElementById('tableBanner');
+    banner.style.display = 'flex';
+    document.getElementById('tableBannerTitle').textContent = 'Stol №' + tableNumber;
+  } else {
+    document.getElementById('orderTypeSection').style.display = 'block';
+    document.getElementById('tableBanner').style.display = 'none';
+    document.getElementById('clientAddress').style.display = orderType === 'delivery' ? 'block' : 'none';
+  }
 }
 
 function cartChangeQty(id, delta) {
@@ -859,6 +982,7 @@ async function submitOrder() {
     client_phone: phone,
     order_type: orderType,
     address: orderType === 'delivery' ? address : null,
+    table_id: orderType === 'dine_in' ? tableDbId : null,
     comment: comment || null,
     items: cartItems().map(i => ({ product_id: i.id, quantity: i.qty }))
   };
@@ -884,6 +1008,19 @@ async function submitOrder() {
 
 function showSuccess(orderId) {
   document.getElementById('successOrderId').textContent = '#' + String(orderId).padStart(4, '0');
+
+  // Текст успеха зависит от типа заказа
+  if (orderType === 'dine_in') {
+    document.getElementById('successSubtitle').textContent =
+      'Buyurtmangiz qabul qilindi! Tez orada stolga yetkaziladi 🍽️';
+  } else if (orderType === 'takeaway') {
+    document.getElementById('successSubtitle').textContent =
+      'Buyurtmangiz qabul qilindi! Tayyor bo\'lganda xabar beramiz 🥡';
+  } else {
+    document.getElementById('successSubtitle').textContent =
+      'Buyurtmangiz qabul qilindi! Tez orada yetkaziladi 🛵';
+  }
+
   document.getElementById('successScreen').classList.add('active');
   cart = {};
   updateBar();
@@ -898,6 +1035,7 @@ function backToMenu() {
 window.addEventListener('DOMContentLoaded', () => {
   const tg = window.Telegram?.WebApp;
   if (tg) { tg.ready(); tg.expand(); }
+  parseStartApp();
   loadMenu();
 });
 </script>
