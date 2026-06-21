@@ -273,7 +273,7 @@
     display: none;
     position: fixed;
     inset: 0;
-ращ background: var(--cream);
+    background: var(--cream);
     z-index: 300;
     overflow-y: auto;
     animation: slideUp 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
@@ -891,7 +891,7 @@ function showSuccess(orderId) {
 
 function backToMenu() {
   document.getElementById('successScreen').classList.remove('active');
-  document.getElementById('cartScreen').classList.remove('remove');
+  document.getElementById('cartScreen').classList.remove('active');
   renderMenu();
 }
 
