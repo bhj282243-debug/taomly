@@ -10,12 +10,13 @@ import handlers
 router = APIRouter()
 
 VALID_STATUS_TRANSITIONS = {
-    "new":        ["accepted", "cancelled"],
-    "accepted":   ["preparing", "cancelled"],
-    "preparing":  ["delivering", "cancelled"],
-    "delivering": ["completed"],
-    "completed":  [],
-    "cancelled":  [],
+    "new":                ["accepted", "cancelled"],
+    "accepted":           ["preparing", "cancelled"],
+    "preparing":          ["ready_for_delivery", "cancelled"],
+    "ready_for_delivery": ["delivering", "cancelled"],
+    "delivering":         ["completed"],
+    "completed":          [],
+    "cancelled":          [],
 }
 
 
@@ -79,7 +80,6 @@ def create_order(data: OrderCreate, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=500, detail="Ошибка при сохранении заказа")
 
-    # Уведомление персоналу
     db.refresh(order)
     order_with_items = (
         db.query(Order)
@@ -147,7 +147,6 @@ def update_order_status(
     db.commit()
     db.refresh(order)
 
-    # Уведомление клиенту при принятии
     if data.status == "accepted":
         handlers.notify_client_accepted(order)
 
