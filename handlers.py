@@ -16,11 +16,14 @@ MANAGER_ID    = 331294063
 def handle_start(message):
     """Приветствие с кнопкой открытия меню."""
 
-    # Постоянная кнопка над клавиатурой (всегда видна)
-    reply_markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+    # Постоянная большая кнопка над клавиатурой
+    reply_markup = telebot.types.ReplyKeyboardMarkup(
+        resize_keyboard=True,
+        is_persistent=True
+    )
     reply_markup.add(
         telebot.types.KeyboardButton(
-            text="🍽️ Menyuni ochish",
+            text="🍽️  MENYUNI OCHISH  🍽️",
             web_app=telebot.types.WebAppInfo(url="https://taomly.onrender.com/app")
         )
     )
@@ -29,43 +32,40 @@ def handle_start(message):
     inline_markup = telebot.types.InlineKeyboardMarkup()
     inline_markup.add(
         telebot.types.InlineKeyboardButton(
-            text="🍽️ Menyuni ochish",
+            text="🍽️  Menyuni ochish  →",
             web_app=telebot.types.WebAppInfo(url="https://taomly.onrender.com/app")
         )
     )
 
-    name = message.from_user.first_name or "mehmon"
-
     bot.send_message(
         message.chat.id,
-        f"👋 Assalomu alaykum, *{name}*!\n\n"
-        f"🍽️ *Chinar Restaurant*ga xush kelibsiz!\n\n"
-        f"Bizning mazali taomlarimizdan buyurtma bering — tez va qulay 🚀\n\n"
-        f"👇 Quyidagi tugmani bosing:",
-        parse_mode="Markdown",
+        "🌟 Xush kelibsiz!\n\n"
+        "🍽️ Mazali taomlar buyurtma qiling\n"
+        "⚡️ Tez va qulay — bir necha soniyada\n"
+        "🚀 Quyidagi tugmani bosing:",
         reply_markup=reply_markup
     )
 
     bot.send_message(
         message.chat.id,
-        "⬇️",
+        "👇",
         reply_markup=inline_markup
     )
 
 
-@bot.message_handler(func=lambda message: message.text == "🍽️ Menyuni ochish")
+@bot.message_handler(func=lambda message: "MENYUNI OCHISH" in message.text)
 def handle_menu_button(message):
     """Обработка нажатия на постоянную кнопку меню."""
     inline_markup = telebot.types.InlineKeyboardMarkup()
     inline_markup.add(
         telebot.types.InlineKeyboardButton(
-            text="🍽️ Menyuni ochish",
+            text="🍽️  Menyuni ochish  →",
             web_app=telebot.types.WebAppInfo(url="https://taomly.onrender.com/app")
         )
     )
     bot.send_message(
         message.chat.id,
-        "🍽️ Menyuni ochish uchun quyidagi tugmani bosing:",
+        "👇 Menyuni ochish uchun bosing:",
         reply_markup=inline_markup
     )
 
