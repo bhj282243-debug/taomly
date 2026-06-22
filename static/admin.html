@@ -35,14 +35,15 @@
     width: 100%; max-width: 360px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.08);
   }
+  .login-label { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 8px; display: block; }
   .login-input {
     width: 100%; padding: 16px; border-radius: 14px;
     border: 1.5px solid var(--border); font-size: 16px;
     color: var(--text); background: var(--cream);
     outline: none; margin-bottom: 14px; font-family: inherit;
-    letter-spacing: 2px;
   }
   .login-input:focus { border-color: var(--accent); }
+  .login-pass { letter-spacing: 2px; }
   .login-btn {
     width: 100%; padding: 16px; background: var(--accent);
     border: none; border-radius: 14px; color: white;
@@ -65,7 +66,9 @@
     justify-content: space-between;
     position: sticky; top: 0; z-index: 10;
   }
+  .header-left { display: flex; flex-direction: column; }
   .header h1 { font-size: 18px; color: var(--brown); }
+  .header-slug { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .header-right { display: flex; gap: 8px; align-items: center; }
   .refresh-btn {
     padding: 8px 16px; background: var(--accent);
@@ -217,6 +220,12 @@
     animation: spin 0.8s linear infinite; margin: 0 auto 12px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+  .error-screen {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 100vh; padding: 32px; text-align: center;
+    color: var(--muted);
+  }
+  .error-screen h2 { font-size: 20px; color: var(--brown); margin-bottom: 10px; }
 </style>
 </head>
 <body>
@@ -225,19 +234,32 @@
 <div class="login-screen" id="loginScreen">
   <div class="login-logo">🍽️</div>
   <div class="login-title">Taomly Admin</div>
-  <div class="login-sub">Kirish uchun parolni kiriting</div>
+  <div class="login-sub">Kirish uchun ma'lumotlarni kiriting</div>
   <div class="login-card">
-    <input class="login-input" type="password" id="passwordInput" placeholder="••••••••" />
+    <label class="login-label">Restaurant slug</label>
+    <input class="login-input" type="text" id="slugInput" placeholder="chinar" />
+    <label class="login-label">Parol</label>
+    <input class="login-input login-pass" type="password" id="passwordInput" placeholder="••••••••" />
     <button class="login-btn" onclick="doLogin()">Kirish →</button>
-    <div class="login-error" id="loginError">❌ Noto'g'ri parol</div>
+    <div class="login-error" id="loginError">❌ Noto'g'ri slug yoki parol</div>
   </div>
+</div>
+
+<!-- ─── ERROR SCREEN ─── -->
+<div class="error-screen" id="errorScreen" style="display:none;">
+  <div style="font-size:48px;margin-bottom:16px;">❌</div>
+  <h2>Restoran topilmadi</h2>
+  <p>Slug noto'g'ri yoki restoran mavjud emas.</p>
 </div>
 
 <!-- ─── MAIN APP ─── -->
 <div class="app" id="mainApp">
 
   <div class="header">
-    <h1>🍽️ Taomly Admin</h1>
+    <div class="header-left">
+      <h1 id="headerTitle">🍽️ Taomly Admin</h1>
+      <span class="header-slug" id="headerSlug"></span>
+    </div>
     <div class="header-right">
       <button class="refresh-btn" onclick="refreshCurrent()">↻</button>
       <button class="logout-btn" onclick="doLogout()">Chiqish</button>
@@ -312,12 +334,12 @@
 </div>
 
 <script>
-const RESTAURANT_ID = 1;
-const RESTAURANT_SLUG = 'chinar';
 const API = '';
 const ADMIN_PASSWORD = 'taomly2024';
 const SESSION_KEY = 'taomly_admin_auth';
 
+let RESTAURANT_ID = null;
+let RESTAURANT_SLUG = null;
 let allOrders = [];
 let currentFilter = 'new';
 let menuData = null;
@@ -326,39 +348,84 @@ let currentPage = 'orders';
 
 // ─── AUTH ─────────────────────────────────────────────────────
 function checkAuth() {
-  if (sessionStorage.getItem(SESSION_KEY) === 'true') {
-    showApp();
+  // Сначала проверяем URL параметр slug
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlSlug = urlParams.get('slug');
+
+  const saved = sessionStorage.getItem(SESSION_KEY);
+  if (saved) {
+    const data = JSON.parse(saved);
+    // Если slug в URL отличается от сохранённого — требуем вход заново
+    if (urlSlug && data.slug !== urlSlug) {
+      sessionStorage.removeItem(SESSION_KEY);
+    } else {
+      RESTAURANT_SLUG = data.slug;
+      RESTAURANT_ID = data.id;
+      loadApp();
+      return;
+    }
+  }
+
+  // Если slug передан в URL — подставляем в поле
+  if (urlSlug) {
+    document.getElementById('slugInput').value = urlSlug;
   }
 }
 
-function doLogin() {
-  const input = document.getElementById('passwordInput').value;
-  if (input === ADMIN_PASSWORD) {
-    sessionStorage.setItem(SESSION_KEY, 'true');
-    showApp();
-  } else {
+async function doLogin() {
+  const slugInput = document.getElementById('slugInput').value.trim().toLowerCase();
+  const passInput = document.getElementById('passwordInput').value;
+
+  if (!slugInput) {
+    document.getElementById('loginError').textContent = '❌ Slug kiriting';
+    document.getElementById('loginError').style.display = 'block';
+    return;
+  }
+  if (passInput !== ADMIN_PASSWORD) {
+    document.getElementById('loginError').textContent = '❌ Noto\'g\'ri parol';
     document.getElementById('loginError').style.display = 'block';
     document.getElementById('passwordInput').value = '';
-    document.getElementById('passwordInput').focus();
+    return;
   }
+
+  // Проверяем ресторан через API
+  try {
+    const res = await fetch(`${API}/api/restaurants/${slugInput}`);
+    if (!res.ok) throw new Error('not found');
+    const data = await res.json();
+    RESTAURANT_ID = data.id;
+    RESTAURANT_SLUG = slugInput;
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ slug: slugInput, id: data.id }));
+    loadApp();
+  } catch (e) {
+    document.getElementById('loginError').textContent = '❌ Restoran topilmadi';
+    document.getElementById('loginError').style.display = 'block';
+  }
+}
+
+function loadApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'block';
+  document.getElementById('headerTitle').textContent = '🍽️ Taomly Admin';
+  document.getElementById('headerSlug').textContent = RESTAURANT_SLUG;
+  loadOrders();
 }
 
 function doLogout() {
   sessionStorage.removeItem(SESSION_KEY);
+  RESTAURANT_ID = null;
+  RESTAURANT_SLUG = null;
   document.getElementById('mainApp').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('passwordInput').value = '';
   document.getElementById('loginError').style.display = 'none';
 }
 
-function showApp() {
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('mainApp').style.display = 'block';
-  loadOrders();
-}
-
 document.getElementById('passwordInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') doLogin();
+});
+document.getElementById('slugInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('passwordInput').focus();
 });
 
 // ─── NAVIGATION ──────────────────────────────────────────────
@@ -617,7 +684,9 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 
 // ─── INIT ────────────────────────────────────────────────────
 checkAuth();
-setInterval(() => { if (currentPage === 'orders' && sessionStorage.getItem(SESSION_KEY)) loadOrders(); }, 30000);
+setInterval(() => {
+  if (currentPage === 'orders' && RESTAURANT_ID) loadOrders();
+}, 30000);
 </script>
 </body>
 </html>
