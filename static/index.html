@@ -183,7 +183,8 @@
   }
 
   .screen {
-    display: none; position: fixed; inset: 0;
+    display: none;
+    position: fixed; inset: 0;
     background: var(--cream); z-index: 300; overflow-y: auto;
     animation: slideUp 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
   }
@@ -282,7 +283,8 @@
   .checkout-btn:disabled { background: var(--text-muted); cursor: not-allowed; }
 
   #successScreen.active {
-    display: flex; flex-direction: column; align-items: center;
+    display: flex !important;
+    flex-direction: column; align-items: center;
     justify-content: center; min-height: 100vh; padding: 32px; text-align: center;
   }
   .success-anim {
@@ -389,7 +391,7 @@
   <button class="checkout-btn" id="checkoutBtn" onclick="submitOrder()">Buyurtma berish</button>
 </div>
 
-<div id="successScreen" class="screen" style="display:none;">
+<div id="successScreen" class="screen">
   <div class="success-anim">✓</div>
   <div class="success-title">Buyurtma qabul qilindi!</div>
   <div class="success-subtitle" id="successSubtitle">Tez orada siz bilan bog'lanamiz.</div>
@@ -424,11 +426,8 @@ let restaurantSlug = DEFAULT_SLUG;
 const catEmoji = ['🍲','🍖','🔥','🥗','🍵','🥘','🍜','🫕'];
 
 // ─── ПАРСИНГ ПАРАМЕТРОВ ──────────────────────────────────────
-// Поддерживает оба варианта:
-// 1. URL параметры: ?slug=chinar&table=5 (веб QR)
-// 2. Telegram startapp: startapp=chinar_5 (Telegram Mini App)
 function parseParams() {
-  // Сначала пробуем URL параметры (веб вариант)
+  // Вариант 1: URL параметры ?slug=chinar&table=5 (веб QR)
   const urlParams = new URLSearchParams(window.location.search);
   const slugParam = urlParams.get('slug');
   const tableParam = urlParams.get('table');
@@ -442,7 +441,7 @@ function parseParams() {
     return;
   }
 
-  // Потом пробуем Telegram startapp
+  // Вариант 2: Telegram startapp=chinar_5
   const tg = window.Telegram?.WebApp;
   const startParam = tg?.initDataUnsafe?.start_param || '';
   if (startParam) {
@@ -662,6 +661,7 @@ function cartChangeQty(id, delta) {
 }
 
 async function submitOrder() {
+  const btn = document.getElementById('checkoutBtn'); // ИСПРАВЛЕНО
   const name = document.getElementById('clientName').value.trim();
   const phone = document.getElementById('clientPhone').value.trim();
   const address = document.getElementById('clientAddress').value.trim();
@@ -672,6 +672,7 @@ async function submitOrder() {
     if (!phone || phone === '+998') { alert('Telefon raqamingizni kiriting'); return; }
   }
   if (orderType === 'delivery' && !address) { alert('Manzilni kiriting'); return; }
+
   btn.disabled = true;
   btn.textContent = 'Yuborilmoqda...';
 
@@ -681,8 +682,8 @@ async function submitOrder() {
   const payload = {
     restaurant_id: restaurant.id,
     client_telegram_id: tgUser?.id || null,
-    client_name: name,
-    client_phone: phone,
+    client_name: name || null,
+    client_phone: phone || null,
     order_type: orderType,
     address: orderType === 'delivery' ? address : null,
     table_id: orderType === 'dine_in' ? tableDbId : null,
@@ -718,6 +719,7 @@ function showSuccess(orderId) {
   } else {
     document.getElementById('successSubtitle').textContent = 'Buyurtmangiz qabul qilindi! Tez orada yetkaziladi 🛵';
   }
+  document.getElementById('cartScreen').classList.remove('active');
   document.getElementById('successScreen').classList.add('active');
   cart = {};
   updateBar();
@@ -725,7 +727,6 @@ function showSuccess(orderId) {
 
 function backToMenu() {
   document.getElementById('successScreen').classList.remove('active');
-  document.getElementById('cartScreen').classList.remove('active');
   renderMenu();
 }
 
