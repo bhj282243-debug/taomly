@@ -38,12 +38,11 @@ def handle_start(message):
 
     bot.send_message(
         message.chat.id,
-        f"👋 Assalomu alaykum, *{name}*\\!\n\n"
-        f"🍽️ *Chinar Restaurant*ga xush kelibsiz\\!\n\n"
-        f"Bizning mazali taomlarimizdan buyurtma bering — "
-        f"tez va qulay 🚀\n\n"
-        f"👇 *Menyuni ochish* tugmasini bosing\\:",
-        parse_mode="MarkdownV2",
+        f"👋 Assalomu alaykum, *{name}*!\n\n"
+        f"🍽️ *Chinar Restaurant*ga xush kelibsiz!\n\n"
+        f"Bizning mazali taomlarimizdan buyurtma bering — tez va qulay 🚀\n\n"
+        f"👇 Quyidagi tugmani bosing:",
+        parse_mode="Markdown",
         reply_markup=reply_markup
     )
 
