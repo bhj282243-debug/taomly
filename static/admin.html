@@ -17,44 +17,72 @@
   }
   body { font-family: -apple-system, sans-serif; background: var(--cream); color: var(--text); }
 
-  .header {
-    background: var(--card);
-    padding: 16px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 10;
+  /* ─── LOGIN SCREEN ─── */
+  .login-screen {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 100vh; padding: 32px;
   }
-  .header h1 { font-size: 18px; color: var(--brown); }
-  .refresh-btn {
-    padding: 8px 16px;
-    background: var(--accent);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
+  .login-logo {
+    width: 80px; height: 80px; background: var(--accent);
+    border-radius: 24px; display: flex; align-items: center;
+    justify-content: center; font-size: 40px; margin-bottom: 24px;
+    box-shadow: 0 8px 24px rgba(200,112,58,0.3);
+  }
+  .login-title { font-size: 26px; font-weight: 800; color: var(--brown); margin-bottom: 6px; }
+  .login-sub { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
+  .login-card {
+    background: var(--card); border-radius: 20px; padding: 28px 24px;
+    width: 100%; max-width: 360px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+  .login-input {
+    width: 100%; padding: 16px; border-radius: 14px;
+    border: 1.5px solid var(--border); font-size: 16px;
+    color: var(--text); background: var(--cream);
+    outline: none; margin-bottom: 14px; font-family: inherit;
+    letter-spacing: 2px;
+  }
+  .login-input:focus { border-color: var(--accent); }
+  .login-btn {
+    width: 100%; padding: 16px; background: var(--accent);
+    border: none; border-radius: 14px; color: white;
+    font-size: 16px; font-weight: 700; cursor: pointer;
+    transition: transform 0.1s;
+  }
+  .login-btn:active { transform: scale(0.98); }
+  .login-error {
+    color: #C62828; font-size: 13px; text-align: center;
+    margin-top: 12px; display: none;
   }
 
-  .main-tabs {
-    display: flex;
-    background: var(--card);
-    border-bottom: 2px solid var(--border);
+  /* ─── MAIN APP ─── */
+  .app { display: none; }
+
+  .header {
+    background: var(--card); padding: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 10;
   }
+  .header h1 { font-size: 18px; color: var(--brown); }
+  .header-right { display: flex; gap: 8px; align-items: center; }
+  .refresh-btn {
+    padding: 8px 16px; background: var(--accent);
+    color: white; border: none; border-radius: 10px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .logout-btn {
+    padding: 8px 12px; background: var(--border);
+    color: var(--muted); border: none; border-radius: 10px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+
+  .main-tabs { display: flex; background: var(--card); border-bottom: 2px solid var(--border); }
   .main-tab {
-    flex: 1;
-    padding: 14px;
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--muted);
-    cursor: pointer;
-    text-align: center;
-    border-bottom: 3px solid transparent;
-    transition: all 0.2s;
+    flex: 1; padding: 14px; font-size: 14px; font-weight: 700;
+    color: var(--muted); cursor: pointer; text-align: center;
+    border-bottom: 3px solid transparent; transition: all 0.2s;
   }
   .main-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
@@ -62,46 +90,26 @@
   .page.active { display: block; }
 
   .tabs {
-    display: flex;
-    background: var(--card);
+    display: flex; background: var(--card);
     border-bottom: 1px solid var(--border);
-    overflow-x: auto;
-    scrollbar-width: none;
+    overflow-x: auto; scrollbar-width: none;
   }
   .tab {
-    flex-shrink: 0;
-    padding: 12px 16px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--muted);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    white-space: nowrap;
+    flex-shrink: 0; padding: 12px 16px; font-size: 13px;
+    font-weight: 600; color: var(--muted); cursor: pointer;
+    border-bottom: 2px solid transparent; white-space: nowrap;
   }
   .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
   .content { padding: 16px; max-width: 600px; margin: 0 auto; }
 
   .order-card {
-    background: var(--card);
-    border-radius: 16px;
-    padding: 16px;
-    margin-bottom: 12px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    background: var(--card); border-radius: 16px; padding: 16px;
+    margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   }
-  .order-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-  }
+  .order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .order-id { font-size: 16px; font-weight: 700; color: var(--brown); }
-  .status-badge {
-    padding: 4px 10px;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: 600;
-  }
+  .status-badge { padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; }
   .status-new { background: #FFF3E0; color: #E65100; }
   .status-accepted { background: #E8F5E9; color: #2E7D32; }
   .status-preparing { background: #E3F2FD; color: #1565C0; }
@@ -115,242 +123,165 @@
   .client-phone { font-size: 13px; color: var(--accent); }
   .client-address { font-size: 13px; color: var(--muted); margin-top: 2px; }
   .items-list { border-top: 1px solid var(--border); padding-top: 10px; margin-bottom: 10px; }
-  .item-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 13px;
-    padding: 3px 0;
-  }
+  .item-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
   .order-total {
-    display: flex;
-    justify-content: space-between;
-    font-size: 15px;
-    font-weight: 700;
+    display: flex; justify-content: space-between;
+    font-size: 15px; font-weight: 700;
     border-top: 1px solid var(--border);
-    padding-top: 10px;
-    margin-bottom: 12px;
+    padding-top: 10px; margin-bottom: 12px;
   }
   .order-total span:last-child { color: var(--accent); }
   .action-btns { display: flex; gap: 8px; }
-  .btn {
-    flex: 1;
-    padding: 12px;
-    border: none;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: transform 0.1s;
-  }
+  .btn { flex: 1; padding: 12px; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: transform 0.1s; }
   .btn:active { transform: scale(0.97); }
   .btn-accept { background: var(--accent); color: white; }
   .btn-cancel { background: var(--border); color: var(--muted); }
   .order-time { font-size: 12px; color: var(--muted); }
 
-  /* MENU */
   .menu-content { padding: 16px; max-width: 600px; margin: 0 auto; }
   .add-product-btn {
-    width: 100%;
-    padding: 14px;
-    background: var(--accent);
-    color: white;
-    border: none;
-    border-radius: 14px;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-    margin-bottom: 16px;
+    width: 100%; padding: 14px; background: var(--accent);
+    color: white; border: none; border-radius: 14px;
+    font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 16px;
   }
   .category-block { margin-bottom: 24px; }
   .category-name {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--brown);
-    margin-bottom: 10px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--border);
+    font-size: 15px; font-weight: 700; color: var(--brown);
+    margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
   }
   .product-row {
-    background: var(--card);
-    border-radius: 14px;
-    padding: 14px;
-    margin-bottom: 8px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    background: var(--card); border-radius: 14px; padding: 14px;
+    margin-bottom: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    display: flex; align-items: center; gap: 12px;
   }
   .product-row-info { flex: 1; }
   .product-row-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
   .product-row-price { font-size: 13px; color: var(--accent); font-weight: 600; }
   .product-row-actions { display: flex; gap: 6px; align-items: center; }
-
   .toggle-btn {
-    width: 44px;
-    height: 24px;
-    border-radius: 12px;
-    border: none;
-    cursor: pointer;
-    position: relative;
-    transition: background 0.2s;
-    flex-shrink: 0;
+    width: 44px; height: 24px; border-radius: 12px; border: none;
+    cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0;
   }
   .toggle-btn.on { background: #4CAF50; }
   .toggle-btn.off { background: #ccc; }
   .toggle-btn::after {
-    content: '';
-    position: absolute;
-    width: 18px;
-    height: 18px;
-    background: white;
-    border-radius: 50%;
-    top: 3px;
-    transition: left 0.2s;
+    content: ''; position: absolute; width: 18px; height: 18px;
+    background: white; border-radius: 50%; top: 3px; transition: left 0.2s;
   }
   .toggle-btn.on::after { left: 23px; }
   .toggle-btn.off::after { left: 3px; }
-
   .icon-btn {
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    border: 1.5px solid var(--border);
-    background: var(--card);
-    font-size: 16px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 34px; height: 34px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--card);
+    font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;
   }
-  .icon-btn:active { background: var(--cream); }
-
   .unavailable .product-row-name { color: var(--muted); }
   .unavailable .product-row-price { color: var(--muted); }
 
-  /* MODAL */
   .modal-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.4);
-    z-index: 1000;
-    align-items: flex-end;
-    justify-content: center;
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4); z-index: 1000;
+    align-items: flex-end; justify-content: center;
   }
   .modal-overlay.active { display: flex; }
   .modal {
-    background: var(--card);
-    border-radius: 20px 20px 0 0;
-    padding: 24px 20px 40px;
-    width: 100%;
-    max-width: 600px;
+    background: var(--card); border-radius: 20px 20px 0 0;
+    padding: 24px 20px 40px; width: 100%; max-width: 600px;
     animation: slideUp 0.25s ease;
   }
-  @keyframes slideUp {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
-  }
-  .modal-title {
-    font-size: 17px;
-    font-weight: 700;
-    color: var(--brown);
-    margin-bottom: 20px;
-    text-align: center;
-  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-title { font-size: 17px; font-weight: 700; color: var(--brown); margin-bottom: 20px; text-align: center; }
   .modal-input {
-    width: 100%;
-    padding: 14px 16px;
-    border-radius: 12px;
-    border: 1.5px solid var(--border);
-    font-size: 15px;
-    color: var(--text);
-    background: var(--cream);
-    outline: none;
-    margin-bottom: 12px;
-    font-family: inherit;
+    width: 100%; padding: 14px 16px; border-radius: 12px;
+    border: 1.5px solid var(--border); font-size: 15px;
+    color: var(--text); background: var(--cream);
+    outline: none; margin-bottom: 12px; font-family: inherit;
   }
   .modal-input:focus { border-color: var(--accent); }
   .modal-select {
-    width: 100%;
-    padding: 14px 16px;
-    border-radius: 12px;
-    border: 1.5px solid var(--border);
-    font-size: 15px;
-    color: var(--text);
-    background: var(--cream);
-    outline: none;
-    margin-bottom: 12px;
-    font-family: inherit;
+    width: 100%; padding: 14px 16px; border-radius: 12px;
+    border: 1.5px solid var(--border); font-size: 15px;
+    color: var(--text); background: var(--cream);
+    outline: none; margin-bottom: 12px; font-family: inherit;
   }
   .modal-btns { display: flex; gap: 10px; margin-top: 8px; }
-  .modal-btn {
-    flex: 1;
-    padding: 14px;
-    border: none;
-    border-radius: 12px;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-  }
+  .modal-btn { flex: 1; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; }
   .modal-btn-save { background: var(--accent); color: white; }
   .modal-btn-cancel { background: var(--border); color: var(--muted); }
 
   .empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 15px; }
   .loading { text-align: center; padding: 60px 20px; color: var(--muted); }
   .spinner {
-    width: 32px; height: 32px;
-    border: 3px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin: 0 auto 12px;
+    width: 32px; height: 32px; border: 3px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 12px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
-<div class="header">
-  <h1>🍽️ Taomly Admin</h1>
-  <button class="refresh-btn" onclick="refreshCurrent()">↻ Yangilash</button>
-</div>
-
-<div class="main-tabs">
-  <div class="main-tab active" id="mtab-orders" onclick="switchPage('orders')">📋 Buyurtmalar</div>
-  <div class="main-tab" id="mtab-menu" onclick="switchPage('menu')">🍽️ Menyu</div>
-  <div class="main-tab" id="mtab-analytics" onclick="switchPage('analytics')" style="color:#ccc;pointer-events:none;">📊 Analitika</div>
-</div>
-
-<!-- ORDERS PAGE -->
-<div class="page active" id="page-orders">
-  <div class="tabs">
-    <div class="tab active" onclick="filterOrders('new')" id="tab-new">🔴 Yangi</div>
-    <div class="tab" onclick="filterOrders('accepted')" id="tab-accepted">✅ Qabul</div>
-    <div class="tab" onclick="filterOrders('preparing')" id="tab-preparing">👨‍🍳 Tayyorlanmoqda</div>
-    <div class="tab" onclick="filterOrders('ready_for_delivery')" id="tab-ready_for_delivery">📦 Tayyor</div>
-    <div class="tab" onclick="filterOrders('delivering')" id="tab-delivering">🛵 Yetkazilmoqda</div>
-    <div class="tab" onclick="filterOrders('completed')" id="tab-completed">✔️ Bajarildi</div>
-  </div>
-  <div class="content" id="orders-content">
-    <div class="loading"><div class="spinner"></div>Yuklanmoqda...</div>
+<!-- ─── LOGIN SCREEN ─── -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-logo">🍽️</div>
+  <div class="login-title">Taomly Admin</div>
+  <div class="login-sub">Kirish uchun parolni kiriting</div>
+  <div class="login-card">
+    <input class="login-input" type="password" id="passwordInput" placeholder="••••••••" />
+    <button class="login-btn" onclick="doLogin()">Kirish →</button>
+    <div class="login-error" id="loginError">❌ Noto'g'ri parol</div>
   </div>
 </div>
 
-<!-- MENU PAGE -->
-<div class="page" id="page-menu">
-  <div class="menu-content">
-    <button class="add-product-btn" onclick="openAddModal()">+ Yangi taom qo'shish</button>
-    <div id="menu-content">
+<!-- ─── MAIN APP ─── -->
+<div class="app" id="mainApp">
+
+  <div class="header">
+    <h1>🍽️ Taomly Admin</h1>
+    <div class="header-right">
+      <button class="refresh-btn" onclick="refreshCurrent()">↻</button>
+      <button class="logout-btn" onclick="doLogout()">Chiqish</button>
+    </div>
+  </div>
+
+  <div class="main-tabs">
+    <div class="main-tab active" id="mtab-orders" onclick="switchPage('orders')">📋 Buyurtmalar</div>
+    <div class="main-tab" id="mtab-menu" onclick="switchPage('menu')">🍽️ Menyu</div>
+    <div class="main-tab" id="mtab-analytics" onclick="switchPage('analytics')" style="color:#ccc;pointer-events:none;">📊 Analitika</div>
+  </div>
+
+  <!-- ORDERS PAGE -->
+  <div class="page active" id="page-orders">
+    <div class="tabs">
+      <div class="tab active" onclick="filterOrders('new')" id="tab-new">🔴 Yangi</div>
+      <div class="tab" onclick="filterOrders('accepted')" id="tab-accepted">✅ Qabul</div>
+      <div class="tab" onclick="filterOrders('preparing')" id="tab-preparing">👨‍🍳 Tayyorlanmoqda</div>
+      <div class="tab" onclick="filterOrders('ready_for_delivery')" id="tab-ready_for_delivery">📦 Tayyor</div>
+      <div class="tab" onclick="filterOrders('delivering')" id="tab-delivering">🛵 Yetkazilmoqda</div>
+      <div class="tab" onclick="filterOrders('completed')" id="tab-completed">✔️ Bajarildi</div>
+    </div>
+    <div class="content" id="orders-content">
       <div class="loading"><div class="spinner"></div>Yuklanmoqda...</div>
     </div>
   </div>
-</div>
 
-<!-- ANALYTICS PAGE -->
-<div class="page" id="page-analytics">
-  <div class="content">
-    <div class="empty">📊 Tez orada...</div>
+  <!-- MENU PAGE -->
+  <div class="page" id="page-menu">
+    <div class="menu-content">
+      <button class="add-product-btn" onclick="openAddModal()">+ Yangi taom qo'shish</button>
+      <div id="menu-content">
+        <div class="loading"><div class="spinner"></div>Yuklanmoqda...</div>
+      </div>
+    </div>
   </div>
+
+  <!-- ANALYTICS PAGE -->
+  <div class="page" id="page-analytics">
+    <div class="content">
+      <div class="empty">📊 Tez orada...</div>
+    </div>
+  </div>
+
 </div>
 
 <!-- EDIT PRICE MODAL -->
@@ -384,6 +315,8 @@
 const RESTAURANT_ID = 1;
 const RESTAURANT_SLUG = 'chinar';
 const API = '';
+const ADMIN_PASSWORD = 'taomly2024';
+const SESSION_KEY = 'taomly_admin_auth';
 
 let allOrders = [];
 let currentFilter = 'new';
@@ -391,6 +324,44 @@ let menuData = null;
 let editingProductId = null;
 let currentPage = 'orders';
 
+// ─── AUTH ─────────────────────────────────────────────────────
+function checkAuth() {
+  if (sessionStorage.getItem(SESSION_KEY) === 'true') {
+    showApp();
+  }
+}
+
+function doLogin() {
+  const input = document.getElementById('passwordInput').value;
+  if (input === ADMIN_PASSWORD) {
+    sessionStorage.setItem(SESSION_KEY, 'true');
+    showApp();
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+    document.getElementById('passwordInput').value = '';
+    document.getElementById('passwordInput').focus();
+  }
+}
+
+function doLogout() {
+  sessionStorage.removeItem(SESSION_KEY);
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('passwordInput').value = '';
+  document.getElementById('loginError').style.display = 'none';
+}
+
+function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'block';
+  loadOrders();
+}
+
+document.getElementById('passwordInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+// ─── NAVIGATION ──────────────────────────────────────────────
 function switchPage(page) {
   currentPage = page;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -452,8 +423,7 @@ async function loadOrders() {
     allOrders = await res.json();
     renderOrders();
   } catch (e) {
-    document.getElementById('orders-content').innerHTML =
-      `<div class="empty">❌ Yuklab bo'lmadi.</div>`;
+    document.getElementById('orders-content').innerHTML = `<div class="empty">❌ Yuklab bo'lmadi.</div>`;
   }
 }
 
@@ -496,8 +466,8 @@ function makeOrderCard(order) {
     </div>
     <div class="order-type">${TYPE_LABELS[order.order_type] || order.order_type} · <span class="order-time">${timeAgo(order.created_at)}</span></div>
     <div class="client-info">
-      <div class="client-name">👤 ${order.client_name}</div>
-      <div class="client-phone">📞 ${order.client_phone}</div>
+      <div class="client-name">👤 ${order.client_name || '—'}</div>
+      <div class="client-phone">📞 ${order.client_phone || '—'}</div>
       ${addressHtml}${commentHtml}
     </div>
     <div class="items-list">${itemsHtml}</div>
@@ -530,8 +500,7 @@ async function loadMenu() {
     menuData = await res.json();
     renderMenu();
   } catch (e) {
-    document.getElementById('menu-content').innerHTML =
-      `<div class="empty">❌ Menyu yuklanmadi.</div>`;
+    document.getElementById('menu-content').innerHTML = `<div class="empty">❌ Menyu yuklanmadi.</div>`;
   }
 }
 
@@ -608,9 +577,7 @@ async function savePrice() {
 function openAddModal() {
   if (!menuData) return;
   const select = document.getElementById('newProductCategory');
-  select.innerHTML = menuData.map(c =>
-    `<option value="${c.id}">${c.name}</option>`
-  ).join('');
+  select.innerHTML = menuData.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
   document.getElementById('newProductName').value = '';
   document.getElementById('newProductPrice').value = '';
   document.getElementById('newProductDesc').value = '';
@@ -648,8 +615,9 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
   });
 });
 
-loadOrders();
-setInterval(() => { if (currentPage === 'orders') loadOrders(); }, 30000);
+// ─── INIT ────────────────────────────────────────────────────
+checkAuth();
+setInterval(() => { if (currentPage === 'orders' && sessionStorage.getItem(SESSION_KEY)) loadOrders(); }, 30000);
 </script>
 </body>
 </html>
