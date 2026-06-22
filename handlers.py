@@ -15,8 +15,50 @@ MANAGER_ID    = 331294063
 @bot.message_handler(commands=['start'])
 def handle_start(message):
     """Приветствие с кнопкой открытия меню."""
-    markup = telebot.types.InlineKeyboardMarkup()
-    markup.add(
+
+    # Постоянная кнопка над клавиатурой (всегда видна)
+    reply_markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+    reply_markup.add(
+        telebot.types.KeyboardButton(
+            text="🍽️ Menyuni ochish",
+            web_app=telebot.types.WebAppInfo(url="https://taomly.onrender.com/app")
+        )
+    )
+
+    # Inline кнопка в сообщении
+    inline_markup = telebot.types.InlineKeyboardMarkup()
+    inline_markup.add(
+        telebot.types.InlineKeyboardButton(
+            text="🍽️ Menyuni ochish",
+            web_app=telebot.types.WebAppInfo(url="https://taomly.onrender.com/app")
+        )
+    )
+
+    name = message.from_user.first_name or "mehmon"
+
+    bot.send_message(
+        message.chat.id,
+        f"👋 Assalomu alaykum, *{name}*\\!\n\n"
+        f"🍽️ *Chinar Restaurant*ga xush kelibsiz\\!\n\n"
+        f"Bizning mazali taomlarimizdan buyurtma bering — "
+        f"tez va qulay 🚀\n\n"
+        f"👇 *Menyuni ochish* tugmasini bosing\\:",
+        parse_mode="MarkdownV2",
+        reply_markup=reply_markup
+    )
+
+    bot.send_message(
+        message.chat.id,
+        "⬇️",
+        reply_markup=inline_markup
+    )
+
+
+@bot.message_handler(func=lambda message: message.text == "🍽️ Menyuni ochish")
+def handle_menu_button(message):
+    """Обработка нажатия на постоянную кнопку меню."""
+    inline_markup = telebot.types.InlineKeyboardMarkup()
+    inline_markup.add(
         telebot.types.InlineKeyboardButton(
             text="🍽️ Menyuni ochish",
             web_app=telebot.types.WebAppInfo(url="https://taomly.onrender.com/app")
@@ -24,10 +66,8 @@ def handle_start(message):
     )
     bot.send_message(
         message.chat.id,
-        "👋 *Taomly*ga xush kelibsiz!\n\n"
-        "Quyi tugmani bosib menyu va buyurtma berishingiz mumkin 👇",
-        parse_mode="Markdown",
-        reply_markup=markup
+        "🍽️ Menyuni ochish uchun quyidagi tugmani bosing:",
+        reply_markup=inline_markup
     )
 
 
