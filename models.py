@@ -8,11 +8,24 @@ from sqlalchemy.sql import func
 from database import Base
 
 
+class Agency(Base):
+    __tablename__ = "agencies"
+    id = Column(BigInteger, primary_key=True)
+    name = Column(String(255), nullable=False)
+    owner_email = Column(String(255), unique=True, nullable=False)
+    owner_password_hash = Column(String(255), nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+    restaurants = relationship("Restaurant", back_populates="agency")
+
+
 class Restaurant(Base):
     __tablename__ = "restaurants"
     id = Column(BigInteger, primary_key=True)
+    agency_id = Column(BigInteger, ForeignKey("agencies.id", ondelete="SET NULL"), nullable=True, index=True)
     name = Column(String(255), nullable=False)
-    slug = Column(String(100), unique=True, nullable=False)
+    slug = Column(String(100), unique=True, index=True, nullable=False)
     description = Column(Text)
     phone = Column(String(50))
     address = Column(Text)
@@ -20,6 +33,22 @@ class Restaurant(Base):
     is_waiter_call_enabled = Column(Boolean, default=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
+    # Auth
+    admin_password_hash = Column(String(255), nullable=True)
+
+    # White Label Branding
+    logo_url = Column(Text, nullable=True)
+    primary_color = Column(String(20), default="#8B1A2E")
+    secondary_color = Column(String(20), default="#FAF6EE")
+    accent_color = Column(String(20), default="#D4A853")
+    welcome_text = Column(Text, nullable=True)
+    custom_domain = Column(String(255), nullable=True, unique=True, index=True)
+
+    # Telegram
+    telegram_bot_token_encrypted = Column(Text, nullable=True)
+    telegram_dispatcher_id = Column(BigInteger, nullable=True)
+
+    agency = relationship("Agency", back_populates="restaurants")
     categories = relationship("Category", back_populates="restaurant")
     products = relationship("Product", back_populates="restaurant")
     orders = relationship("Order", back_populates="restaurant")
