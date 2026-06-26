@@ -6,3 +6,7 @@ python-dotenv
 pytelegrambotapi
 python-multipart
 Pillow
+python-jose[cryptography]
+passlib[bcrypt]
+cryptography
+email-validator
