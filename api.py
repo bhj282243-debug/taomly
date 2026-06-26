@@ -9,7 +9,8 @@ from database import engine
 import models
 import telebot
 from routers import menu, orders, reservations, waiter_calls, restaurants
-import handlers  # импортируем чтобы зарегистрировать хендлеры
+from routers import agency
+import handlers
 
 load_dotenv()
 
@@ -18,7 +19,6 @@ logger = logging.getLogger(__name__)
 
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
-# Используем bot из handlers.py — один объект на всё приложение
 bot = handlers.bot
 
 
@@ -35,20 +35,26 @@ async def lifespan(app: FastAPI):
     bot.remove_webhook()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    title="Taomly White Label Platform",
+    description="Multi-tenant restaurant SaaS engine",
+    version="2.0.0",
+    lifespan=lifespan,
+)
 
 app.include_router(menu.router, prefix="/api/menu", tags=["menu"])
 app.include_router(orders.router, prefix="/api/orders", tags=["orders"])
 app.include_router(reservations.router, prefix="/api/reservations", tags=["reservations"])
 app.include_router(waiter_calls.router, prefix="/api/waiter-calls", tags=["waiter-calls"])
 app.include_router(restaurants.router)
+app.include_router(agency.router)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.get("/")
 def root():
-    return {"status": "running", "app": "Taomly", "version": "0.1.0"}
+    return {"status": "running", "app": "Taomly", "version": "2.0.0"}
 
 
 @app.get("/health")
@@ -64,6 +70,11 @@ def serve_app():
 @app.get("/admin")
 def serve_admin():
     return FileResponse("static/admin.html")
+
+
+@app.get("/agency-admin")
+def serve_agency_admin():
+    return FileResponse("static/agency_admin.html")
 
 
 @app.post("/webhook")
