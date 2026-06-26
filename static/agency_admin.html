@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taomly — Agency Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary: #8B1A2E;
+  --primary-light: #A52338;
+  --accent: #D4AF37;
+  --bg: #F5F6FA;
+  --bg-card: #FFFFFF;
+  --sidebar-bg: #1A1A2E;
+  --sidebar-text: #A0A8C0;
+  --sidebar-active: #FFFFFF;
+  --text-main: #1A1A2E;
+  --text-sub: #6B7280;
+  --border: #E5E7EB;
+  --success: #10B981;
+  --danger: #EF4444;
+  --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
+}
+
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); min-height: 100vh; }
+
+#loginScreen {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; background: linear-gradient(135deg, #1A1A2E 0%, #2D1B3D 100%);
+}
+.login-card {
+  background: var(--bg-card); border-radius: 16px; padding: 40px;
+  width: 100%; max-width: 420px; box-shadow: var(--shadow-lg);
+}
+.login-logo { text-align: center; margin-bottom: 32px; }
+.login-logo-mark {
+  width: 56px; height: 56px; background: var(--primary); border-radius: 14px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 24px; color: #fff; margin-bottom: 12px;
+}
+.login-title { font-size: 22px; font-weight: 700; color: var(--text-main); }
+.login-sub { font-size: 13px; color: var(--text-sub); margin-top: 4px; }
+
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 13px; font-weight: 500; color: var(--text-sub); margin-bottom: 6px; }
+.form-control {
+  width: 100%; padding: 11px 14px; border: 1.5px solid var(--border);
+  border-radius: 10px; font-size: 14px; font-family: inherit;
+  color: var(--text-main); background: #fff; outline: none; transition: border-color 0.2s;
+}
+.form-control:focus { border-color: var(--primary); }
+.form-hint { font-size: 11px; color: var(--text-sub); margin-top: 4px; }
+
+/* Стили для копирования в один клик */
+.input-group-copy { display: flex; gap: 8px; }
+.btn-copy {
+  background: var(--bg); border: 1.5px solid var(--border); padding: 0 12px;
+  border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center;
+  justify-content: center; font-size: 14px; transition: all 0.2s; user-select: none;
+}
+.btn-copy:hover { background: var(--border); }
+
+/* Стили для загрузки логотипа с предпросмотром */
+.file-upload-wrap { display: flex; align-items: center; gap: 16px; margin-top: 6px; }
+.file-upload-preview {
+  width: 54px; height: 54px; border-radius: 12px; border: 1.5px solid var(--border);
+  object-fit: cover; background: var(--bg); display: none;
+}
+.file-upload-preview.show { display: block; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px 20px; border-radius: 10px; font-size: 14px; font-weight: 600;
+  font-family: inherit; cursor: pointer; border: none; transition: all 0.2s; text-decoration: none;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-light); }
+.btn-secondary { background: var(--bg); color: var(--text-main); border: 1.5px solid var(--border); }
+.btn-secondary:hover { background: var(--border); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-success { background: var(--success); color: #fff; }
+.btn-sm { padding: 7px 14px; font-size: 13px; }
+.btn-full { width: 100%; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.error-banner {
+  background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px;
+  padding: 10px 14px; font-size: 13px; color: var(--danger); margin-bottom: 16px; display: none;
+}
+
+#appScreen { display: none; min-height: 100vh; }
+
+.sidebar {
+  position: fixed; top: 0; left: 0; bottom: 0; width: 240px;
+  background: var(--sidebar-bg); display: flex; flex-direction: column; z-index: 100;
+}
+.sidebar-logo { padding: 24px 20px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.sidebar-logo-mark {
+  width: 36px; height: 36px; background: var(--primary); border-radius: 9px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 16px; color: #fff; margin-bottom: 10px;
+}
+.sidebar-product { font-size: 16px; font-weight: 700; color: #fff; }
+.sidebar-edition { font-size: 11px; color: var(--sidebar-text); margin-top: 2px; }
+
+.sidebar-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500;
+  color: var(--sidebar-text); transition: all 0.15s;
+}
+.nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.nav-item.active { background: rgba(255,255,255,0.1); color: var(--sidebar-active); }
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+.sidebar-footer { padding: 16px 12px; border-top: 1px solid rgba(255,255,255,0.08); }
+.agency-badge {
+  background: rgba(255,255,255,0.06); border-radius: 8px;
+  padding: 10px 12px; margin-bottom: 8px;
+}
+.agency-name { font-size: 13px; font-weight: 600; color: #fff; }
+.agency-email { font-size: 11px; color: var(--sidebar-text); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.btn-logout {
+  width: 100%; display: flex; align-items: center; gap: 8px; padding: 9px 12px;
+  border-radius: 8px; background: none; border: none; font-size: 13px;
+  color: var(--sidebar-text); cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.btn-logout:hover { background: rgba(239,68,68,0.15); color: #F87171; }
+
+.main-content { margin-left: 240px; min-height: 100vh; }
+
+.topbar {
+  background: var(--bg-card); border-bottom: 1px solid var(--border);
+  padding: 16px 32px; display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 50;
+}
+.topbar-title { font-size: 18px; font-weight: 700; color: var(--text-main); }
+.topbar-sub { font-size: 13px; color: var(--text-sub); margin-top: 2px; }
+
+.page { padding: 28px 32px; display: none; }
+.page.active { display: block; }
+
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 28px; }
+.stat-card {
+  background: var(--bg-card); border-radius: 12px; padding: 20px;
+  box-shadow: var(--shadow); border: 1px solid var(--border);
+}
+.stat-label { font-size: 12px; font-weight: 500; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-value { font-size: 28px; font-weight: 700; color: var(--text-main); margin-top: 6px; }
+.stat-icon { font-size: 22px; margin-bottom: 8px; }
+
+.card {
+  background: var(--bg-card); border-radius: 12px;
+  box-shadow: var(--shadow); border: 1px solid var(--border); overflow: hidden;
+}
+.card-header {
+  padding: 18px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.card-title { font-size: 15px; font-weight: 600; color: var(--text-main); }
+
+.search-box {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px; padding: 8px 12px;
+}
+.search-box input {
+  border: none; background: none; outline: none;
+  font-size: 13px; font-family: inherit; color: var(--text-main); width: 200px;
+}
+
+table { width: 100%; border-collapse: collapse; }
+th {
+  padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 600;
+  color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px;
+  background: var(--bg); border-bottom: 1px solid var(--border);
+}
+td { padding: 14px 16px; font-size: 14px; color: var(--text-main); border-bottom: 1px solid var(--border); }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg); }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;
+}
+.badge-active { background: #D1FAE5; color: #065F46; }
+.badge-inactive { background: #FEE2E2; color: #991B1B; }
+.actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg-card); border-radius: 16px; width: 100%; max-width: 580px;
+  max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg);
+}
+.modal-header {
+  padding: 20px 24px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; background: #fff; z-index: 1;
+}
+.modal-title { font-size: 16px; font-weight: 700; }
+.modal-close {
+  width: 32px; height: 32px; border-radius: 8px; background: var(--bg);
+  border: none; cursor: pointer; font-size: 18px; color: var(--text-sub);
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-body { padding: 24px; display: flex; flex-direction: column; gap: 14px; }
+.modal-footer {
+  padding: 16px 24px; border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end; gap: 10px;
+}
+
+.section-title {
+  font-size: 11px; font-weight: 600; color: var(--text-sub);
+  text-transform: uppercase; letter-spacing: 1px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-top: 4px;
+}
+
+.color-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.color-input-wrap { position: relative; }
+.color-preview {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  width: 20px; height: 20px; border-radius: 5px; border: 1px solid var(--border); pointer-events: none;
+}
+
+.toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: var(--text-main); color: #fff; padding: 12px 18px; border-radius: 10px;
+  font-size: 13px; font-weight: 500; box-shadow: var(--shadow-lg);
+  animation: slideIn 0.3s ease; max-width: 320px;
+}
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+.loading-overlay {
+  position: fixed; inset: 0; background: rgba(255,255,255,0.8);
+  z-index: 500; display: none; align-items: center; justify-content: center;
+}
+.loading-overlay.show { display: flex; }
+.spinner {
+  width: 36px; height: 36px; border: 3px solid var(--border);
+  border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-state { text-align: center; padding: 48px 20px; color: var(--text-sub); font-size: 14px; }
+.empty-icon { font-size: 36px; margin-bottom: 12px; }
+
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main-content { margin-left: 0; }
+  .page { padding: 16px; }
+  .topbar { padding: 14px 16px; }
+  .color-row { grid-template-columns: 1fr; }
+  .search-box input { width: 120px; }
+}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-mark">✦</div>
+      <div class="login-title">Taomly Agency</div>
+      <div class="login-sub">Панель управления веб-студии</div>
+    </div>
+    <div class="error-banner" id="loginError"></div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input class="form-control" type="email" id="loginEmail" placeholder="agency@example.com" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Пароль</label>
+      <input class="form-control" type="password" id="loginPassword" placeholder="••••••••" />
+    </div>
+    <button class="btn btn-primary btn-full" id="loginBtn" onclick="doLogin()">Войти</button>
+  </div>
+</div>
+
+<div id="appScreen">
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-mark">✦</div>
+      <div class="sidebar-product">Taomly</div>
+      <div class="sidebar-edition">Agency Panel</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard', this)">
+        <span class="nav-icon">📊</span> Dashboard
+      </div>
+      <div class="nav-item" id="nav-restaurants" onclick="showPage('restaurants', this)">
+        <span class="nav-icon">🍽️</span> Рестораны
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="agency-badge">
+        <div class="agency-name" id="sidebarAgencyName">—</div>
+        <div class="agency-email" id="sidebarAgencyEmail">—</div>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">🚪 Выйти</button>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title" id="topbarTitle">Dashboard</div>
+        <div class="topbar-sub" id="topbarSub">Добро пожаловать</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openCreateModal()" id="createBtn" style="display:none;">
+        + Создать ресторан
+      </button>
+    </div>
+
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">🍽️</div>
+          <div class="stat-label">Всего ресторанов</div>
+          <div class="stat-value" id="statTotal">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✅</div>
+          <div class="stat-label">Активных</div>
+          <div class="stat-value" id="statActive">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⏸️</div>
+          <div class="stat-label">Неактивных</div>
+          <div class="stat-value" id="statInactive">—</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Последние рестораны</span>
+          <button class="btn btn-secondary btn-sm" onclick="showPage('restaurants', document.getElementById('nav-restaurants'))">Все →</button>
+        </div>
+        <table>
+          <thead><tr><th>Название</th><th>Slug</th><th>Статус</th></tr></thead>
+          <tbody id="dashboardTable"><tr><td colspan="3"><div class="empty-state">Загрузка...</div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="page" id="page-restaurants">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Рестораны агентства</span>
+          <div class="search-box">
+            <span style="color:var(--text-sub)">🔍</span>
+            <input type="text" id="searchInput" placeholder="Поиск..." oninput="filterRestaurants()" />
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Название</th><th>Slug</th><th>Адрес</th><th>Статус</th><th>Действия</th></tr>
+          </thead>
+          <tbody id="restaurantsTable">
+            <tr><td colspan="5"><div class="empty-state"><div class="empty-icon">🍽️</div>Загрузка...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="createModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Создать ресторан</span>
+      <button class="modal-close" onclick="closeModal('createModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="error-banner" id="createError"></div>
+
+      <div class="section-title">Основная информация</div>
+      <div class="form-group">
+        <label class="form-label">Название *</label>
+        <input class="form-control" id="c_name" placeholder="Чинор" oninput="autoSlug()" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Slug *</label>
+        <input class="form-control" id="c_slug" placeholder="chinar" />
+        <div class="form-hint">Только латиница и дефисы. Генерируется автоматически.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Описание</label>
+        <input class="form-control" id="c_description" placeholder="Ресторан узбекской кухни" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Телефон</label>
+        <input class="form-control" id="c_phone" placeholder="+998901234567" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Адрес</label>
+        <input class="form-control" id="c_address" placeholder="Бухара, ул. Накшбанди 12" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Пароль для admin.html *</label>
+        <input class="form-control" type="password" id="c_password" placeholder="Минимум 6 символов" />
+      </div>
+
+      <div class="section-title">Telegram</div>
+      <div class="form-group">
+        <label class="form-label">Bot Token</label>
+        <input class="form-control" id="c_bot_token" placeholder="Оставьте пустым — будет использован общий бот" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Telegram ID диспетчера</label>
+        <input class="form-control" type="number" id="c_dispatcher_id" placeholder="331294063" />
+      </div>
+
+      <div class="section-title">Брендинг</div>
+      <div class="form-group">
+        <label class="form-label">Логотип ресторана</label>
+        <div class="file-upload-wrap">
+          <img id="c_logo_preview" class="file-upload-preview" src="" alt="Preview">
+          <input type="file" id="c_logo_file" accept="image/*" style="display:none;" onchange="handleLogoUpload(this, 'c_logo_url', 'c_logo_preview')" />
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('c_logo_file').click()">Выбрать файл</button>
+          <input type="hidden" id="c_logo_url" />
+        </div>
+      </div>
+      <div class="color-row">
+        <div class="form-group">
+          <label class="form-label">Основной цвет</label>
+          <div class="color-input-wrap">
+            <input class="form-control" id="c_primary_color" placeholder="#8B1A2E" oninput="updateColorPreview('c_primary_color','cprev_primary')" />
+            <div class="color-preview" id="cprev_primary" style="background:#8B1A2E"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Доп. цвет</label>
+          <div class="color-input-wrap">
+            <input class="form-control" id="c_secondary_color" placeholder="#FAF6EE" oninput="updateColorPreview('c_secondary_color','cprev_secondary')" />
+            <div class="color-preview" id="cprev_secondary" style="background:#FAF6EE"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Accent цвет</label>
+          <div class="color-input-wrap">
+            <input class="form-control" id="c_accent_color" placeholder="#D4A853" oninput="updateColorPreview('c_accent_color','cprev_accent')" />
+            <div class="color-preview" id="cprev_accent" style="background:#D4A853"></div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Welcome Text</label>
+        <input class="form-control" id="c_welcome_text" placeholder="Добро пожаловать!" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Custom Domain</label>
+        <input class="form-control" id="c_custom_domain" placeholder="menu.chinar.uz" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('createModal')">Отмена</button>
+      <button class="btn btn-primary" id="createSubmitBtn" onclick="submitCreate()">Создать</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="editModalTitle">Редактировать ресторан</span>
+      <button class="modal-close" onclick="closeModal('editModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="error-banner" id="editError"></div>
+      <input type="hidden" id="e_id" />
+
+      <div class="section-title">Основная информация</div>
+      <div class="form-group">
+        <label class="form-label">Название</label>
+        <input class="form-control" id="e_name" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Slug</label>
+        <div class="input-group-copy">
+          <input class="form-control" id="e_slug" />
+          <button class="btn-copy" onclick="copyField('e_slug')" title="Копировать Slug">📋</button>
+        </div>
+        <div class="form-hint">Изменение slug сломает существующие QR-коды.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Описание</label>
+        <input class="form-control" id="e_description" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Телефон</label>
+        <input class="form-control" id="e_phone" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Адрес</label>
+        <input class="form-control" id="e_address" />
+      </div>
+
+      <div class="section-title">Telegram</div>
+      <div class="form-group">
+        <label class="form-label">Bot Token</label>
+        <div class="input-group-copy">
+          <input class="form-control" id="e_bot_token" placeholder="Оставьте пустым — не изменится" />
+          <button class="btn-copy" onclick="copyField('e_bot_token')" title="Копировать Token">📋</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Telegram ID диспетчера</label>
+        <div class="input-group-copy">
+          <input class="form-control" type="number" id="e_dispatcher_id" />
+          <button class="btn-copy" onclick="copyField('e_dispatcher_id')" title="Копировать ID">📋</button>
+        </div>
+      </div>
+
+      <div class="section-title">Брендинг</div>
+      <div class="form-group">
+        <label class="form-label">Логотип ресторана</label>
+        <div class="file-upload-wrap">
+          <img id="e_logo_preview" class="file-upload-preview" src="" alt="Preview">
+          <input type="file" id="e_logo_file" accept="image/*" style="display:none;" onchange="handleLogoUpload(this, 'e_logo_url', 'e_logo_preview')" />
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('e_logo_file').click()">Выбрать новый файл</button>
+          <input type="hidden" id="e_logo_url" />
+        </div>
+      </div>
+      <div class="color-row">
+        <div class="form-group">
+          <label class="form-label">Основной цвет</label>
+          <div class="color-input-wrap">
+            <input class="form-control" id="e_primary_color" oninput="updateColorPreview('e_primary_color','eprev_primary')" />
+            <div class="color-preview" id="eprev_primary"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Доп. цвет</label>
+          <div class="color-input-wrap">
+            <input class="form-control" id="e_secondary_color" oninput="updateColorPreview('e_secondary_color','eprev_secondary')" />
+            <div class="color-preview" id="eprev_secondary"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Accent цвет</label>
+          <div class="color-input-wrap">
+            <input class="form-control" id="e_accent_color" oninput="updateColorPreview('e_accent_color','eprev_accent')" />
+            <div class="color-preview" id="eprev_accent"></div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Welcome Text</label>
+        <input class="form-control" id="e_welcome_text" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Custom Domain</label>
+        <div class="input-group-copy">
+          <input class="form-control" id="e_custom_domain" />
+          <button class="btn-copy" onclick="copyField('e_custom_domain')" title="Копировать домен">📋</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('editModal')">Отмена</button>
+      <button class="btn btn-primary" id="editSubmitBtn" onclick="submitEdit()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
+
+<script>
+const API = '';
+let token = localStorage.getItem('agency_token') || null;
+let agencyInfo = JSON.parse(localStorage.getItem('agency_info') || 'null');
+let allRestaurants = [];
+
+// ── TRANSLITERATION MAP ──
+const TRANSLIT = {
+  'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z',
+  'и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r',
+  'с':'s','т':'t','у':'u','ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh',
+  'щ':'sch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya',
+  'ў':'o','қ':'q','ғ':'g','ҳ':'h'
+};
+
+function transliterate(str) {
+  return str.toLowerCase().split('').map(c => TRANSLIT[c] !== undefined ? TRANSLIT[c] : c).join('');
+}
+
+function autoSlug() {
+  const name = document.getElementById('c_name').value;
+  const slug = transliterate(name)
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  document.getElementById('c_slug').value = slug;
+}
+
+// ── FILE UPLOAD HELPER ──
+function handleLogoUpload(input, urlInputId, previewId) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById(urlInputId).value = e.target.result;
+    const prev = document.getElementById(previewId);
+    prev.src = e.target.result;
+    prev.classList.add('show');
+  }
+  reader.readAsDataURL(file);
+}
+
+// ── CLICK TO COPY HELPER ──
+function copyField(id) {
+  const val = document.getElementById(id)?.value?.trim();
+  if (!val) { toast('Поле пустое, нечего копировать', 'error'); return; }
+  navigator.clipboard.writeText(val).then(() => {
+    toast('Скопировано в буфер обмена!', 'success');
+  }).catch(() => {
+    toast('Ошибка копирования', 'error');
+  });
+}
+
+// ── INIT ──
+window.addEventListener('DOMContentLoaded', () => {
+  if (token) {
+    loadAgencyInfo()
+      .then(() => { showApp(); loadRestaurants(); })
+      .catch(() => { doLogout(); });
+  } else {
+    showLogin();
+  }
+  document.getElementById('loginPassword').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+});
+
+function showLogin() {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('appScreen').style.display = 'none';
+}
+
+function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  if (agencyInfo) {
+    document.getElementById('sidebarAgencyName').textContent = agencyInfo.name || '—';
+    document.getElementById('sidebarAgencyEmail').textContent = agencyInfo.email || '—';
+    document.getElementById('topbarSub').textContent = agencyInfo.name || '';
+  }
+}
+
+// ── LOGIN ──
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
+  if (!email || !password) { showErr(errEl, 'Введите email и пароль'); return; }
+
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'Вход...';
+
+  try {
+    const res = await fetch('/api/agency/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Ошибка входа');
+
+    token = data.access_token;
+    localStorage.setItem('agency_token', token);
+
+    await loadAgencyInfo();
+    showApp();
+    loadRestaurants();
+  } catch (e) {
+    showErr(errEl, e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Войти';
+  }
+}
+
+async function loadAgencyInfo() {
+  const res = await authFetch('/api/agency/me');
+  if (!res.ok) throw new Error('Unauthorized');
+  const data = await res.json();
+  agencyInfo = { id: data.id, name: data.name, email: data.email };
+  localStorage.setItem('agency_info', JSON.stringify(agencyInfo));
+}
+
+function doLogout() {
+  token = null; agencyInfo = null;
+  localStorage.removeItem('agency_token');
+  localStorage.removeItem('agency_info');
+  showLogin();
+}
+
+// ── NAVIGATION ──
+function showPage(name, navEl) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (navEl) navEl.classList.add('active');
+  const titles = { dashboard: 'Dashboard', restaurants: 'Рестораны' };
+  document.getElementById('topbarTitle').textContent = titles[name] || name;
+  document.getElementById('createBtn').style.display = name === 'restaurants' ? 'flex' : 'none';
+}
+
+// ── LOAD RESTAURANTS ──
+async function loadRestaurants() {
+  showLoading(true);
+  try {
+    const res = await authFetch('/api/agency/restaurants');
+    if (res.status === 401) { doLogout(); return; }
+    if (!res.ok) throw new Error('Ошибка загрузки');
+    allRestaurants = await res.json();
+    renderRestaurants(allRestaurants);
+    renderDashboard(allRestaurants);
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+function renderDashboard(list) {
+  document.getElementById('statTotal').textContent = list.length;
+  document.getElementById('statActive').textContent = list.filter(r => r.is_active).length;
+  document.getElementById('statInactive').textContent = list.filter(r => !r.is_active).length;
+
+  const tbody = document.getElementById('dashboardTable');
+  const recent = list.slice(0, 5);
+  if (!recent.length) {
+    tbody.innerHTML = '<tr><td colspan="3"><div class="empty-state">Нет ресторанов</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = recent.map(r => `
+    <tr>
+      <td><strong>${esc(r.name)}</strong></td>
+      <td><code style="font-size:12px;color:var(--text-sub)">${esc(r.slug)}</code></td>
+      <td><span class="badge ${r.is_active ? 'badge-active' : 'badge-inactive'}">${r.is_active ? '● Активен' : '● Неактивен'}</span></td>
+    </tr>`).join('');
+}
+
+function renderRestaurants(list) {
+  const tbody = document.getElementById('restaurantsTable');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">🍽️</div>Нет ресторанов. Создайте первый!</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(r => {
+    const menuUrl = r.custom_domain ? `https://${esc(r.custom_domain)}` : `https://${esc(r.slug)}.taomly.uz`;
+    return `
+    <tr>
+      <td><strong>${esc(r.name)}</strong></td>
+      <td><code style="font-size:12px;color:var(--text-sub)">${esc(r.slug)}</code></td>
+      <td>${r.address ? esc(r.address) : '<span style="color:var(--text-sub)">—</span>'}</td>
+      <td><span class="badge ${r.is_active ? 'badge-active' : 'badge-inactive'}">${r.is_active ? '● Активен' : '● Неактивен'}</span></td>
+      <td>
+        <div class="actions">
+          <button class="btn btn-secondary btn-sm" onclick="openEditModal(${r.id})">✏️ Изменить</button>
+          <a href="/admin?slug=${esc(r.slug)}" target="_blank" class="btn btn-secondary btn-sm">🛠️ Админка</a>
+          <a href="${menuUrl}" target="_blank" class="btn btn-secondary btn-sm">🌐 Меню</a>
+          ${r.is_active
+            ? `<button class="btn btn-danger btn-sm" onclick="deactivate(${r.id})">⏸ Деактивировать</button>`
+            : `<button class="btn btn-success btn-sm" onclick="activate(${r.id})">▶ Активировать</button>`}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterRestaurants() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  renderRestaurants(allRestaurants.filter(r =>
+    r.name.toLowerCase().includes(q) ||
+    r.slug.toLowerCase().includes(q) ||
+    (r.address || '').toLowerCase().includes(q)
+  ));
+}
+
+// ── CREATE ──
+function openCreateModal() {
+  ['c_name','c_slug','c_description','c_phone','c_address','c_password',
+   'c_bot_token','c_dispatcher_id','c_logo_url','c_primary_color',
+   'c_secondary_color','c_accent_color','c_welcome_text','c_custom_domain'
+  ].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  
+  const prev = document.getElementById('c_logo_preview');
+  if (prev) { prev.src = ''; prev.classList.remove('show'); }
+  document.getElementById('c_logo_file').value = '';
+
+  document.getElementById('createError').style.display = 'none';
+  openModal('createModal');
+}
+
+async function submitCreate() {
+  const errEl = document.getElementById('createError');
+  errEl.style.display = 'none';
+
+  const name = v('c_name');
+  const slug = v('c_slug');
+  const password = document.getElementById('c_password').value;
+
+  if (!name) { showErr(errEl, 'Введите название ресторана'); return; }
+  if (!slug) { showErr(errEl, 'Введите slug'); return; }
+  if (!password || password.length < 6) { showErr(errEl, 'Пароль минимум 6 символов'); return; }
+
+  const btn = document.getElementById('createSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Создание...';
+
+  const dispId = v('c_dispatcher_id');
+  const payload = {
+    name, slug,
+    description: v('c_description') || null,
+    phone: v('c_phone') || null,
+    address: v('c_address') || null,
+    admin_password: password,
+    telegram_bot_token: v('c_bot_token') || null,
+    telegram_dispatcher_id: dispId ? parseInt(dispId) : null,
+    logo_url: v('c_logo_url') || null,
+    primary_color: v('c_primary_color') || null,
+    secondary_color: v('c_secondary_color') || null,
+    accent_color: v('c_accent_color') || null,
+    welcome_text: v('c_welcome_text') || null,
+    custom_domain: v('c_custom_domain') || null,
+  };
+
+  try {
+    const res = await authFetch('/api/agency/restaurants', {
+      method: 'POST', body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Ошибка создания');
+    closeModal('createModal');
+    toast('Ресторан создан!', 'success');
+    await loadRestaurants();
+  } catch (e) {
+    showErr(errEl, e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Создать';
+  }
+}
+
+// ── EDIT ──
+function openEditModal(id) {
+  const r = allRestaurants.find(x => x.id === id);
+  if (!r) return;
+
+  document.getElementById('editModalTitle').textContent = 'Редактировать: ' + r.name;
+  document.getElementById('e_id').value = r.id;
+  document.getElementById('e_name').value = r.name || '';
+  document.getElementById('e_slug').value = r.slug || '';
+  document.getElementById('e_description').value = r.description || '';
+  document.getElementById('e_phone').value = r.phone || '';
+  document.getElementById('e_address').value = r.address || '';
+  document.getElementById('e_bot_token').value = r.telegram_bot_token || '';
+  document.getElementById('e_dispatcher_id').value = r.telegram_dispatcher_id || '';
+  document.getElementById('e_logo_url').value = r.logo_url || '';
+  document.getElementById('e_primary_color').value = r.primary_color || '';
+  document.getElementById('e_secondary_color').value = r.secondary_color || '';
+  document.getElementById('e_accent_color').value = r.accent_color || '';
+  document.getElementById('e_welcome_text').value = r.welcome_text || '';
+  document.getElementById('e_custom_domain').value = r.custom_domain || '';
+
+  document.getElementById('e_logo_file').value = '';
+  const prev = document.getElementById('e_logo_preview');
+  if (prev && r.logo_url) {
+    prev.src = r.logo_url;
+    prev.classList.add('show');
+  } else if (prev) {
+    prev.src = '';
+    prev.classList.remove('show');
+  }
+
+  [['e_primary_color','eprev_primary'],['e_secondary_color','eprev_secondary'],['e_accent_color','eprev_accent']].forEach(([inputId, prevId]) => {
+    const val = document.getElementById(inputId).value;
+    const el = document.getElementById(prevId);
+    if (el && val) el.style.background = val;
+  });
+
+  document.getElementById('editError').style.display = 'none';
+  openModal('editModal');
+}
+
+async function submitEdit() {
+  const errEl = document.getElementById('editError');
+  errEl.style.display = 'none';
+  const id = document.getElementById('e_id').value;
+
+  const btn = document.getElementById('editSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Сохранение...';
+
+  const payload = {};
+  const textFields = {
+    e_name: 'name', e_slug: 'slug', e_description: 'description',
+    e_phone: 'phone', e_address: 'address',
+    e_bot_token: 'telegram_bot_token', e_logo_url: 'logo_url',
+    e_primary_color: 'primary_color', e_secondary_color: 'secondary_color',
+    e_accent_color: 'accent_color', e_welcome_text: 'welcome_text',
+    e_custom_domain: 'custom_domain'
+  };
+
+  for (const [elId, key] of Object.entries(textFields)) {
+    const val = v(elId);
+    if (val !== '') payload[key] = val || null;
+  }
+  const dispId = v('e_dispatcher_id');
+  if (dispId !== '') payload.telegram_dispatcher_id = dispId ? parseInt(dispId) : null;
+
+  try {
+    const res = await authFetch(`/api/agency/restaurants/${id}`, {
+      method: 'PATCH', body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Ошибка сохранения');
+    closeModal('editModal');
+    toast('Изменения сохранены', 'success');
+    await loadRestaurants();
+  } catch (e) {
+    showErr(errEl, e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Сохранить';
+  }
+}
+
+// ── DEACTIVATE / ACTIVATE ──
+async function deactivate(id) {
+  if (!confirm('Деактивировать ресторан? Клиенты не смогут открыть меню.')) return;
+  try {
+    const res = await authFetch(`/api/agency/restaurants/${id}`, { method: 'DELETE' });
+    if (!res.ok) { const d = await res.json(); throw new Error(d.detail); }
+    toast('Ресторан деактивирован', 'success');
+    await loadRestaurants();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function activate(id) {
+  try {
+    const res = await authFetch(`/api/agency/restaurants/${id}`, {
+      method: 'PATCH', body: JSON.stringify({ is_active: true })
+    });
+    if (!res.ok) { const d = await res.json(); throw new Error(d.detail); }
+    toast('Ресторан активирован', 'success');
+    await loadRestaurants();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+// ── HELPERS ──
+function authFetch(url, opts = {}) {
+  return fetch(url, {
+    ...opts,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...(opts.headers || {})
+    }
+  });
+}
+
+function v(id) { return (document.getElementById(id)?.value || '').trim(); }
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function showErr(el, msg) { el.textContent = msg; el.style.display = 'block'; }
+function showLoading(on) { document.getElementById('loadingOverlay').classList.toggle('show', on); }
+
+function toast(msg, type = '') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = (type === 'success' ? '✓ ' : type === 'error' ? '✕ ' : '') + msg;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+function updateColorPreview(inputId, previewId) {
+  const val = document.getElementById(inputId)?.value;
+  const el = document.getElementById(previewId);
+  if (el && val && /^#[0-9A-Fa-f]{3,6}$/.test(val)) el.style.background = val;
+}
+</script>
+</body>
+</html>
