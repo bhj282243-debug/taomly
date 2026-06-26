@@ -8,6 +8,7 @@ router = APIRouter(prefix="/api/restaurants", tags=["restaurants"])
 
 @router.get("/{slug}")
 def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
+    # 1. Ищем ресторан в базе данных по его текстовому адресу (slug)
     restaurant = (
         db.query(Restaurant)
         .filter(Restaurant.slug == slug, Restaurant.is_active == True)
@@ -16,6 +17,7 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
 
+    # 2. Загружаем категории меню и продукты для этого ресторана
     categories = (
         db.query(Category)
         .filter(Category.restaurant_id == restaurant.id)
@@ -24,6 +26,7 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
         .all()
     )
 
+    # 3. Отдаем ВСЕ данные, включая логотип и фирменные цвета для White Label
     return {
         "id": restaurant.id,
         "name": restaurant.name,
@@ -32,6 +35,15 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
         "phone": restaurant.phone,
         "address": restaurant.address,
         "is_waiter_call_enabled": restaurant.is_waiter_call_enabled,
+        
+        # 🌟 Новые поля, которые мы добавили для кастомизации:
+        "logo_url": restaurant.logo_url,
+        "primary_color": restaurant.primary_color,
+        "secondary_color": restaurant.secondary_color,
+        "accent_color": restaurant.accent_color,
+        "welcome_text": restaurant.welcome_text,
+        "custom_domain": restaurant.custom_domain,
+        
         "categories": [
             {
                 "id": cat.id,
