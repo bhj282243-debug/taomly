@@ -67,6 +67,22 @@ def login_restaurant_admin(data: RestaurantAdminLogin, db: Session = Depends(get
 
 
 # ──────────────────────────────────────────
+# ME
+# ──────────────────────────────────────────
+@router.get("/me")
+def get_agency_me(
+    db: Session = Depends(get_db),
+    agency: Agency = Depends(get_current_agency)
+):
+    return {
+        "id": agency.id,
+        "name": agency.name,
+        "email": agency.owner_email,
+        "is_active": agency.is_active,
+    }
+
+
+# ──────────────────────────────────────────
 # РЕСТОРАНЫ — Agency Owner CRUD
 # ──────────────────────────────────────────
 @router.post("/restaurants", response_model=RestaurantAdminResponse)
