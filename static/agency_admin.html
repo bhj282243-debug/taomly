@@ -723,7 +723,24 @@ async function loadRestaurants() {
   try {
     const res = await authFetch('/api/agency/restaurants');
     if (res.status === 401) { doLogout(); return; }
-    if (!res.ok) throw new Error('Ошибка загрузки');
+    
+    // Если сервер вернул ошибку, разбираем её детали
+    if (!res.ok) {
+      let serverError = `Статус: ${res.status}`;
+      try {
+        const data = await res.json();
+        serverError += ` | Детали: ${data.detail ? JSON.stringify(data.detail) : JSON.stringify(data)}`;
+      } catch (_) {
+        try {
+          const txt = await res.text();
+          serverError += ` | Ответ: ${txt.substring(0, 120)}`;
+        } catch (_) {
+          serverError += ` | Не удалось прочитать текст ответа`;
+        }
+      }
+      throw new Error(serverError);
+    }
+    
     allRestaurants = await res.json();
     renderRestaurants(allRestaurants);
     renderDashboard(allRestaurants);
