@@ -1,11 +1,9 @@
 """
 routers/orders.py — Taomly Platform
 
-Изменения v4:
-  - Убран повторный db.query(Restaurant) в create_order:
-    ресторан берётся напрямую из tg_user.restaurant (загружен в get_telegram_user)
-  - tg_user.restaurant_id используется вместо data.restaurant_id (которого больше нет)
-  - Остальная логика v3 сохранена без изменений
+Изменения v5:
+  - Исправлен вызов notify_client_accepted: теперь передаёт restaurant вторым
+    аргументом → устранён TypeError
 """
 
 import logging
@@ -48,19 +46,16 @@ def create_order(
     """
     Создаёт новый заказ.
 
-    Источники данных (всё верифицировано до роутера):
-      restaurant   → tg_user.restaurant    (загружен в get_telegram_user, SQL не повторяется)
-      restaurant_id → tg_user.restaurant_id (из X-Restaurant-Id, проверен)
-      client_telegram_id → tg_user.id      (из initData, верифицирован HMAC-SHA256)
-      total_amount → вычислен из цен БД    (нельзя подменить на клиенте)
-      quantity     → проверен Pydantic ge=1 (нельзя передать <= 0)
-
-    Telegram-уведомление диспетчеру отправляется в фоне (BackgroundTasks).
+    Источники данных (все верифицированы до роутера):
+      restaurant        → tg_user.restaurant    (загружен в get_telegram_user)
+      restaurant_id     → tg_user.restaurant_id (из X-Restaurant-Id)
+      client_telegram_id → tg_user.id           (из initData, HMAC-SHA256)
+      total_amount      → вычислен из цен БД    (нельзя подменить)
+      quantity          → проверен Pydantic ge=1
     """
-    # Ресторан уже загружен и проверен в get_telegram_user — повторный SQL не нужен
     restaurant = tg_user.restaurant
 
-    # Проверка стола для dine_in — стол обязан принадлежать этому ресторану
+    # Проверка стола для dine_in
     if data.order_type == "dine_in":
         if not data.table_id:
             raise HTTPException(
@@ -69,7 +64,6 @@ def create_order(
             )
         table = db.query(RestaurantTable).filter(
             RestaurantTable.id == data.table_id,
-            # Tenant-изоляция: стол обязан принадлежать именно этому ресторану
             RestaurantTable.restaurant_id == restaurant.id,
         ).first()
         if not table:
@@ -85,7 +79,6 @@ def create_order(
     for item in data.items:
         product = db.query(Product).filter(
             Product.id == item.product_id,
-            # Tenant-изоляция: продукт обязан принадлежать этому ресторану
             Product.restaurant_id == restaurant.id,
         ).first()
 
@@ -149,7 +142,6 @@ def create_order(
         .first()
     )
 
-    # Уведомление диспетчеру в фоне — не блокирует HTTP-ответ клиенту
     background_tasks.add_task(
         handlers.notify_new_order,
         order_with_items,
@@ -159,10 +151,7 @@ def create_order(
 
     logger.info(
         "Заказ создан: order_id=%s restaurant_id=%s tg_user=%s total=%s",
-        order_with_items.id,
-        restaurant.id,
-        tg_user.id,
-        total,
+        order_with_items.id, restaurant.id, tg_user.id, total,
     )
     return order_with_items
 
@@ -249,8 +238,7 @@ def update_order_status(
 ):
     """
     Меняет статус заказа.
-    Tenant-изоляция + проверка допустимости перехода статуса.
-    Уведомление клиенту при 'accepted' отправляется в фоне.
+    Tenant-изоляция + проверка допустимости перехода.
     """
     order = (
         db.query(Order)
@@ -284,9 +272,7 @@ def update_order_status(
         db.commit()
         db.refresh(order)
     except Exception:
-        logger.exception(
-            "Ошибка при обновлении статуса заказа: order_id=%s", order_id
-        )
+        logger.exception("Ошибка при обновлении статуса заказа: order_id=%s", order_id)
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -299,6 +285,11 @@ def update_order_status(
     )
 
     if data.status == "accepted":
-        background_tasks.add_task(handlers.notify_client_accepted, order)
+        # Передаём restaurant — notify_client_accepted Multi-Tenant
+        background_tasks.add_task(
+            handlers.notify_client_accepted,
+            order,
+            restaurant,
+        )
 
     return order
