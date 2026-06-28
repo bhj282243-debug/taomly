@@ -297,3 +297,38 @@ class RestaurantAdminResponse(BaseModel):
 class RestaurantAdminLogin(BaseModel):
     slug: str
     password: str
+
+
+# ──────────────────────────────────────────
+# MENU — схемы для ProductCreate/Update и Category
+# (перенесены из routers/menu.py)
+# ──────────────────────────────────────────
+class ProductCreate(BaseModel):
+    category_id: int = Field(..., gt=0)
+    name: str = Field(..., min_length=1, max_length=255)
+    # gt=0: цена обязана быть положительной — проверяется до роутера
+    price: int = Field(..., gt=0)
+    description: Optional[str] = None
+    photo_url: Optional[str] = None
+    is_available: bool = True
+    sort_order: int = Field(0, ge=0)
+
+
+class ProductUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    price: Optional[int] = Field(None, gt=0)
+    description: Optional[str] = None
+    photo_url: Optional[str] = None
+    is_available: Optional[bool] = None
+    sort_order: Optional[int] = Field(None, ge=0)
+    category_id: Optional[int] = Field(None, gt=0)
+
+
+class CategoryCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    sort_order: int = Field(0, ge=0)
+
+
+class CategoryUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    sort_order: Optional[int] = Field(None, ge=0)
