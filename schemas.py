@@ -132,7 +132,7 @@ class OrderStatusUpdate(BaseModel):
 # БРОНЬ
 # ──────────────────────────────────────────
 class ReservationCreate(BaseModel):
-    restaurant_id: int
+    # restaurant_id убран — берётся из TelegramUser.restaurant_id
     client_name: str
     client_phone: str
     guests_count: int = Field(..., ge=1)
@@ -161,8 +161,8 @@ class ReservationStatusUpdate(BaseModel):
 # ВЫЗОВ ОФИЦИАНТА
 # ──────────────────────────────────────────
 class WaiterCallCreate(BaseModel):
-    restaurant_id: int
-    table_id: int
+    # restaurant_id убран — берётся из TelegramUser.restaurant_id
+    table_id: int = Field(..., gt=0)
 
 
 class WaiterCallResponse(BaseModel):
