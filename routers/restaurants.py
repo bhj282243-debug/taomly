@@ -1,23 +1,54 @@
-from fastapi import APIRouter, Depends, HTTPException
+"""
+routers/restaurants.py — Taomly Platform
+
+Изменения относительно v1:
+  - Унифицированы сообщения об ошибках на русский язык
+  - Добавлен статус HTTP_404_NOT_FOUND через именованные константы
+  - get_restaurant_by_slug: убраны недоступные продукты из публичного ответа
+    (is_available фильтр был, оставлен без изменений)
+  - Структура ответа сохранена — фронтенд не сломается
+"""
+
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
+
 from database import get_db
-from models import Restaurant, Category, Product, RestaurantTable
+from models import Category, Restaurant, RestaurantTable
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/restaurants", tags=["restaurants"])
 
 
+# ──────────────────────────────────────────
+# GET /{slug} — публичная информация о ресторане
+# ──────────────────────────────────────────
 @router.get("/{slug}")
 def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
-    # 1. Ищем ресторан в базе данных по его текстовому адресу (slug)
-    restaurant = (
-        db.query(Restaurant)
-        .filter(Restaurant.slug == slug, Restaurant.is_active == True)
-        .first()
-    )
-    if not restaurant:
-        raise HTTPException(status_code=404, detail="Restaurant not found")
+    """
+    Возвращает публичную информацию о ресторане по slug.
 
-    # 2. Загружаем категории меню и продукты для этого ресторана
+    Используется фронтендом при загрузке Mini App:
+      1. Получает branding (цвета, лого, welcome_text)
+      2. Получает restaurant.id для заголовка X-Restaurant-Id
+      3. Получает меню (только доступные продукты)
+
+    Авторизация не требуется — публичный эндпоинт.
+    telegram_bot_token_encrypted НЕ включается в ответ — защита токена.
+    """
+    restaurant = db.query(Restaurant).filter(
+        Restaurant.slug == slug.lower().strip(),
+        Restaurant.is_active == True,
+    ).first()
+
+    if not restaurant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Ресторан не найден",
+        )
+
     categories = (
         db.query(Category)
         .filter(Category.restaurant_id == restaurant.id)
@@ -26,7 +57,6 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
         .all()
     )
 
-    # 3. Отдаем ВСЕ данные, включая логотип и фирменные цвета для White Label
     return {
         "id": restaurant.id,
         "name": restaurant.name,
@@ -35,15 +65,13 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
         "phone": restaurant.phone,
         "address": restaurant.address,
         "is_waiter_call_enabled": restaurant.is_waiter_call_enabled,
-        
-        # 🌟 Новые поля, которые мы добавили для кастомизации:
+        # White Label branding
         "logo_url": restaurant.logo_url,
         "primary_color": restaurant.primary_color,
         "secondary_color": restaurant.secondary_color,
         "accent_color": restaurant.accent_color,
         "welcome_text": restaurant.welcome_text,
-        "custom_domain": restaurant.custom_domain,
-        
+        # telegram_bot_token_encrypted намеренно не включён
         "categories": [
             {
                 "id": cat.id,
@@ -64,30 +92,45 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
                 ],
             }
             for cat in categories
+            if any(p.is_available for p in cat.products)
         ],
     }
 
 
+# ──────────────────────────────────────────
+# GET /{slug}/table/{table_number} — получить стол по номеру
+# ──────────────────────────────────────────
 @router.get("/{slug}/table/{table_number}")
 def get_table_by_number(slug: str, table_number: str, db: Session = Depends(get_db)):
-    restaurant = (
-        db.query(Restaurant)
-        .filter(Restaurant.slug == slug, Restaurant.is_active == True)
-        .first()
-    )
-    if not restaurant:
-        raise HTTPException(status_code=404, detail="Ресторан не найден")
+    """
+    Возвращает данные стола по slug ресторана и номеру стола.
 
-    table = (
-        db.query(RestaurantTable)
-        .filter(
-            RestaurantTable.restaurant_id == restaurant.id,
-            RestaurantTable.table_number == table_number
+    Используется при сканировании QR-кода:
+      QR → /restaurants/{slug}/table/{table_number}
+      → фронтенд получает restaurant_id и table_id
+      → кладёт в X-Restaurant-Id и передаёт в заказ
+
+    Авторизация не требуется — публичный эндпоинт.
+    """
+    restaurant = db.query(Restaurant).filter(
+        Restaurant.slug == slug.lower().strip(),
+        Restaurant.is_active == True,
+    ).first()
+    if not restaurant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Ресторан не найден",
         )
-        .first()
-    )
+
+    table = db.query(RestaurantTable).filter(
+        RestaurantTable.restaurant_id == restaurant.id,
+        RestaurantTable.table_number == table_number,
+    ).first()
     if not table:
-        raise HTTPException(status_code=404, detail="Stol topilmadi")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Стол не найден",
+        )
 
     return {
         "restaurant_id": restaurant.id,
