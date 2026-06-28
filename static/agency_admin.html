@@ -433,21 +433,21 @@ tr:hover td { background: var(--bg); }
         <div class="form-group">
           <label class="form-label">Основной цвет</label>
           <div class="color-input-wrap">
-            <input class="form-control" id="c_primary_color" placeholder="#8B1A2E" oninput="updateColorPreview('c_primary_color','cprev_primary')" />
+            <input class="form-control" id="c_primary_color" placeholder="#8B1A2E" oninput="updateColorPreview('c_primary_color','cprev_primary')" /><input type="color" value="#8B1A2E" oninput="document.getElementById('c_primary_color').value=this.value;updateColorPreview('c_primary_color','cprev_primary')" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;margin-left:6px;" title="Выбрать цвет" />
             <div class="color-preview" id="cprev_primary" style="background:#8B1A2E"></div>
           </div>
         </div>
         <div class="form-group">
           <label class="form-label">Доп. цвет</label>
           <div class="color-input-wrap">
-            <input class="form-control" id="c_secondary_color" placeholder="#FAF6EE" oninput="updateColorPreview('c_secondary_color','cprev_secondary')" />
+            <input class="form-control" id="c_secondary_color" placeholder="#FAF6EE" oninput="updateColorPreview('c_secondary_color','cprev_secondary')" /><input type="color" value="#FAF6EE" oninput="document.getElementById('c_secondary_color').value=this.value;updateColorPreview('c_secondary_color','cprev_secondary')" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;margin-left:6px;" title="Выбрать цвет" />
             <div class="color-preview" id="cprev_secondary" style="background:#FAF6EE"></div>
           </div>
         </div>
         <div class="form-group">
           <label class="form-label">Accent цвет</label>
           <div class="color-input-wrap">
-            <input class="form-control" id="c_accent_color" placeholder="#D4A853" oninput="updateColorPreview('c_accent_color','cprev_accent')" />
+            <input class="form-control" id="c_accent_color" placeholder="#D4A853" oninput="updateColorPreview('c_accent_color','cprev_accent')" /><input type="color" value="#D4A853" oninput="document.getElementById('c_accent_color').value=this.value;updateColorPreview('c_accent_color','cprev_accent')" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;margin-left:6px;" title="Выбрать цвет" />
             <div class="color-preview" id="cprev_accent" style="background:#D4A853"></div>
           </div>
         </div>
@@ -534,7 +534,7 @@ tr:hover td { background: var(--bg); }
         <div class="form-group">
           <label class="form-label">Основной цвет</label>
           <div class="color-input-wrap">
-            <input class="form-control" id="e_primary_color" oninput="updateColorPreview('e_primary_color','eprev_primary')" />
+            <input class="form-control" id="e_primary_color" oninput="updateColorPreview('e_primary_color','eprev_primary')" /><input type="color" value="#8B1A2E" id="e_primary_color_picker" oninput="document.getElementById('e_primary_color').value=this.value;updateColorPreview('e_primary_color','eprev_primary')" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;margin-left:6px;" title="Выбрать цвет" />
             <div class="color-preview" id="eprev_primary"></div>
           </div>
         </div>
@@ -576,9 +576,12 @@ tr:hover td { background: var(--bg); }
 <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
 
 <script>
-const API = '';
-let token = localStorage.getItem('agency_token') || null;
-let agencyInfo = JSON.parse(localStorage.getItem('agency_info') || 'null');
+const API = window.location.origin;
+// JWT хранится в sessionStorage, не localStorage.
+// localStorage уязвим к XSS — любой скрипт на странице может прочитать токен.
+// sessionStorage очищается при закрытии вкладки — безопаснее для админки.
+let token = sessionStorage.getItem('agency_token') || null;
+let agencyInfo = JSON.parse(sessionStorage.getItem('agency_info') || 'null');
 let allRestaurants = [];
 
 // ── TRANSLITERATION MAP ──
@@ -608,6 +611,18 @@ function autoSlug() {
 function handleLogoUpload(input, urlInputId, previewId) {
   const file = input.files[0];
   if (!file) return;
+  // Проверка типа файла
+  if (!file.type.startsWith('image/')) {
+    toast('Только изображения (JPG, PNG, WebP)', 'error');
+    input.value = '';
+    return;
+  }
+  // Лимит 2MB
+  if (file.size > 2 * 1024 * 1024) {
+    toast('Файл слишком большой. Максимум 2MB', 'error');
+    input.value = '';
+    return;
+  }
   const reader = new FileReader();
   reader.onload = function(e) {
     document.getElementById(urlInputId).value = e.target.result;
@@ -622,11 +637,30 @@ function handleLogoUpload(input, urlInputId, previewId) {
 function copyField(id) {
   const val = document.getElementById(id)?.value?.trim();
   if (!val) { toast('Поле пустое, нечего копировать', 'error'); return; }
-  navigator.clipboard.writeText(val).then(() => {
-    toast('Скопировано в буфер обмена!', 'success');
-  }).catch(() => {
-    toast('Ошибка копирования', 'error');
-  });
+  // Fallback для браузеров без navigator.clipboard (HTTP, старые браузеры)
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(val).then(() => {
+      toast('Скопировано в буфер обмена!', 'success');
+    }).catch(() => {
+      toast('Ошибка копирования', 'error');
+    });
+  } else {
+    // Fallback через execCommand (устаревший, но работает везде)
+    const textarea = document.createElement('textarea');
+    textarea.value = val;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      toast('Скопировано!', 'success');
+    } catch {
+      toast('Ошибка копирования', 'error');
+    }
+    document.body.removeChild(textarea);
+  }
 }
 
 // ── INIT ──
@@ -679,7 +713,7 @@ async function doLogin() {
     if (!res.ok) throw new Error(data.detail || 'Ошибка входа');
 
     token = data.access_token;
-    localStorage.setItem('agency_token', token);
+    sessionStorage.setItem('agency_token', token);
 
     await loadAgencyInfo();
     showApp();
@@ -692,17 +726,17 @@ async function doLogin() {
 }
 
 async function loadAgencyInfo() {
-  const res = await authFetch('/api/agency/me');
+  const res = await apiFetch('/api/agency/me');
   if (!res.ok) throw new Error('Unauthorized');
   const data = await res.json();
   agencyInfo = { id: data.id, name: data.name, email: data.email };
-  localStorage.setItem('agency_info', JSON.stringify(agencyInfo));
+  sessionStorage.setItem('agency_info', JSON.stringify(agencyInfo));
 }
 
 function doLogout() {
   token = null; agencyInfo = null;
-  localStorage.removeItem('agency_token');
-  localStorage.removeItem('agency_info');
+  sessionStorage.removeItem('agency_token');
+  sessionStorage.removeItem('agency_info');
   showLogin();
 }
 
@@ -721,7 +755,7 @@ function showPage(name, navEl) {
 async function loadRestaurants() {
   showLoading(true);
   try {
-    const res = await authFetch('/api/agency/restaurants');
+    const res = await apiFetch('/api/agency/restaurants');
     if (res.status === 401) { doLogout(); return; }
     
     // Если сервер вернул ошибку, разбираем её детали
@@ -799,11 +833,15 @@ function renderRestaurants(list) {
 }
 
 function filterRestaurants() {
-  const q = document.getElementById('searchInput').value.toLowerCase();
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  if (!q) { renderRestaurants(allRestaurants); return; }
   renderRestaurants(allRestaurants.filter(r =>
     r.name.toLowerCase().includes(q) ||
     r.slug.toLowerCase().includes(q) ||
-    (r.address || '').toLowerCase().includes(q)
+    (r.address || '').toLowerCase().includes(q) ||
+    (r.phone || '').toLowerCase().includes(q) ||
+    (r.custom_domain || '').toLowerCase().includes(q) ||
+    String(r.telegram_dispatcher_id || '').includes(q)
   ));
 }
 
@@ -855,7 +893,7 @@ async function submitCreate() {
   };
 
   try {
-    const res = await authFetch('/api/agency/restaurants', {
+    const res = await apiFetch('/api/agency/restaurants', {
       method: 'POST', body: JSON.stringify(payload)
     });
     const data = await res.json();
@@ -937,7 +975,7 @@ async function submitEdit() {
   if (dispId !== '') payload.telegram_dispatcher_id = dispId ? parseInt(dispId) : null;
 
   try {
-    const res = await authFetch(`/api/agency/restaurants/${id}`, {
+    const res = await apiFetch(`/api/agency/restaurants/${id}`, {
       method: 'PATCH', body: JSON.stringify(payload)
     });
     const data = await res.json();
@@ -956,7 +994,7 @@ async function submitEdit() {
 async function deactivate(id) {
   if (!confirm('Деактивировать ресторан? Клиенты не смогут открыть меню.')) return;
   try {
-    const res = await authFetch(`/api/agency/restaurants/${id}`, { method: 'DELETE' });
+    const res = await apiFetch(`/api/agency/restaurants/${id}`, { method: 'DELETE' });
     if (!res.ok) { const d = await res.json(); throw new Error(d.detail); }
     toast('Ресторан деактивирован', 'success');
     await loadRestaurants();
@@ -965,7 +1003,7 @@ async function deactivate(id) {
 
 async function activate(id) {
   try {
-    const res = await authFetch(`/api/agency/restaurants/${id}`, {
+    const res = await apiFetch(`/api/agency/restaurants/${id}`, {
       method: 'PATCH', body: JSON.stringify({ is_active: true })
     });
     if (!res.ok) { const d = await res.json(); throw new Error(d.detail); }
@@ -984,6 +1022,16 @@ function authFetch(url, opts = {}) {
       ...(opts.headers || {})
     }
   });
+}
+
+// При 401 — токен истёк, автоматически разлогиниваем
+async function apiFetch(url, options = {}) {
+  const res = await authFetch(url, options);
+  if (res.status === 401) {
+    doLogout();
+    throw new Error('Сессия истекла. Войдите снова.');
+  }
+  return res;
 }
 
 function v(id) { return (document.getElementById(id)?.value || '').trim(); }
