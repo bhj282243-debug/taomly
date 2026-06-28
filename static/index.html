@@ -881,29 +881,40 @@ async function submitOrder() {
   }
   if (orderType === 'delivery' && !address) { alert('Manzilni kiriting'); return; }
 
+  // initData обязателен — без него сервер отклонит запрос с 401
+  const tg = window.Telegram?.WebApp;
+  const initData = tg?.initData;
+  if (!initData) {
+    alert('Telegram Mini App dan foydalaning');
+    return;
+  }
+
   btn.disabled = true;
   btn.textContent = 'Yuborilmoqda...';
 
-  const tg = window.Telegram?.WebApp;
-  const tgUser = tg?.initDataUnsafe?.user;
-
+  // restaurant_id и client_telegram_id убраны из payload —
+  // сервер берёт их из заголовков X-Restaurant-Id и X-Telegram-Init-Data
   const payload = {
-    restaurant_id: restaurant.id,
-    client_telegram_id: tgUser?.id || null,
     client_name: name || null,
     client_phone: phone || null,
     order_type: orderType,
     address: orderType === 'delivery' ? address : null,
     table_id: orderType === 'dine_in' ? tableDbId : null,
     comment: comment || null,
-    items: cartItems().map(i => ({ product_id:i.id, quantity:i.qty }))
+    items: cartItems().map(i => ({ product_id: i.id, quantity: i.qty }))
   };
 
   try {
     const res = await fetch(`${API_BASE}/api/orders/`, {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json' },
-      body:JSON.stringify(payload)
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // Сервер верифицирует подпись Telegram HMAC-SHA256
+        'X-Telegram-Init-Data': initData,
+        // Сервер загружает ресторан и его бот-токен для верификации
+        'X-Restaurant-Id': String(restaurant.id),
+      },
+      body: JSON.stringify(payload)
     });
     if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Xato'); }
     const order = await res.json();
