@@ -811,23 +811,25 @@ function renderRestaurants(list) {
     return;
   }
   tbody.innerHTML = list.map(r => {
-    const menuUrl = r.custom_domain ? `https://${esc(r.custom_domain)}` : `https://${esc(r.slug)}.taomly.uz`;
+    const menuUrl = r.custom_domain ? `https://${esc(r.custom_domain)}` : `https://taomly.onrender.com/app?slug=${esc(r.slug)}`;
     return `
-    <tr>
-      <td><strong>${esc(r.name)}</strong></td>
-      <td><code style="font-size:12px;color:var(--text-sub)">${esc(r.slug)}</code></td>
-      <td>${r.address ? esc(r.address) : '<span style="color:var(--text-sub)">—</span>'}</td>
-      <td><span class="badge ${r.is_active ? 'badge-active' : 'badge-inactive'}">${r.is_active ? '● Активен' : '● Неактивен'}</span></td>
+    <tr style="cursor:pointer" onclick="openEditModal(${r.id})">
       <td>
-        <div class="actions">
-          <button class="btn btn-secondary btn-sm" onclick="openEditModal(${r.id})">✏️ Изменить</button>
-          <a href="/admin?slug=${esc(r.slug)}" target="_blank" class="btn btn-secondary btn-sm">🛠️ Админка</a>
-          <a href="${menuUrl}" target="_blank" class="btn btn-secondary btn-sm">🌐 Меню</a>
+        <strong>${esc(r.name)}</strong>
+        <div style="font-size:11px;color:var(--text-sub);margin-top:2px">${esc(r.slug)}</div>
+        <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;padding-bottom:4px">
+          <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openEditModal(${r.id})">✏️ Изменить</button>
+          <a href="/admin?slug=${esc(r.slug)}" target="_blank" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">🛠️ Админка</a>
+          <a href="${menuUrl}" target="_blank" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">🌐 Меню</a>
           ${r.is_active
-            ? `<button class="btn btn-danger btn-sm" onclick="deactivate(${r.id})">⏸ Деактивировать</button>`
-            : `<button class="btn btn-success btn-sm" onclick="activate(${r.id})">▶ Активировать</button>`}
+            ? `<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deactivate(${r.id})">⏸ Деакт.</button>`
+            : `<button class="btn btn-success btn-sm" onclick="event.stopPropagation();activate(${r.id})">▶ Актив.</button>`}
         </div>
       </td>
+      <td style="display:none">${esc(r.slug)}</td>
+      <td>${r.address ? esc(r.address) : '<span style="color:var(--text-sub)">—</span>'}</td>
+      <td><span class="badge ${r.is_active ? 'badge-active' : 'badge-inactive'}">${r.is_active ? '● Активен' : '● Неактивен'}</span></td>
+      <td style="display:none"></td>
     </tr>`;
   }).join('');
 }
