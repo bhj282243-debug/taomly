@@ -162,6 +162,53 @@ def serve_agency_admin():
     return FileResponse("static/agency_admin.html")
 
 
+@app.post("/webhook/{slug}")
+def restaurant_webhook(
+    slug: str,
+    request: Request,
+    update: dict,
+    x_telegram_bot_api_secret_token: str = Header(
+        default=None,
+        alias="X-Telegram-Bot-Api-Secret-Token",
+    ),
+):
+    """
+    Принимает обновления от Telegram для бота конкретного ресторана.
+
+    Multi-Tenant: slug определяет ресторан, бот которого обрабатывает update.
+    Webhook регистрируется автоматически при создании ресторана
+    (см. telegram_service.register_restaurant_webhook), вызывается из
+    routers/agency.py — никаких ручных действий через Postman не требуется.
+
+    Безопасность: тот же WEBHOOK_SECRET, что и у платформенного бота —
+    Telegram подписывает запрос секретом, переданным при setWebhook.
+    """
+    if x_telegram_bot_api_secret_token != WEBHOOK_SECRET:
+        logger.warning(
+            "Webhook[%s]: отклонён запрос с невалидным секретом от %s",
+            slug, request.client.host if request.client else "unknown",
+        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+    with SessionLocal() as db:
+        restaurant = db.query(models.Restaurant).filter(
+            models.Restaurant.slug == slug,
+            models.Restaurant.is_active == True,
+        ).first()
+
+        if not restaurant or not restaurant.telegram_bot_token_encrypted:
+            logger.warning("Webhook[%s]: ресторан не найден или бот не настроен", slug)
+            # 200 — чтобы Telegram не повторял запрос бесконечно
+            return {"ok": False, "detail": "Ресторан не найден"}
+
+        try:
+            handlers.process_restaurant_webhook_update(restaurant, update)
+            return {"ok": True}
+        except Exception:
+            logger.exception("Webhook[%s]: ошибка обработки update", slug)
+            return {"ok": False}
+
+
 # ──────────────────────────────────────────
 # WEBHOOK — платформенный бот
 # ──────────────────────────────────────────
