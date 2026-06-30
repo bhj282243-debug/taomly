@@ -12,6 +12,7 @@ routers/agency.py — Taomly Platform
 """
 
 import logging
+import os
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -33,14 +34,26 @@ from schemas import (
     RestaurantAdminLogin,
     RestaurantAdminResponse,
     RestaurantCreate,
+    RestaurantCreateResponse,
     RestaurantUpdate,
     TokenResponse,
 )
 import handlers
+import telegram_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/agency", tags=["agency"])
+
+# Та же пара URL/секрет, что использует платформенный webhook в api.py —
+# единый источник конфигурации для всех webhook'ов (платформенного и ресторанных).
+import hashlib as _hashlib
+_WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+_SECRET_KEY = os.getenv("SECRET_KEY", "")
+_WEBHOOK_SECRET = os.getenv(
+    "WEBHOOK_SECRET",
+    _hashlib.sha256(_SECRET_KEY.encode()).hexdigest()[:64],
+)
 
 
 # ──────────────────────────────────────────
@@ -137,7 +150,7 @@ def get_agency_me(agency: Agency = Depends(get_current_agency)):
 # ──────────────────────────────────────────
 # РЕСТОРАНЫ — Agency Owner CRUD
 # ──────────────────────────────────────────
-@router.post("/restaurants", response_model=RestaurantAdminResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/restaurants", response_model=RestaurantCreateResponse, status_code=status.HTTP_201_CREATED)
 def create_restaurant(
     data: RestaurantCreate,
     agency: Agency = Depends(get_current_agency),
@@ -205,7 +218,32 @@ def create_restaurant(
         "Ресторан создан: restaurant_id=%s slug=%s agency_id=%s",
         restaurant.id, slug, agency.id,
     )
-    return restaurant
+
+    # Автоматическая настройка Telegram-бота: getMe → deleteWebhook → setWebhook.
+    # Никогда не бросает исключение — ресторан уже создан и должен вернуться
+    # клиенту, даже если токен бота окажется невалидным или Telegram недоступен.
+    webhook_status = "skipped"
+    webhook_detail = None
+    if data.telegram_bot_token:
+        result = telegram_service.register_restaurant_webhook(
+            bot_token=data.telegram_bot_token,
+            slug=slug,
+            webhook_base_url=_WEBHOOK_URL,
+            webhook_secret=_WEBHOOK_SECRET,
+            restaurant_name=restaurant.name,
+        )
+        webhook_status = "ok" if result.ok else "failed"
+        webhook_detail = result.detail
+        if not result.ok:
+            logger.warning(
+                "Ресторан id=%s создан, но webhook не зарегистрирован: %s",
+                restaurant.id, result.detail,
+            )
+
+    response = RestaurantCreateResponse.model_validate(restaurant)
+    response.webhook_status = webhook_status
+    response.webhook_detail = webhook_detail
+    return response
 
 
 @router.get("/restaurants", response_model=list[RestaurantAdminResponse])
@@ -285,14 +323,14 @@ def update_restaurant(
 
     update_fields = data.model_dump(exclude_none=True)
     token_changed = False
+    new_plain_token = None
 
     if "admin_password" in update_fields:
         restaurant.admin_password_hash = hash_password(update_fields.pop("admin_password"))
 
     if "telegram_bot_token" in update_fields:
-        restaurant.telegram_bot_token_encrypted = encrypt_token(
-            update_fields.pop("telegram_bot_token")
-        )
+        new_plain_token = update_fields.pop("telegram_bot_token")
+        restaurant.telegram_bot_token_encrypted = encrypt_token(new_plain_token)
         token_changed = True
 
     for field, value in update_fields.items():
@@ -312,11 +350,42 @@ def update_restaurant(
         )
 
     # Сбрасываем кэш бота после commit — старый токен уже не актуален
+    webhook_status = None
+    webhook_detail = None
     if token_changed:
+        # Снимаем webhook со старого токена ДО того как он пропадёт из памяти —
+        # bot_token уже перезаписан в БД, но кэш ещё хранит старый TeleBot.
+        old_bot = handlers._BOT_CACHE.get(restaurant_id)
+        if old_bot:
+            try:
+                old_bot.remove_webhook()
+                logger.info("Token changed: старый webhook снят (restaurant_id=%s)", restaurant_id)
+            except Exception:
+                logger.exception(
+                    "Token changed: не удалось снять старый webhook (restaurant_id=%s)",
+                    restaurant_id,
+                )
+
         handlers.invalidate_bot_cache(restaurant_id)
         logger.info(
             "BOT_CACHE сброшен после смены токена: restaurant_id=%s", restaurant_id
         )
+
+        # Регистрируем webhook на новый токен — полностью автоматически.
+        result = telegram_service.register_restaurant_webhook(
+            bot_token=new_plain_token,
+            slug=restaurant.slug,
+            webhook_base_url=_WEBHOOK_URL,
+            webhook_secret=_WEBHOOK_SECRET,
+            restaurant_name=restaurant.name,
+        )
+        webhook_status = "ok" if result.ok else "failed"
+        webhook_detail = result.detail
+        if not result.ok:
+            logger.warning(
+                "Token changed: webhook не зарегистрирован (restaurant_id=%s): %s",
+                restaurant_id, result.detail,
+            )
 
     logger.info("Ресторан обновлён: restaurant_id=%s agency_id=%s", restaurant_id, agency.id)
     return restaurant
@@ -356,6 +425,23 @@ def delete_restaurant(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка при деактивации ресторана",
         )
+
+    # Снимаем webhook бота перед сбросом кэша — деактивированный ресторан
+    # не должен продолжать получать апдейты от Telegram.
+    if restaurant.telegram_bot_token_encrypted:
+        try:
+            from auth import decrypt_token as _decrypt_token
+            bot_token = _decrypt_token(restaurant.telegram_bot_token_encrypted)
+            telegram_service.remove_restaurant_webhook(
+                bot_token=bot_token,
+                slug=restaurant.slug,
+                restaurant_name=restaurant.name,
+            )
+        except Exception:
+            logger.exception(
+                "Не удалось снять webhook при деактивации restaurant_id=%s — продолжаем",
+                restaurant_id,
+            )
 
     handlers.invalidate_bot_cache(restaurant_id)
     logger.info(
