@@ -776,8 +776,17 @@ async function saveNewCategory() {
       body: JSON.stringify({ name, sort_order: menuData ? menuData.length : 0 }),
     });
     if (!res.ok) {
-      const err = await res.json().catch(() => null);
-      throw new Error(err && err.detail ? err.detail : 'Xato');
+      let detail = `HTTP ${res.status}`;
+      try {
+        const text = await res.text();
+        try {
+          const parsed = JSON.parse(text);
+          detail = (parsed && parsed.detail) ? `${res.status}: ${JSON.stringify(parsed.detail)}` : `${res.status}: ${text}`;
+        } catch {
+          detail = `${res.status}: ${text}`;
+        }
+      } catch {}
+      throw new Error(detail);
     }
     closeModal('addCategoryModal');
     await loadMenu();
