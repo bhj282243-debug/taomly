@@ -85,6 +85,78 @@ def invalidate_bot_cache(restaurant_id: int) -> None:
 
 
 # ──────────────────────────────────────────
+# /start ДЛЯ РЕСТОРАННЫХ БОТОВ (Multi-Tenant)
+# ──────────────────────────────────────────
+# Базовый URL Mini App. Каждому ресторану добавляется ?slug=...,
+# поэтому один обработчик подходит для всех ресторанных ботов.
+_APP_BASE_URL = os.getenv("WEBHOOK_URL", "https://taomly.onrender.com").rstrip("/") + "/app"
+
+
+def _send_restaurant_welcome(bot: telebot.TeleBot, chat_id: int, restaurant) -> None:
+    """Отправляет приветствие и кнопку Mini App конкретного ресторана."""
+    app_url = f"{_APP_BASE_URL}?slug={restaurant.slug}"
+    welcome_text = restaurant.welcome_text or "🌟 Xush kelibsiz!"
+
+    reply_markup = telebot.types.ReplyKeyboardMarkup(
+        resize_keyboard=True,
+        is_persistent=True,
+    )
+    reply_markup.add(
+        telebot.types.KeyboardButton(
+            text="🍽️  MENYUNI OCHISH  🍽️",
+            web_app=telebot.types.WebAppInfo(url=app_url),
+        )
+    )
+
+    inline_markup = telebot.types.InlineKeyboardMarkup()
+    inline_markup.add(
+        telebot.types.InlineKeyboardButton(
+            text="🍽️  Menyuni ochish  →",
+            web_app=telebot.types.WebAppInfo(url=app_url),
+        )
+    )
+
+    bot.send_message(
+        chat_id,
+        f"{welcome_text}\n\n"
+        f"🍽️ {restaurant.name} — mazali taomlar buyurtma qiling\n"
+        "⚡️ Tez va qulay — bir necha soniyada\n"
+        "🚀 Quyidagi tugmani bosing:",
+        reply_markup=reply_markup,
+    )
+    bot.send_message(chat_id, "👇", reply_markup=inline_markup)
+
+
+def process_restaurant_webhook_update(restaurant, update_dict: dict) -> None:
+    """
+    Обрабатывает входящий Telegram Update для конкретного ресторанного бота.
+
+    Вызывается из эндпоинта POST /webhook/{slug} в api.py.
+    Каждый ресторан получает свой собственный /start с собственной
+    кнопкой Mini App (ссылка содержит slug этого ресторана).
+    """
+    bot = get_restaurant_bot(restaurant)
+
+    # Регистрируем хендлеры один раз на конкретный экземпляр TeleBot.
+    # Используем замыкание restaurant — у каждого бота из _BOT_CACHE
+    # свои хендлеры, привязанные к своему ресторану.
+    if not getattr(bot, "_taomly_handlers_registered", False):
+
+        @bot.message_handler(commands=["start"])
+        def _handle_start(message, _restaurant=restaurant, _bot=bot):
+            _send_restaurant_welcome(_bot, message.chat.id, _restaurant)
+
+        @bot.message_handler(func=lambda m: m.text and "MENYUNI OCHISH" in m.text)
+        def _handle_menu_button(message, _restaurant=restaurant, _bot=bot):
+            _send_restaurant_welcome(_bot, message.chat.id, _restaurant)
+
+        bot._taomly_handlers_registered = True
+
+    update_obj = telebot.types.Update.de_json(update_dict)
+    bot.process_new_updates([update_obj])
+
+
+# ──────────────────────────────────────────
 # ПЛАТФОРМЕННЫЙ /start (onboarding)
 # ──────────────────────────────────────────
 if platform_bot:
