@@ -291,6 +291,21 @@ class RestaurantAdminResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class RestaurantCreateResponse(RestaurantAdminResponse):
+    """
+    Ответ на создание ресторана — расширяет RestaurantAdminResponse
+    статусом автоматической настройки Telegram-бота (getMe/setWebhook).
+
+    webhook_status:
+      - "ok"        — бот проверен, webhook зарегистрирован
+      - "skipped"   — telegram_bot_token не был передан при создании
+      - "failed"    — токен невалиден или Telegram API недоступен,
+                       подробности в webhook_detail (ресторан всё равно создан)
+    """
+    webhook_status: str = "skipped"
+    webhook_detail: Optional[str] = None
+
+
 # ──────────────────────────────────────────
 # RESTAURANT ADMIN — авторизация
 # ──────────────────────────────────────────
