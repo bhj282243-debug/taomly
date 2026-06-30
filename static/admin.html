@@ -311,6 +311,7 @@
   <!-- MENU PAGE -->
   <div class="page" id="page-menu">
     <div class="menu-content">
+      <button class="add-product-btn" id="addCategoryBtn" onclick="openAddCategoryModal()" style="background:var(--brown); display:none;">+ Yangi kategoriya qo'shish</button>
       <button class="add-product-btn" onclick="openAddModal()">+ Yangi taom qo'shish</button>
       <div id="menu-content">
         <div class="loading"><div class="spinner"></div>Yuklanmoqda...</div>
@@ -359,6 +360,18 @@
     <div class="modal-btns">
       <button class="modal-btn modal-btn-cancel" onclick="closeModal('editPriceModal')">Bekor</button>
       <button class="modal-btn modal-btn-save" onclick="savePrice()">Saqlash</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD CATEGORY MODAL -->
+<div class="modal-overlay" id="addCategoryModal">
+  <div class="modal">
+    <div class="modal-title">Yangi kategoriya qo'shish</div>
+    <input class="modal-input" type="text" id="newCategoryName" placeholder="Kategoriya nomi (masalan: Supy)" />
+    <div class="modal-btns">
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal('addCategoryModal')">Bekor</button>
+      <button class="modal-btn modal-btn-save" onclick="saveNewCategory()">Qo'shish</button>
     </div>
   </div>
 </div>
@@ -671,16 +684,26 @@ async function loadMenu() {
 function renderMenu() {
   const content = document.getElementById('menu-content');
   content.innerHTML = '';
+  const catBtn = document.getElementById('addCategoryBtn');
   if (!menuData || menuData.length === 0) {
-    content.innerHTML = `<div class="empty">Menyu bo'sh</div>`;
+    catBtn.style.display = 'block';
+    content.innerHTML = `<div class="empty">Menyu bo'sh.<br>Avval kategoriya qo'shing.</div>`;
     return;
   }
+  catBtn.style.display = 'block';
   menuData.forEach(cat => {
-    if (!cat.products || cat.products.length === 0) return;
     const block = document.createElement('div');
     block.className = 'category-block';
     block.innerHTML = `<div class="category-name">${cat.name}</div>`;
-    cat.products.forEach(p => block.appendChild(makeProductRow(p)));
+    if (cat.products && cat.products.length > 0) {
+      cat.products.forEach(p => block.appendChild(makeProductRow(p)));
+    } else {
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.style.padding = '12px 0';
+      empty.textContent = "Bu kategoriyada taom yo'q";
+      block.appendChild(empty);
+    }
     content.appendChild(block);
   });
 }
@@ -738,8 +761,36 @@ async function savePrice() {
   }
 }
 
+function openAddCategoryModal() {
+  document.getElementById('newCategoryName').value = '';
+  document.getElementById('addCategoryModal').classList.add('active');
+}
+
+async function saveNewCategory() {
+  const name = document.getElementById('newCategoryName').value.trim();
+  if (!name) { alert('Kategoriya nomini kiriting'); return; }
+  try {
+    const res = await apiFetch(`${API}/api/menu/category/`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ name, sort_order: menuData ? menuData.length : 0 }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      throw new Error(err && err.detail ? err.detail : 'Xato');
+    }
+    closeModal('addCategoryModal');
+    await loadMenu();
+  } catch (e) {
+    alert('Xato: ' + e.message);
+  }
+}
+
 function openAddModal() {
-  if (!menuData) return;
+  if (!menuData || menuData.length === 0) {
+    alert("Avval kamida bitta kategoriya qo'shing");
+    return;
+  }
   const select = document.getElementById('newProductCategory');
   select.innerHTML = menuData.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
   document.getElementById('newProductName').value = '';
