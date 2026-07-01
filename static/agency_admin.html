@@ -4,263 +4,281 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Taomly — Agency Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 :root {
-  --primary: #8B1A2E;
-  --primary-light: #A52338;
-  --accent: #D4AF37;
-  --bg: #F5F6FA;
-  --bg-card: #FFFFFF;
-  --sidebar-bg: #1A1A2E;
-  --sidebar-text: #A0A8C0;
-  --sidebar-active: #FFFFFF;
-  --text-main: #1A1A2E;
-  --text-sub: #6B7280;
-  --border: #E5E7EB;
-  --success: #10B981;
-  --danger: #EF4444;
-  --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
-  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
+  --bg: #FAF7F1;
+  --card: #FFFFFF;
+  --surface: #F3ECDF;
+  --ink: #241B17;
+  --soft: #8A7A6D;
+  --ruby: #7A1530;
+  --ruby-d: #5E0F25;
+  --ruby-soft: #FBEEF1;
+  --gold: #B68A3F;
+  --line: rgba(36,27,23,0.09);
+  --green: #1A6B3A;
+  --green-soft: #EBF5F0;
+  --red: #B01C1C;
+  --red-soft: #FCEAEA;
+  --blue: #1A4A8A;
+  --purple: #5B2A8A;
+  --sh: 0 1px 3px rgba(36,27,23,0.07), 0 1px 2px rgba(36,27,23,0.04);
+  --sh-md: 0 8px 24px rgba(36,27,23,0.08), 0 2px 6px rgba(36,27,23,0.05);
+  --sh-ruby: 0 8px 24px rgba(122,21,48,0.22);
+  --r-lg: 20px;
+  --r-md: 16px;
+  --r-sm: 12px;
 }
 
-body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); min-height: 100vh; }
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+svg { display: block; }
+.icon { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.6; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 
+/* ── LOGIN ── */
 #loginScreen {
   display: flex; align-items: center; justify-content: center;
-  min-height: 100vh; background: linear-gradient(135deg, #1A1A2E 0%, #2D1B3D 100%);
+  min-height: 100vh; padding: 32px;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(122,21,48,0.08), transparent 45%),
+    radial-gradient(circle at 85% 85%, rgba(182,138,63,0.10), transparent 45%),
+    var(--bg);
 }
-.login-card {
-  background: var(--bg-card); border-radius: 16px; padding: 40px;
-  width: 100%; max-width: 420px; box-shadow: var(--shadow-lg);
-}
-.login-logo { text-align: center; margin-bottom: 32px; }
+.login-card { background: var(--card); border-radius: var(--r-lg); padding: 34px 28px; width: 100%; max-width: 380px; box-shadow: var(--sh-md); }
+.login-logo { text-align: center; margin-bottom: 26px; }
 .login-logo-mark {
-  width: 56px; height: 56px; background: var(--primary); border-radius: 14px;
+  width: 60px; height: 60px; background: var(--ruby); border-radius: 18px;
   display: inline-flex; align-items: center; justify-content: center;
-  font-size: 24px; color: #fff; margin-bottom: 12px;
+  margin-bottom: 16px; box-shadow: var(--sh-ruby);
 }
-.login-title { font-size: 22px; font-weight: 700; color: var(--text-main); }
-.login-sub { font-size: 13px; color: var(--text-sub); margin-top: 4px; }
+.login-logo-mark svg { width: 26px; height: 26px; stroke: #FAF7F1; stroke-width: 1.5; }
+.login-title { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; color: var(--ink); }
+.login-sub { font-size: 13px; color: var(--soft); margin-top: 5px; }
 
 .form-group { margin-bottom: 16px; }
-.form-label { display: block; font-size: 13px; font-weight: 500; color: var(--text-sub); margin-bottom: 6px; }
+.form-label { display: block; font-size: 11.5px; font-weight: 700; color: var(--soft); margin-bottom: 7px; text-transform: uppercase; letter-spacing: 0.7px; }
 .form-control {
-  width: 100%; padding: 11px 14px; border: 1.5px solid var(--border);
-  border-radius: 10px; font-size: 14px; font-family: inherit;
-  color: var(--text-main); background: #fff; outline: none; transition: border-color 0.2s;
+  width: 100%; padding: 13px 15px; border: 1.5px solid var(--line);
+  border-radius: var(--r-sm); font-size: 14.5px; font-family: inherit;
+  color: var(--ink); background: var(--bg); outline: none; transition: border-color 0.15s;
 }
-.form-control:focus { border-color: var(--primary); }
-.form-hint { font-size: 11px; color: var(--text-sub); margin-top: 4px; }
+.form-control:focus { border-color: var(--ruby); }
+.form-hint { font-size: 11px; color: var(--soft); margin-top: 5px; }
 
-/* Стили для копирования в один клик */
 .input-group-copy { display: flex; gap: 8px; }
 .btn-copy {
-  background: var(--bg); border: 1.5px solid var(--border); padding: 0 12px;
-  border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center;
-  justify-content: center; font-size: 14px; transition: all 0.2s; user-select: none;
+  background: var(--surface); border: 1.5px solid var(--line); padding: 0 13px;
+  border-radius: var(--r-sm); cursor: pointer; display: inline-flex; align-items: center;
+  justify-content: center; font-size: 14px; transition: all 0.15s; user-select: none; color: var(--soft);
 }
-.btn-copy:hover { background: var(--border); }
+.btn-copy:hover { background: var(--line); }
 
-/* Стили для загрузки логотипа с предпросмотром */
-.file-upload-wrap { display: flex; align-items: center; gap: 16px; margin-top: 6px; }
+.file-upload-wrap { display: flex; align-items: center; gap: 14px; margin-top: 4px; }
 .file-upload-preview {
-  width: 54px; height: 54px; border-radius: 12px; border: 1.5px solid var(--border);
-  object-fit: cover; background: var(--bg); display: none;
+  width: 52px; height: 52px; border-radius: var(--r-sm); border: 1.5px solid var(--line);
+  object-fit: cover; background: var(--surface); display: none;
 }
 .file-upload-preview.show { display: block; }
 
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 11px 20px; border-radius: 10px; font-size: 14px; font-weight: 600;
-  font-family: inherit; cursor: pointer; border: none; transition: all 0.2s; text-decoration: none;
+  padding: 12px 20px; border-radius: var(--r-sm); font-size: 14px; font-weight: 700;
+  font-family: inherit; cursor: pointer; border: none; transition: all 0.15s; text-decoration: none;
 }
-.btn-primary { background: var(--primary); color: #fff; }
-.btn-primary:hover { background: var(--primary-light); }
-.btn-secondary { background: var(--bg); color: var(--text-main); border: 1.5px solid var(--border); }
-.btn-secondary:hover { background: var(--border); }
-.btn-danger { background: var(--danger); color: #fff; }
-.btn-success { background: var(--success); color: #fff; }
-.btn-sm { padding: 7px 14px; font-size: 13px; }
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--ruby); color: #FAF7F1; box-shadow: var(--sh-ruby); }
+.btn-primary:hover { background: var(--ruby-d); }
+.btn-secondary { background: var(--surface); color: var(--ink); border: 1.5px solid var(--line); box-shadow: none; }
+.btn-secondary:hover { background: var(--line); }
+.btn-danger { background: var(--red-soft); color: var(--red); box-shadow: none; }
+.btn-success { background: var(--green-soft); color: var(--green); box-shadow: none; }
+.btn-sm { padding: 8px 14px; font-size: 12.5px; }
 .btn-full { width: 100%; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .error-banner {
-  background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px;
-  padding: 10px 14px; font-size: 13px; color: var(--danger); margin-bottom: 16px; display: none;
+  background: var(--red-soft); border: 1px solid rgba(176,28,28,0.25); border-radius: var(--r-sm);
+  padding: 11px 14px; font-size: 13px; color: var(--red); margin-bottom: 16px; display: none;
 }
 
+/* ── APP SHELL ── */
 #appScreen { display: none; min-height: 100vh; }
 
 .sidebar {
-  position: fixed; top: 0; left: 0; bottom: 0; width: 240px;
-  background: var(--sidebar-bg); display: flex; flex-direction: column; z-index: 100;
+  position: fixed; top: 0; left: 0; bottom: 0; width: 248px;
+  background: var(--card); border-right: 1px solid var(--line);
+  display: flex; flex-direction: column; z-index: 100;
 }
-.sidebar-logo { padding: 24px 20px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.sidebar-logo { padding: 26px 22px 22px; border-bottom: 1px solid var(--line); }
 .sidebar-logo-mark {
-  width: 36px; height: 36px; background: var(--primary); border-radius: 9px;
+  width: 40px; height: 40px; background: var(--ruby); border-radius: 12px;
   display: inline-flex; align-items: center; justify-content: center;
-  font-size: 16px; color: #fff; margin-bottom: 10px;
+  margin-bottom: 12px; box-shadow: var(--sh-ruby);
 }
-.sidebar-product { font-size: 16px; font-weight: 700; color: #fff; }
-.sidebar-edition { font-size: 11px; color: var(--sidebar-text); margin-top: 2px; }
+.sidebar-logo-mark svg { width: 18px; height: 18px; stroke: #FAF7F1; stroke-width: 1.6; }
+.sidebar-product { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 700; color: var(--ink); }
+.sidebar-edition { font-size: 11px; color: var(--soft); margin-top: 2px; letter-spacing: 0.3px; }
 
-.sidebar-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+.sidebar-nav { flex: 1; padding: 18px 14px; display: flex; flex-direction: column; gap: 3px; }
 .nav-item {
-  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
-  border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500;
-  color: var(--sidebar-text); transition: all 0.15s;
+  display: flex; align-items: center; gap: 11px; padding: 11px 13px;
+  border-radius: var(--r-sm); cursor: pointer; font-size: 13.5px; font-weight: 600;
+  color: var(--soft); transition: all 0.15s;
 }
-.nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
-.nav-item.active { background: rgba(255,255,255,0.1); color: var(--sidebar-active); }
-.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+.nav-item:hover { background: var(--surface); color: var(--ink); }
+.nav-item.active { background: var(--ruby-soft); color: var(--ruby); }
+.nav-item .icon { width: 17px; height: 17px; flex-shrink: 0; }
 
-.sidebar-footer { padding: 16px 12px; border-top: 1px solid rgba(255,255,255,0.08); }
+.sidebar-footer { padding: 16px 14px; border-top: 1px solid var(--line); }
 .agency-badge {
-  background: rgba(255,255,255,0.06); border-radius: 8px;
-  padding: 10px 12px; margin-bottom: 8px;
+  background: var(--surface); border-radius: var(--r-sm);
+  padding: 12px 13px; margin-bottom: 8px;
 }
-.agency-name { font-size: 13px; font-weight: 600; color: #fff; }
-.agency-email { font-size: 11px; color: var(--sidebar-text); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agency-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+.agency-email { font-size: 11px; color: var(--soft); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .btn-logout {
-  width: 100%; display: flex; align-items: center; gap: 8px; padding: 9px 12px;
-  border-radius: 8px; background: none; border: none; font-size: 13px;
-  color: var(--sidebar-text); cursor: pointer; font-family: inherit; transition: all 0.15s;
+  width: 100%; display: flex; align-items: center; gap: 9px; padding: 10px 13px;
+  border-radius: var(--r-sm); background: none; border: none; font-size: 13px; font-weight: 600;
+  color: var(--soft); cursor: pointer; font-family: inherit; transition: all 0.15s;
 }
-.btn-logout:hover { background: rgba(239,68,68,0.15); color: #F87171; }
+.btn-logout .icon { width: 16px; height: 16px; }
+.btn-logout:hover { background: var(--red-soft); color: var(--red); }
 
-.main-content { margin-left: 240px; min-height: 100vh; }
+.main-content { margin-left: 248px; min-height: 100vh; }
 
 .topbar {
-  background: var(--bg-card); border-bottom: 1px solid var(--border);
-  padding: 16px 32px; display: flex; align-items: center; justify-content: space-between;
+  background: rgba(250,247,241,0.9); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line);
+  padding: 18px 32px; display: flex; align-items: center; justify-content: space-between;
   position: sticky; top: 0; z-index: 50;
 }
-.topbar-title { font-size: 18px; font-weight: 700; color: var(--text-main); }
-.topbar-sub { font-size: 13px; color: var(--text-sub); margin-top: 2px; }
+.topbar-title { font-family: 'Playfair Display', serif; font-size: 19px; font-weight: 700; color: var(--ink); }
+.topbar-sub { font-size: 12.5px; color: var(--soft); margin-top: 2px; }
 
 .page { padding: 28px 32px; display: none; }
 .page.active { display: block; }
 
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 28px; }
-.stat-card {
-  background: var(--bg-card); border-radius: 12px; padding: 20px;
-  box-shadow: var(--shadow); border: 1px solid var(--border);
+.stat-card { background: var(--card); border-radius: var(--r-md); padding: 20px; box-shadow: var(--sh); }
+.stat-icon-wrap {
+  width: 38px; height: 38px; border-radius: 11px; background: var(--ruby-soft); color: var(--ruby);
+  display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
 }
-.stat-label { font-size: 12px; font-weight: 500; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; }
-.stat-value { font-size: 28px; font-weight: 700; color: var(--text-main); margin-top: 6px; }
-.stat-icon { font-size: 22px; margin-bottom: 8px; }
+.stat-icon-wrap .icon { width: 18px; height: 18px; }
+.stat-label { font-size: 11px; font-weight: 700; color: var(--soft); text-transform: uppercase; letter-spacing: 0.6px; }
+.stat-value { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; color: var(--ink); margin-top: 6px; }
 
-.card {
-  background: var(--bg-card); border-radius: 12px;
-  box-shadow: var(--shadow); border: 1px solid var(--border); overflow: hidden;
-}
+.card { background: var(--card); border-radius: var(--r-lg); box-shadow: var(--sh); overflow: hidden; }
 .card-header {
-  padding: 18px 20px; border-bottom: 1px solid var(--border);
+  padding: 20px 22px; border-bottom: 1px solid var(--line);
   display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
 }
-.card-title { font-size: 15px; font-weight: 600; color: var(--text-main); }
+.card-title { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700; color: var(--ink); }
 
 .search-box {
   display: flex; align-items: center; gap: 8px;
-  background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px; padding: 8px 12px;
+  background: var(--surface); border: 1.5px solid transparent; border-radius: var(--r-sm); padding: 9px 13px;
 }
-.search-box input {
-  border: none; background: none; outline: none;
-  font-size: 13px; font-family: inherit; color: var(--text-main); width: 200px;
-}
+.search-box .icon { width: 15px; height: 15px; color: var(--soft); }
+.search-box input { border: none; background: none; outline: none; font-size: 13px; font-family: inherit; color: var(--ink); width: 200px; }
 
 table { width: 100%; border-collapse: collapse; }
 th {
-  padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 600;
-  color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px;
-  background: var(--bg); border-bottom: 1px solid var(--border);
+  padding: 13px 22px; text-align: left; font-size: 10.5px; font-weight: 700;
+  color: var(--soft); text-transform: uppercase; letter-spacing: 0.6px;
+  background: var(--surface); border-bottom: 1px solid var(--line);
 }
-td { padding: 14px 16px; font-size: 14px; color: var(--text-main); border-bottom: 1px solid var(--border); }
+td { padding: 16px 22px; font-size: 14px; color: var(--ink); border-bottom: 1px solid var(--line); vertical-align: top; }
 tr:last-child td { border-bottom: none; }
-tr:hover td { background: var(--bg); }
+tr:hover td { background: rgba(243,236,223,0.4); }
 
 .badge {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 11px; border-radius: 100px; font-size: 11.5px; font-weight: 700;
 }
-.badge-active { background: #D1FAE5; color: #065F46; }
-.badge-inactive { background: #FEE2E2; color: #991B1B; }
+.badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.badge-active { background: var(--green-soft); color: var(--green); }
+.badge-active::before { background: var(--green); }
+.badge-inactive { background: var(--red-soft); color: var(--red); }
+.badge-inactive::before { background: var(--red); }
 .actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  position: fixed; inset: 0; background: rgba(36,27,23,0.45);
   z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px;
 }
 .modal-overlay.open { display: flex; }
 .modal {
-  background: var(--bg-card); border-radius: 16px; width: 100%; max-width: 580px;
-  max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg);
+  background: var(--card); border-radius: var(--r-lg); width: 100%; max-width: 580px;
+  max-height: 90vh; overflow-y: auto; box-shadow: var(--sh-md);
 }
 .modal-header {
-  padding: 20px 24px; border-bottom: 1px solid var(--border);
+  padding: 20px 24px; border-bottom: 1px solid var(--line);
   display: flex; align-items: center; justify-content: space-between;
-  position: sticky; top: 0; background: #fff; z-index: 1;
+  position: sticky; top: 0; background: var(--card); z-index: 1;
 }
-.modal-title { font-size: 16px; font-weight: 700; }
+.modal-title { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 700; color: var(--ink); }
 .modal-close {
-  width: 32px; height: 32px; border-radius: 8px; background: var(--bg);
-  border: none; cursor: pointer; font-size: 18px; color: var(--text-sub);
+  width: 32px; height: 32px; border-radius: 9px; background: var(--surface);
+  border: none; cursor: pointer; font-size: 17px; color: var(--soft);
   display: flex; align-items: center; justify-content: center;
 }
+.modal-close:hover { background: var(--line); }
 .modal-body { padding: 24px; display: flex; flex-direction: column; gap: 14px; }
 .modal-footer {
-  padding: 16px 24px; border-top: 1px solid var(--border);
+  padding: 16px 24px; border-top: 1px solid var(--line);
   display: flex; justify-content: flex-end; gap: 10px;
 }
 
 .section-title {
-  font-size: 11px; font-weight: 600; color: var(--text-sub);
+  font-size: 11px; font-weight: 700; color: var(--gold);
   text-transform: uppercase; letter-spacing: 1px;
-  padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-top: 4px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--line); margin-top: 6px;
 }
 
 .color-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-.color-input-wrap { position: relative; }
+.color-input-wrap { position: relative; display: flex; align-items: center; }
 .color-preview {
-  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-  width: 20px; height: 20px; border-radius: 5px; border: 1px solid var(--border); pointer-events: none;
+  position: absolute; right: 46px; top: 50%; transform: translateY(-50%);
+  width: 20px; height: 20px; border-radius: 5px; border: 1px solid var(--line); pointer-events: none;
 }
 
 .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
 .toast {
-  background: var(--text-main); color: #fff; padding: 12px 18px; border-radius: 10px;
-  font-size: 13px; font-weight: 500; box-shadow: var(--shadow-lg);
+  background: var(--ink); color: #FAF7F1; padding: 13px 18px; border-radius: var(--r-sm);
+  font-size: 13px; font-weight: 600; box-shadow: var(--sh-md);
   animation: slideIn 0.3s ease; max-width: 320px;
 }
-.toast.success { background: var(--success); }
-.toast.error { background: var(--danger); }
+.toast.success { background: var(--green); }
+.toast.error { background: var(--red); }
 @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
 .loading-overlay {
-  position: fixed; inset: 0; background: rgba(255,255,255,0.8);
+  position: fixed; inset: 0; background: rgba(250,247,241,0.82);
   z-index: 500; display: none; align-items: center; justify-content: center;
 }
 .loading-overlay.show { display: flex; }
 .spinner {
-  width: 36px; height: 36px; border: 3px solid var(--border);
-  border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite;
+  width: 36px; height: 36px; border: 3px solid var(--line);
+  border-top-color: var(--ruby); border-radius: 50%; animation: spin 0.7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.empty-state { text-align: center; padding: 48px 20px; color: var(--text-sub); font-size: 14px; }
-.empty-icon { font-size: 36px; margin-bottom: 12px; }
+.empty-state { text-align: center; padding: 52px 20px; color: var(--soft); font-size: 14px; }
+.empty-icon { width: 34px; height: 34px; margin: 0 auto 14px; color: var(--soft); opacity: 0.6; }
 
 @media (max-width: 768px) {
   .sidebar { display: none; }
   .main-content { margin-left: 0; }
   .page { padding: 16px; }
-  .topbar { padding: 14px 16px; }
+  .topbar { padding: 14px 18px; }
   .color-row { grid-template-columns: 1fr; }
   .search-box input { width: 120px; }
+  td, th { padding: 12px 14px; }
 }
 </style>
 </head>
@@ -269,7 +287,9 @@ tr:hover td { background: var(--bg); }
 <div id="loginScreen">
   <div class="login-card">
     <div class="login-logo">
-      <div class="login-logo-mark">✦</div>
+      <div class="login-logo-mark">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12"/><path d="M9 21v-6h6v6"/></svg>
+      </div>
       <div class="login-title">Taomly Agency</div>
       <div class="login-sub">Панель управления веб-студии</div>
     </div>
@@ -289,16 +309,20 @@ tr:hover td { background: var(--bg); }
 <div id="appScreen">
   <div class="sidebar">
     <div class="sidebar-logo">
-      <div class="sidebar-logo-mark">✦</div>
+      <div class="sidebar-logo-mark">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12"/><path d="M9 21v-6h6v6"/></svg>
+      </div>
       <div class="sidebar-product">Taomly</div>
       <div class="sidebar-edition">Agency Panel</div>
     </div>
     <nav class="sidebar-nav">
       <div class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard', this)">
-        <span class="nav-icon">📊</span> Dashboard
+        <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Dashboard
       </div>
       <div class="nav-item" id="nav-restaurants" onclick="showPage('restaurants', this)">
-        <span class="nav-icon">🍽️</span> Рестораны
+        <svg class="icon" viewBox="0 0 24 24"><path d="M3 2v7a3 3 0 0 0 3 3v10"/><path d="M6 2v7"/><path d="M9 2v7"/><path d="M18 2c-2 2-3 5-3 8s1 3 3 3v9"/></svg>
+        Рестораны
       </div>
     </nav>
     <div class="sidebar-footer">
@@ -306,7 +330,10 @@ tr:hover td { background: var(--bg); }
         <div class="agency-name" id="sidebarAgencyName">—</div>
         <div class="agency-email" id="sidebarAgencyEmail">—</div>
       </div>
-      <button class="btn-logout" onclick="doLogout()">🚪 Выйти</button>
+      <button class="btn-logout" onclick="doLogout()">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+        Выйти
+      </button>
     </div>
   </div>
 
@@ -317,24 +344,25 @@ tr:hover td { background: var(--bg); }
         <div class="topbar-sub" id="topbarSub">Добро пожаловать</div>
       </div>
       <button class="btn btn-primary btn-sm" onclick="openCreateModal()" id="createBtn" style="display:none;">
-        + Создать ресторан
+        <svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg>
+        Создать ресторан
       </button>
     </div>
 
     <div class="page active" id="page-dashboard">
       <div class="stats-grid">
         <div class="stat-card">
-          <div class="stat-icon">🍽️</div>
+          <div class="stat-icon-wrap"><svg class="icon" viewBox="0 0 24 24"><path d="M3 2v7a3 3 0 0 0 3 3v10"/><path d="M6 2v7"/><path d="M9 2v7"/><path d="M18 2c-2 2-3 5-3 8s1 3 3 3v9"/></svg></div>
           <div class="stat-label">Всего ресторанов</div>
           <div class="stat-value" id="statTotal">—</div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon">✅</div>
+          <div class="stat-icon-wrap" style="background:var(--green-soft);color:var(--green)"><svg class="icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>
           <div class="stat-label">Активных</div>
           <div class="stat-value" id="statActive">—</div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon">⏸️</div>
+          <div class="stat-icon-wrap" style="background:var(--red-soft);color:var(--red)"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
           <div class="stat-label">Неактивных</div>
           <div class="stat-value" id="statInactive">—</div>
         </div>
@@ -356,7 +384,7 @@ tr:hover td { background: var(--bg); }
         <div class="card-header">
           <span class="card-title">Рестораны агентства</span>
           <div class="search-box">
-            <span style="color:var(--text-sub)">🔍</span>
+            <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
             <input type="text" id="searchInput" placeholder="Поиск..." oninput="filterRestaurants()" />
           </div>
         </div>
@@ -365,7 +393,7 @@ tr:hover td { background: var(--bg); }
             <tr><th>Название</th><th>Slug</th><th>Адрес</th><th>Статус</th><th>Действия</th></tr>
           </thead>
           <tbody id="restaurantsTable">
-            <tr><td colspan="5"><div class="empty-state"><div class="empty-icon">🍽️</div>Загрузка...</div></td></tr>
+            <tr><td colspan="5"><div class="empty-state">Загрузка...</div></td></tr>
           </tbody>
         </table>
       </div>
@@ -433,22 +461,25 @@ tr:hover td { background: var(--bg); }
         <div class="form-group">
           <label class="form-label">Основной цвет</label>
           <div class="color-input-wrap">
-            <input class="form-control" id="c_primary_color" placeholder="#8B1A2E" oninput="updateColorPreview('c_primary_color','cprev_primary')" /><input type="color" value="#8B1A2E" oninput="document.getElementById('c_primary_color').value=this.value;updateColorPreview('c_primary_color','cprev_primary')" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;margin-left:6px;" title="Выбрать цвет" />
+            <input class="form-control" id="c_primary_color" placeholder="#8B1A2E" oninput="updateColorPreview('c_primary_color','cprev_primary')" style="padding-right:64px" />
             <div class="color-preview" id="cprev_primary" style="background:#8B1A2E"></div>
+            <input type="color" value="#8B1A2E" oninput="document.getElementById('c_primary_color').value=this.value;updateColorPreview('c_primary_color','cprev_primary')" style="position:absolute;right:8px;width:28px;height:28px;border:none;border-radius:7px;cursor:pointer;padding:0;" title="Выбрать цвет" />
           </div>
         </div>
         <div class="form-group">
           <label class="form-label">Доп. цвет</label>
           <div class="color-input-wrap">
-            <input class="form-control" id="c_secondary_color" placeholder="#FAF6EE" oninput="updateColorPreview('c_secondary_color','cprev_secondary')" /><input type="color" value="#FAF6EE" oninput="document.getElementById('c_secondary_color').value=this.value;updateColorPreview('c_secondary_color','cprev_secondary')" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;margin-left:6px;" title="Выбрать цвет" />
+            <input class="form-control" id="c_secondary_color" placeholder="#FAF6EE" oninput="updateColorPreview('c_secondary_color','cprev_secondary')" style="padding-right:64px" />
             <div class="color-preview" id="cprev_secondary" style="background:#FAF6EE"></div>
+            <input type="color" value="#FAF6EE" oninput="document.getElementById('c_secondary_color').value=this.value;updateColorPreview('c_secondary_color','cprev_secondary')" style="position:absolute;right:8px;width:28px;height:28px;border:none;border-radius:7px;cursor:pointer;padding:0;" title="Выбрать цвет" />
           </div>
         </div>
         <div class="form-group">
           <label class="form-label">Accent цвет</label>
           <div class="color-input-wrap">
-            <input class="form-control" id="c_accent_color" placeholder="#D4A853" oninput="updateColorPreview('c_accent_color','cprev_accent')" /><input type="color" value="#D4A853" oninput="document.getElementById('c_accent_color').value=this.value;updateColorPreview('c_accent_color','cprev_accent')" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;margin-left:6px;" title="Выбрать цвет" />
+            <input class="form-control" id="c_accent_color" placeholder="#D4A853" oninput="updateColorPreview('c_accent_color','cprev_accent')" style="padding-right:64px" />
             <div class="color-preview" id="cprev_accent" style="background:#D4A853"></div>
+            <input type="color" value="#D4A853" oninput="document.getElementById('c_accent_color').value=this.value;updateColorPreview('c_accent_color','cprev_accent')" style="position:absolute;right:8px;width:28px;height:28px;border:none;border-radius:7px;cursor:pointer;padding:0;" title="Выбрать цвет" />
           </div>
         </div>
       </div>
@@ -487,7 +518,9 @@ tr:hover td { background: var(--bg); }
         <label class="form-label">Slug</label>
         <div class="input-group-copy">
           <input class="form-control" id="e_slug" />
-          <button class="btn-copy" onclick="copyField('e_slug')" title="Копировать Slug">📋</button>
+          <button class="btn-copy" onclick="copyField('e_slug')" title="Копировать Slug">
+            <svg class="icon" viewBox="0 0 24 24" style="width:15px;height:15px"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
         </div>
         <div class="form-hint">Изменение slug сломает существующие QR-коды.</div>
       </div>
@@ -509,14 +542,18 @@ tr:hover td { background: var(--bg); }
         <label class="form-label">Bot Token</label>
         <div class="input-group-copy">
           <input class="form-control" id="e_bot_token" placeholder="Оставьте пустым — не изменится" />
-          <button class="btn-copy" onclick="copyField('e_bot_token')" title="Копировать Token">📋</button>
+          <button class="btn-copy" onclick="copyField('e_bot_token')" title="Копировать Token">
+            <svg class="icon" viewBox="0 0 24 24" style="width:15px;height:15px"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
         </div>
       </div>
       <div class="form-group">
         <label class="form-label">Telegram ID диспетчера</label>
         <div class="input-group-copy">
           <input class="form-control" type="number" id="e_dispatcher_id" />
-          <button class="btn-copy" onclick="copyField('e_dispatcher_id')" title="Копировать ID">📋</button>
+          <button class="btn-copy" onclick="copyField('e_dispatcher_id')" title="Копировать ID">
+            <svg class="icon" viewBox="0 0 24 24" style="width:15px;height:15px"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
         </div>
       </div>
 
@@ -534,8 +571,9 @@ tr:hover td { background: var(--bg); }
         <div class="form-group">
           <label class="form-label">Основной цвет</label>
           <div class="color-input-wrap">
-            <input class="form-control" id="e_primary_color" oninput="updateColorPreview('e_primary_color','eprev_primary')" /><input type="color" value="#8B1A2E" id="e_primary_color_picker" oninput="document.getElementById('e_primary_color').value=this.value;updateColorPreview('e_primary_color','eprev_primary')" style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:2px;margin-left:6px;" title="Выбрать цвет" />
+            <input class="form-control" id="e_primary_color" oninput="updateColorPreview('e_primary_color','eprev_primary')" style="padding-right:64px" />
             <div class="color-preview" id="eprev_primary"></div>
+            <input type="color" value="#8B1A2E" id="e_primary_color_picker" oninput="document.getElementById('e_primary_color').value=this.value;updateColorPreview('e_primary_color','eprev_primary')" style="position:absolute;right:8px;width:28px;height:28px;border:none;border-radius:7px;cursor:pointer;padding:0;" title="Выбрать цвет" />
           </div>
         </div>
         <div class="form-group">
@@ -561,7 +599,9 @@ tr:hover td { background: var(--bg); }
         <label class="form-label">Custom Domain</label>
         <div class="input-group-copy">
           <input class="form-control" id="e_custom_domain" />
-          <button class="btn-copy" onclick="copyField('e_custom_domain')" title="Копировать домен">📋</button>
+          <button class="btn-copy" onclick="copyField('e_custom_domain')" title="Копировать домен">
+            <svg class="icon" viewBox="0 0 24 24" style="width:15px;height:15px"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
         </div>
       </div>
     </div>
@@ -799,15 +839,15 @@ function renderDashboard(list) {
   tbody.innerHTML = recent.map(r => `
     <tr>
       <td><strong>${esc(r.name)}</strong></td>
-      <td><code style="font-size:12px;color:var(--text-sub)">${esc(r.slug)}</code></td>
-      <td><span class="badge ${r.is_active ? 'badge-active' : 'badge-inactive'}">${r.is_active ? '● Активен' : '● Неактивен'}</span></td>
+      <td><code style="font-size:12px;color:var(--soft)">${esc(r.slug)}</code></td>
+      <td><span class="badge ${r.is_active ? 'badge-active' : 'badge-inactive'}">${r.is_active ? 'Активен' : 'Неактивен'}</span></td>
     </tr>`).join('');
 }
 
 function renderRestaurants(list) {
   const tbody = document.getElementById('restaurantsTable');
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">🍽️</div>Нет ресторанов. Создайте первый!</div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">Нет ресторанов. Создайте первый!</div></td></tr>';
     return;
   }
   tbody.innerHTML = list.map(r => {
@@ -816,19 +856,19 @@ function renderRestaurants(list) {
     <tr style="cursor:pointer" onclick="openEditModal(${r.id})">
       <td>
         <strong>${esc(r.name)}</strong>
-        <div style="font-size:11px;color:var(--text-sub);margin-top:2px">${esc(r.slug)}</div>
-        <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;padding-bottom:4px">
-          <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openEditModal(${r.id})">✏️ Изменить</button>
-          <a href="/admin?slug=${esc(r.slug)}" target="_blank" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">🛠️ Админка</a>
-          <a href="${menuUrl}" target="_blank" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">🌐 Меню</a>
+        <div style="font-size:11px;color:var(--soft);margin-top:2px">${esc(r.slug)}</div>
+        <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;padding-bottom:2px">
+          <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openEditModal(${r.id})">Изменить</button>
+          <a href="/admin?slug=${esc(r.slug)}" target="_blank" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">Админка</a>
+          <a href="${menuUrl}" target="_blank" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">Меню</a>
           ${r.is_active
-            ? `<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deactivate(${r.id})">⏸ Деакт.</button>`
-            : `<button class="btn btn-success btn-sm" onclick="event.stopPropagation();activate(${r.id})">▶ Актив.</button>`}
+            ? `<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deactivate(${r.id})">Деакт.</button>`
+            : `<button class="btn btn-success btn-sm" onclick="event.stopPropagation();activate(${r.id})">Актив.</button>`}
         </div>
       </td>
       <td style="display:none">${esc(r.slug)}</td>
-      <td>${r.address ? esc(r.address) : '<span style="color:var(--text-sub)">—</span>'}</td>
-      <td><span class="badge ${r.is_active ? 'badge-active' : 'badge-inactive'}">${r.is_active ? '● Активен' : '● Неактивен'}</span></td>
+      <td>${r.address ? esc(r.address) : '<span style="color:var(--soft)">—</span>'}</td>
+      <td><span class="badge ${r.is_active ? 'badge-active' : 'badge-inactive'}">${r.is_active ? 'Активен' : 'Неактивен'}</span></td>
       <td style="display:none"></td>
     </tr>`;
   }).join('');
