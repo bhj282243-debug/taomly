@@ -12,20 +12,20 @@
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
 :root {
-  --bg:          #FAF7F1;
+  --bg:          #F7F4EE;
   --card:        #FFFFFF;
-  --surface:     #F3ECDF;
-  --ink:         #241B17;
-  --ink-soft:    #8A7A6D;
-  --ruby:        #7A1530;
-  --ruby-deep:   #5E0F25;
-  --gold:        #B68A3F;
-  --gold-soft:   #C9A14A;
-  --line:        rgba(36,27,23,0.09);
-  --line-strong: rgba(36,27,23,0.16);
-  --shadow-sm:   0 1px 3px rgba(36,27,23,0.06), 0 1px 2px rgba(36,27,23,0.04);
-  --shadow-md:   0 8px 24px rgba(36,27,23,0.08), 0 2px 6px rgba(36,27,23,0.05);
-  --shadow-ruby: 0 10px 30px rgba(122,21,48,0.28);
+  --surface:     #EFEAE0;
+  --ink:         #1C1A18;
+  --ink-soft:    #7A726A;
+  --ruby:        #2C211B;
+  --ruby-deep:   #1C1512;
+  --gold:        #B08A45;
+  --gold-soft:   #B08A45;
+  --line:        rgba(28,26,24,0.09);
+  --line-strong: rgba(28,26,24,0.16);
+  --shadow-sm:   0 1px 3px rgba(28,26,24,0.06), 0 1px 2px rgba(28,26,24,0.04);
+  --shadow-md:   0 8px 24px rgba(28,26,24,0.08), 0 2px 6px rgba(28,26,24,0.05);
+  --shadow-ruby: 0 10px 30px rgba(44,33,27,0.24);
   --radius-lg:   20px;
   --radius-md:   16px;
   --radius-sm:   12px;
@@ -121,10 +121,10 @@ svg { display:block; }
   position:relative; overflow:hidden;
   border-radius:var(--radius-lg);
   background:linear-gradient(135deg, var(--ruby) 0%, var(--ruby-deep) 100%);
-  padding:26px 22px 26px;
-  margin-bottom:18px;
+  padding:20px 22px 20px;
+  margin-bottom:16px;
   box-shadow:var(--shadow-ruby);
-  min-height:148px;
+  min-height:112px;
   display:flex; flex-direction:column; justify-content:flex-end;
 }
 .hero-bg-img {
@@ -145,24 +145,24 @@ svg { display:block; }
   content:'';
   position:absolute; top:-40%; right:-15%;
   width:200px; height:200px; border-radius:50%;
-  background:radial-gradient(circle, rgba(201,161,74,0.22), transparent 70%);
+  background:radial-gradient(circle, rgba(176,138,69,0.28), transparent 70%);
   pointer-events:none; z-index:2;
 }
 .hero-eyebrow {
   font-size:11px; font-weight:700; letter-spacing:1.6px;
-  text-transform:uppercase; color:var(--gold-soft);
-  margin-bottom:8px; position:relative; z-index:3;
+  text-transform:uppercase; color:var(--gold);
+  margin-bottom:6px; position:relative; z-index:3;
   opacity:0; animation:heroFadeUp 0.5s ease 0.15s forwards;
 }
 .hero-title {
   font-family:'Playfair Display',serif;
-  font-size:24px; font-weight:700; color:#FAF7F1;
+  font-size:22px; font-weight:700; color:#F7F4EE;
   line-height:1.22; position:relative; max-width:85%; z-index:3;
   opacity:0; animation:heroFadeUp 0.5s ease 0.28s forwards;
 }
 .hero-sub {
-  font-size:13px; color:rgba(250,247,241,0.8);
-  margin-top:8px; position:relative; z-index:3;
+  font-size:13px; color:rgba(247,244,238,0.78);
+  margin-top:6px; position:relative; z-index:3;
   opacity:0; animation:heroFadeUp 0.5s ease 0.4s forwards;
 }
 @keyframes heroFadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
@@ -214,7 +214,7 @@ svg { display:block; }
   background:var(--ruby);
   border-color:var(--ruby);
   color:#FAF7F1;
-  box-shadow:0 4px 14px rgba(122,21,48,0.28);
+  box-shadow:0 4px 14px rgba(44,33,27,0.24);
 }
 
 /* ─── MAIN CONTENT ─── */
@@ -317,11 +317,11 @@ svg { display:block; }
   color:#FAF7F1;
   cursor:pointer; display:flex; align-items:center; justify-content:center;
   transition:transform 0.15s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.15s ease;
-  box-shadow:0 4px 12px rgba(122,21,48,0.35);
+  box-shadow:0 4px 12px rgba(44,33,27,0.30);
   flex-shrink:0;
 }
 .add-btn .icon { width:16px; height:16px; stroke-width:2.2; }
-.add-btn:active { transform:scale(0.85) rotate(90deg); box-shadow:0 2px 6px rgba(122,21,48,0.3); }
+.add-btn:active { transform:scale(0.85) rotate(90deg); box-shadow:0 2px 6px rgba(44,33,27,0.25); }
 
 .qty-control {
   display:flex; align-items:center; gap:2px;
@@ -417,8 +417,8 @@ svg { display:block; }
 }
 .type-btn.active {
   border-color:var(--ruby);
-  background:rgba(122,21,48,0.05);
-  box-shadow:0 4px 16px rgba(122,21,48,0.1);
+  background:rgba(44,33,27,0.05);
+  box-shadow:0 4px 16px rgba(44,33,27,0.09);
 }
 .type-btn-icon {
   width:30px; height:30px; margin:0 auto 8px;
@@ -577,7 +577,7 @@ svg { display:block; }
   content:'';
   position:absolute; inset:-10px;
   border-radius:50%;
-  border:1.5px solid rgba(122,21,48,0.3);
+  border:1.5px solid rgba(44,33,27,0.25);
   animation:ringPulse 1.6s ease-out 0.3s infinite;
 }
 .success-anim .icon {
@@ -900,14 +900,38 @@ function fmtTwoLine(p) {
   return `${p.toLocaleString('uz-UZ')}<span class="price-currency">so'm</span>`;
 }
 
-// Применяет фирменные цвета ресторана (primary/secondary/accent_color),
-// которые agency_admin уже хранит в БД — White Label темизация без
-// каких-либо изменений backend. Если цвет не настроен, остаётся дефолтный.
+// Применяет фирменные цвета ресторана поверх базовой luxury-палитры
+// (тёплый молочный + тёмный орех + матовое золото).
+// Цвет ресторана НЕ подставляется как есть — какой бы яркий/светлый
+// цвет ни выбрал ресторан в agency_admin, он подмешивается к тёмному
+// ореху и затемняется. Это не даёт кнопкам/баннеру превратиться в неон
+// и держит белый текст поверх них читаемым при любом исходном цвете.
+// Фон (--bg) всегда остаётся молочным — это часть единого бренд-шелла
+// White Label, его не переопределяем цветом конкретного ресторана.
 function applyBrandTheme(r) {
   const root = document.documentElement.style;
-  if (r.primary_color)   { root.setProperty('--ruby', r.primary_color); root.setProperty('--ruby-deep', shade(r.primary_color, -18)); }
-  if (r.accent_color)    { root.setProperty('--gold', r.accent_color); root.setProperty('--gold-soft', r.accent_color); }
-  if (r.secondary_color) { root.setProperty('--bg', r.secondary_color); }
+  if (r.primary_color) {
+    const woodTone = mix(r.primary_color, '#2C211B', 0.55);
+    root.setProperty('--ruby', woodTone);
+    root.setProperty('--ruby-deep', shade(woodTone, -16));
+  }
+  if (r.accent_color) {
+    const goldTone = mix(r.accent_color, '#B08A45', 0.6);
+    root.setProperty('--gold', goldTone);
+    root.setProperty('--gold-soft', goldTone);
+  }
+}
+// Смешивает hex-цвет ресторана с базовым брендовым цветом (orig, base, вес базового 0..1).
+function mix(hexA, hexB, weightB) {
+  try {
+    const a = parseInt(hexA.replace('#',''), 16);
+    const b = parseInt(hexB.replace('#',''), 16);
+    const wA = 1 - weightB;
+    const r = Math.round(((a >> 16) & 0xff) * wA + ((b >> 16) & 0xff) * weightB);
+    const g = Math.round(((a >> 8) & 0xff) * wA + ((b >> 8) & 0xff) * weightB);
+    const bl = Math.round((a & 0xff) * wA + (b & 0xff) * weightB);
+    return `#${((1<<24)+(r<<16)+(g<<8)+bl).toString(16).slice(1)}`;
+  } catch { return hexB; }
 }
 function shade(hex, percent) {
   try {
