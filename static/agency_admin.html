@@ -3,414 +3,1053 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Taomly — Agency Admin</title>
+<title>Taomly — Agency</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 :root {
-  --bg: #FAF7F1;
-  --card: #FFFFFF;
-  --surface: #F3ECDF;
-  --ink: #241B17;
-  --soft: #8A7A6D;
-  --ruby: #7A1530;
-  --ruby-d: #5E0F25;
-  --ruby-soft: #FBEEF1;
-  --gold: #B68A3F;
-  --line: rgba(36,27,23,0.09);
-  --green: #1A6B3A;
-  --green-soft: #EBF5F0;
-  --red: #B01C1C;
-  --red-soft: #FCEAEA;
-  --blue: #1A4A8A;
-  --purple: #5B2A8A;
-  --sh: 0 1px 3px rgba(36,27,23,0.07), 0 1px 2px rgba(36,27,23,0.04);
-  --sh-md: 0 8px 24px rgba(36,27,23,0.08), 0 2px 6px rgba(36,27,23,0.05);
-  --sh-ruby: 0 8px 24px rgba(122,21,48,0.22);
-  --r-lg: 20px;
-  --r-md: 16px;
-  --r-sm: 12px;
+  /* Core palette */
+  --void:      #0D0B09;
+  --obsid:     #131008;
+  --surface:   #1A1610;
+  --surface-2: #211D16;
+  --surface-3: #2A2419;
+
+  /* Gold */
+  --gold:      #C9963A;
+  --gold-l:    #E8B86D;
+  --gold-dim:  rgba(201,150,58,0.12);
+  --gold-glow: rgba(201,150,58,0.22);
+  --gold-border: rgba(201,150,58,0.18);
+
+  /* Text */
+  --snow:      #F2EDE4;
+  --mist:      #B8AFA4;
+  --ash:       #6E6459;
+
+  /* Status */
+  --emerald:   #22C55E;
+  --emerald-dim: rgba(34,197,94,0.12);
+  --amber:     #F59E0B;
+  --amber-dim: rgba(245,158,11,0.12);
+  --rose:      #F43F5E;
+  --rose-dim:  rgba(244,63,94,0.12);
+  --blue:      #3B82F6;
+  --blue-dim:  rgba(59,130,246,0.12);
+
+  /* Borders */
+  --line:      rgba(242,237,228,0.07);
+  --line-soft: rgba(242,237,228,0.04);
+
+  /* Shadows */
+  --sh:        0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+  --sh-md:     0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.4);
+  --sh-gold:   0 0 0 1px var(--gold-border), 0 8px 32px rgba(201,150,58,0.15);
+  --sh-xl:     0 24px 64px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.4);
+
+  /* Layout */
+  --sidebar-w: 256px;
+  --r-lg: 16px;
+  --r-md: 12px;
+  --r-sm: 8px;
+  --r-xs: 6px;
 }
 
-body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; -webkit-font-smoothing: antialiased; }
-svg { display: block; }
-.icon { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.6; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+html { scroll-behavior: smooth; }
 
-/* ── LOGIN ── */
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--void);
+  color: var(--snow);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+svg { display: block; }
+.icon { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.6; fill: none; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+/* ═══════════════════════════════════════
+   LOGIN SCREEN
+═══════════════════════════════════════ */
 #loginScreen {
   display: flex; align-items: center; justify-content: center;
-  min-height: 100vh; padding: 32px;
+  min-height: 100vh; padding: 24px;
   background:
-    radial-gradient(circle at 20% 15%, rgba(122,21,48,0.08), transparent 45%),
-    radial-gradient(circle at 85% 85%, rgba(182,138,63,0.10), transparent 45%),
-    var(--bg);
+    radial-gradient(ellipse 60% 50% at 20% 0%, rgba(201,150,58,0.07), transparent),
+    radial-gradient(ellipse 50% 40% at 80% 100%, rgba(201,150,58,0.05), transparent),
+    var(--void);
 }
-.login-card { background: var(--card); border-radius: var(--r-lg); padding: 34px 28px; width: 100%; max-width: 380px; box-shadow: var(--sh-md); }
-.login-logo { text-align: center; margin-bottom: 26px; }
-.login-logo-mark {
-  width: 60px; height: 60px; background: var(--ruby); border-radius: 18px;
+
+.login-wrap {
+  width: 100%; max-width: 400px;
+}
+
+.login-brand {
+  text-align: center; margin-bottom: 32px;
+}
+
+.login-mark {
   display: inline-flex; align-items: center; justify-content: center;
-  margin-bottom: 16px; box-shadow: var(--sh-ruby);
+  width: 56px; height: 56px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-l));
+  border-radius: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 32px rgba(201,150,58,0.35);
 }
-.login-logo-mark svg { width: 26px; height: 26px; stroke: #FAF7F1; stroke-width: 1.5; }
-.login-title { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; color: var(--ink); }
-.login-sub { font-size: 13px; color: var(--soft); margin-top: 5px; }
 
-.form-group { margin-bottom: 16px; }
-.form-label { display: block; font-size: 11.5px; font-weight: 700; color: var(--soft); margin-bottom: 7px; text-transform: uppercase; letter-spacing: 0.7px; }
+.login-mark svg { width: 24px; height: 24px; stroke: #0D0B09; stroke-width: 2; }
+
+.login-wordmark {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px; font-weight: 700;
+  color: var(--snow);
+  letter-spacing: -0.3px;
+}
+
+.login-sub {
+  font-size: 13px; color: var(--ash); margin-top: 4px; letter-spacing: 0.2px;
+}
+
+.login-card {
+  background: var(--obsid);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 28px;
+  box-shadow: var(--sh-xl);
+  backdrop-filter: blur(12px);
+}
+
+.form-group { margin-bottom: 14px; }
+
+.form-label {
+  display: block; font-size: 11px; font-weight: 600;
+  color: var(--ash); margin-bottom: 6px;
+  text-transform: uppercase; letter-spacing: 0.8px;
+}
+
 .form-control {
-  width: 100%; padding: 13px 15px; border: 1.5px solid var(--line);
-  border-radius: var(--r-sm); font-size: 14.5px; font-family: inherit;
-  color: var(--ink); background: var(--bg); outline: none; transition: border-color 0.15s;
+  width: 100%; padding: 11px 14px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-sm); font-size: 14px;
+  font-family: inherit; color: var(--snow); outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
-.form-control:focus { border-color: var(--ruby); }
-.form-hint { font-size: 11px; color: var(--soft); margin-top: 5px; }
 
-.input-group-copy { display: flex; gap: 8px; }
+.form-control::placeholder { color: var(--ash); }
+.form-control:focus { border-color: var(--gold-border); box-shadow: 0 0 0 3px var(--gold-dim); }
+
+.form-hint { font-size: 11px; color: var(--ash); margin-top: 5px; }
+
+.error-banner {
+  background: var(--rose-dim); border: 1px solid rgba(244,63,94,0.2);
+  border-radius: var(--r-sm); padding: 10px 12px;
+  font-size: 12.5px; color: var(--rose); margin-bottom: 14px; display: none;
+}
+
+/* ═══════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════ */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 10px 18px; border-radius: var(--r-sm);
+  font-size: 13px; font-weight: 600; font-family: inherit;
+  cursor: pointer; border: none; transition: all 0.15s;
+  text-decoration: none; white-space: nowrap;
+}
+
+.btn:active { transform: scale(0.97); }
+
+.btn-gold {
+  background: linear-gradient(135deg, var(--gold), #B8862E);
+  color: #0D0B09;
+  box-shadow: 0 4px 16px rgba(201,150,58,0.3);
+}
+
+.btn-gold:hover { box-shadow: 0 6px 24px rgba(201,150,58,0.45); filter: brightness(1.05); }
+
+.btn-ghost {
+  background: var(--surface-2); color: var(--mist);
+  border: 1px solid var(--line);
+}
+
+.btn-ghost:hover { background: var(--surface-3); color: var(--snow); }
+
+.btn-danger { background: var(--rose-dim); color: var(--rose); border: 1px solid rgba(244,63,94,0.15); }
+.btn-danger:hover { background: rgba(244,63,94,0.2); }
+.btn-success { background: var(--emerald-dim); color: var(--emerald); border: 1px solid rgba(34,197,94,0.15); }
+.btn-success:hover { background: rgba(34,197,94,0.2); }
+
+.btn-sm { padding: 7px 12px; font-size: 12px; }
+.btn-full { width: 100%; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
+
+/* ═══════════════════════════════════════
+   APP SHELL
+═══════════════════════════════════════ */
+#appScreen { display: none; min-height: 100vh; }
+
+/* SIDEBAR */
+.sidebar {
+  position: fixed; top: 0; left: 0; bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--obsid);
+  border-right: 1px solid var(--line);
+  display: flex; flex-direction: column;
+  z-index: 100;
+}
+
+.sidebar-top { padding: 20px 16px 16px; border-bottom: 1px solid var(--line-soft); }
+
+.sidebar-brand {
+  display: flex; align-items: center; gap: 10px;
+}
+
+.sidebar-mark {
+  width: 34px; height: 34px;
+  background: linear-gradient(135deg, var(--gold), #B8862E);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(201,150,58,0.3);
+}
+
+.sidebar-mark svg { width: 14px; height: 14px; stroke: #0D0B09; stroke-width: 2.2; }
+
+.sidebar-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 19px; font-weight: 700; color: var(--snow); line-height: 1;
+}
+
+.sidebar-edition {
+  font-size: 10px; color: var(--ash); letter-spacing: 0.8px;
+  text-transform: uppercase; margin-top: 2px;
+}
+
+.sidebar-search {
+  margin-top: 14px;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-sm); padding: 8px 12px;
+  transition: border-color 0.15s;
+}
+
+.sidebar-search:focus-within { border-color: var(--gold-border); }
+.sidebar-search .icon { color: var(--ash); flex-shrink: 0; }
+.sidebar-search input {
+  border: none; background: none; outline: none;
+  font-size: 12.5px; font-family: inherit; color: var(--snow); width: 100%;
+}
+.sidebar-search input::placeholder { color: var(--ash); }
+
+/* NAV */
+.sidebar-nav { flex: 1; padding: 10px 10px; overflow-y: auto; }
+
+.nav-section-label {
+  font-size: 9.5px; font-weight: 700; color: var(--ash);
+  text-transform: uppercase; letter-spacing: 1.2px;
+  padding: 12px 8px 5px;
+}
+
+.nav-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 10px; border-radius: var(--r-sm);
+  cursor: pointer; font-size: 13px; font-weight: 500;
+  color: var(--ash); transition: all 0.15s; margin-bottom: 1px;
+  position: relative;
+}
+
+.nav-item:hover { background: var(--surface); color: var(--snow); }
+
+.nav-item.active {
+  background: var(--gold-dim);
+  color: var(--gold-l);
+}
+
+.nav-item.active::before {
+  content: '';
+  position: absolute; left: 0; top: 20%; bottom: 20%;
+  width: 2.5px; border-radius: 0 2px 2px 0;
+  background: var(--gold);
+}
+
+.nav-item .icon { width: 15px; height: 15px; }
+
+.nav-badge {
+  margin-left: auto; background: var(--gold-dim); color: var(--gold);
+  font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 100px;
+}
+
+/* SIDEBAR FOOTER */
+.sidebar-footer { padding: 12px 10px; border-top: 1px solid var(--line-soft); }
+
+.agency-card {
+  display: flex; align-items: center; gap: 9px;
+  padding: 10px; border-radius: var(--r-sm);
+  background: var(--surface); border: 1px solid var(--line);
+  margin-bottom: 6px;
+}
+
+.agency-avatar {
+  width: 32px; height: 32px; border-radius: 9px;
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold-border));
+  border: 1px solid var(--gold-border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: var(--gold); flex-shrink: 0;
+}
+
+.agency-info { flex: 1; min-width: 0; }
+.agency-name { font-size: 12.5px; font-weight: 600; color: var(--snow); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agency-email { font-size: 10.5px; color: var(--ash); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.btn-logout {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: var(--r-sm);
+  background: none; border: none; font-size: 12.5px; font-weight: 500;
+  color: var(--ash); cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.btn-logout:hover { background: var(--rose-dim); color: var(--rose); }
+.btn-logout .icon { width: 14px; height: 14px; }
+
+/* MAIN CONTENT */
+.main-content { margin-left: var(--sidebar-w); min-height: 100vh; }
+
+/* TOPBAR */
+.topbar {
+  background: rgba(13,11,9,0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--line);
+  padding: 0 28px;
+  height: 60px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 50;
+}
+
+.topbar-left { display: flex; flex-direction: column; gap: 1px; }
+.topbar-title { font-size: 15px; font-weight: 600; color: var(--snow); }
+.topbar-sub { font-size: 11.5px; color: var(--ash); }
+
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+
+.topbar-btn {
+  width: 34px; height: 34px; border-radius: var(--r-sm);
+  background: var(--surface); border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--mist); transition: all 0.15s;
+}
+.topbar-btn:hover { background: var(--surface-2); color: var(--snow); border-color: var(--gold-border); }
+
+/* PAGE */
+.page { padding: 24px 28px; display: none; }
+.page.active { display: block; }
+
+/* ═══════════════════════════════════════
+   STATS GRID
+═══════════════════════════════════════ */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--obsid);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 18px 20px;
+  position: relative; overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s;
+  cursor: default;
+}
+
+.stat-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-border), transparent);
+}
+
+.stat-card:hover {
+  border-color: var(--gold-border);
+  transform: translateY(-2px);
+}
+
+.stat-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.stat-label { font-size: 11px; font-weight: 600; color: var(--ash); text-transform: uppercase; letter-spacing: 0.7px; }
+
+.stat-icon {
+  width: 30px; height: 30px; border-radius: var(--r-xs);
+  display: flex; align-items: center; justify-content: center;
+}
+.stat-icon.gold { background: var(--gold-dim); color: var(--gold); }
+.stat-icon.emerald { background: var(--emerald-dim); color: var(--emerald); }
+.stat-icon.amber { background: var(--amber-dim); color: var(--amber); }
+.stat-icon.blue { background: var(--blue-dim); color: var(--blue); }
+.stat-icon .icon { width: 14px; height: 14px; }
+
+.stat-value {
+  font-size: 28px; font-weight: 700; color: var(--snow);
+  letter-spacing: -0.5px; line-height: 1;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.3s;
+}
+
+.stat-delta {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11.5px; font-weight: 500; margin-top: 6px;
+  color: var(--ash);
+}
+.stat-delta.up { color: var(--emerald); }
+.stat-delta.neutral { color: var(--ash); }
+.stat-delta .icon { width: 12px; height: 12px; }
+
+/* ═══════════════════════════════════════
+   GRID LAYOUT (dashboard)
+═══════════════════════════════════════ */
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+}
+
+.dash-grid-full { grid-column: 1 / -1; }
+
+/* ═══════════════════════════════════════
+   CARDS
+═══════════════════════════════════════ */
+.card {
+  background: var(--obsid);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line-soft);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+
+.card-title { font-size: 13.5px; font-weight: 600; color: var(--snow); }
+.card-sub { font-size: 11.5px; color: var(--ash); margin-top: 1px; }
+
+/* ═══════════════════════════════════════
+   RESTAURANT TABLE
+═══════════════════════════════════════ */
+.r-table { width: 100%; border-collapse: collapse; }
+
+.r-table th {
+  padding: 10px 20px; text-align: left;
+  font-size: 10.5px; font-weight: 700; color: var(--ash);
+  text-transform: uppercase; letter-spacing: 0.7px;
+  background: var(--surface); border-bottom: 1px solid var(--line);
+}
+
+.r-table td {
+  padding: 14px 20px; font-size: 13px; color: var(--snow);
+  border-bottom: 1px solid var(--line-soft); vertical-align: middle;
+}
+
+.r-table tr:last-child td { border-bottom: none; }
+
+.r-table tbody tr {
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s;
+}
+
+.r-table tbody tr::before {
+  content: ''; position: absolute;
+  left: 0; top: 0; bottom: 0; width: 0;
+  background: var(--gold);
+  transition: width 0.2s;
+}
+
+.r-table tbody tr:hover { background: var(--surface); }
+.r-table tbody tr:hover::before { width: 2.5px; }
+.r-table tbody tr:hover td:first-child { padding-left: 22.5px; }
+
+/* Restaurant avatar */
+.r-avatar {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: var(--gold-dim); border: 1px solid var(--gold-border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: var(--gold);
+  flex-shrink: 0; text-transform: uppercase;
+}
+
+.r-name-cell { display: flex; align-items: center; gap: 11px; }
+.r-name { font-size: 13px; font-weight: 600; color: var(--snow); }
+.r-slug { font-size: 11px; color: var(--ash); margin-top: 1.5px; font-family: 'SF Mono', 'Fira Code', monospace; }
+
+.r-actions { display: flex; gap: 5px; align-items: center; opacity: 0; transition: opacity 0.15s; }
+.r-table tbody tr:hover .r-actions { opacity: 1; }
+
+/* ═══════════════════════════════════════
+   BADGES
+═══════════════════════════════════════ */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 9px; border-radius: 100px;
+  font-size: 11px; font-weight: 600;
+}
+.badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.badge-active   { background: var(--emerald-dim); color: var(--emerald); }
+.badge-active::before { background: var(--emerald); box-shadow: 0 0 5px rgba(34,197,94,0.6); }
+.badge-inactive { background: rgba(110,100,89,0.15); color: var(--ash); }
+.badge-inactive::before { background: var(--ash); }
+
+/* ═══════════════════════════════════════
+   ACTIVITY FEED
+═══════════════════════════════════════ */
+.activity-list { padding: 4px 0; }
+
+.activity-item {
+  display: flex; align-items: flex-start; gap: 11px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line-soft);
+  transition: background 0.15s;
+}
+.activity-item:last-child { border-bottom: none; }
+.activity-item:hover { background: var(--surface); }
+
+.activity-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  margin-top: 4px; flex-shrink: 0;
+}
+.dot-gold    { background: var(--gold); box-shadow: 0 0 6px rgba(201,150,58,0.5); }
+.dot-emerald { background: var(--emerald); box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+.dot-amber   { background: var(--amber); box-shadow: 0 0 6px rgba(245,158,11,0.5); }
+.dot-rose    { background: var(--rose); box-shadow: 0 0 6px rgba(244,63,94,0.5); }
+
+.activity-text { flex: 1; }
+.activity-msg { font-size: 12.5px; color: var(--snow); line-height: 1.4; }
+.activity-msg strong { color: var(--gold-l); font-weight: 600; }
+.activity-time { font-size: 11px; color: var(--ash); margin-top: 2px; }
+
+/* ═══════════════════════════════════════
+   TOP LIST (top restaurants)
+═══════════════════════════════════════ */
+.top-list { padding: 4px 0; }
+
+.top-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 20px;
+  border-bottom: 1px solid var(--line-soft);
+  transition: background 0.15s;
+}
+.top-item:last-child { border-bottom: none; }
+.top-item:hover { background: var(--surface); }
+
+.top-rank {
+  width: 22px; height: 22px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800; flex-shrink: 0;
+}
+.rank-1 { background: rgba(201,150,58,0.2); color: var(--gold); }
+.rank-2 { background: rgba(148,163,184,0.12); color: #94A3B8; }
+.rank-3 { background: rgba(180,120,80,0.12); color: #B47850; }
+.rank-n { background: var(--surface); color: var(--ash); }
+
+.top-info { flex: 1; min-width: 0; }
+.top-name { font-size: 12.5px; font-weight: 600; color: var(--snow); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top-orders { font-size: 11px; color: var(--ash); margin-top: 1px; }
+.top-revenue { font-size: 13px; font-weight: 700; color: var(--gold-l); }
+
+/* ═══════════════════════════════════════
+   MINI CHART (sparkline bars)
+═══════════════════════════════════════ */
+.chart-wrap { padding: 16px 20px 12px; }
+.chart-label { font-size: 10.5px; font-weight: 600; color: var(--ash); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 14px; }
+
+.bar-chart-h { display: flex; flex-direction: column; gap: 9px; }
+.bar-row { display: flex; align-items: center; gap: 10px; }
+.bar-name { font-size: 11.5px; color: var(--mist); width: 90px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { flex: 1; height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--gold), var(--gold-l)); transition: width 0.8s cubic-bezier(0.16,1,0.3,1); }
+.bar-val { font-size: 11.5px; font-weight: 600; color: var(--mist); width: 50px; text-align: right; flex-shrink: 0; }
+
+/* ═══════════════════════════════════════
+   SEARCH BOX (topbar)
+═══════════════════════════════════════ */
+.search-wrap {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-sm); padding: 7px 12px;
+  transition: border-color 0.15s; min-width: 200px;
+}
+.search-wrap:focus-within { border-color: var(--gold-border); }
+.search-wrap .icon { color: var(--ash); flex-shrink: 0; }
+.search-wrap input {
+  border: none; background: none; outline: none;
+  font-size: 12.5px; font-family: inherit; color: var(--snow); width: 100%;
+}
+.search-wrap input::placeholder { color: var(--ash); }
+
+/* ═══════════════════════════════════════
+   MODALS
+═══════════════════════════════════════ */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 200; display: none;
+  align-items: center; justify-content: center; padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: var(--obsid);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  width: 100%; max-width: 560px;
+  max-height: 92vh; overflow-y: auto;
+  box-shadow: var(--sh-xl);
+  animation: modalIn 0.22s cubic-bezier(0.16,1,0.3,1);
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--line-soft);
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; background: var(--obsid); z-index: 1;
+}
+
+.modal-title { font-size: 15px; font-weight: 700; color: var(--snow); }
+
+.modal-close {
+  width: 28px; height: 28px; border-radius: var(--r-xs);
+  background: var(--surface); border: 1px solid var(--line);
+  cursor: pointer; color: var(--ash);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; transition: all 0.15s;
+}
+.modal-close:hover { background: var(--surface-2); color: var(--snow); }
+
+.modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 13px; }
+
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--line-soft);
+  display: flex; justify-content: flex-end; gap: 8px;
+}
+
+.section-divider {
+  display: flex; align-items: center; gap: 10px;
+  margin: 4px 0 2px;
+}
+.section-divider-label {
+  font-size: 10.5px; font-weight: 700; color: var(--gold);
+  text-transform: uppercase; letter-spacing: 1px; white-space: nowrap;
+}
+.section-divider-line { flex: 1; height: 1px; background: var(--line); }
+
+/* Color inputs */
+.color-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.color-input-wrap { position: relative; }
+.color-preview {
+  position: absolute; right: 40px; top: 50%; transform: translateY(-50%);
+  width: 18px; height: 18px; border-radius: 5px;
+  border: 1px solid var(--line); pointer-events: none;
+}
+.color-picker-native {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  width: 22px; height: 22px; border: none; border-radius: 5px;
+  cursor: pointer; padding: 0; background: none;
+}
+
+/* Input group */
+.input-group { display: flex; gap: 7px; }
+.input-group .form-control { flex: 1; }
 .btn-copy {
-  background: var(--surface); border: 1.5px solid var(--line); padding: 0 13px;
-  border-radius: var(--r-sm); cursor: pointer; display: inline-flex; align-items: center;
-  justify-content: center; font-size: 14px; transition: all 0.15s; user-select: none; color: var(--soft);
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-sm); padding: 0 12px;
+  cursor: pointer; color: var(--ash);
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
 }
-.btn-copy:hover { background: var(--line); }
+.btn-copy:hover { background: var(--surface-2); color: var(--snow); border-color: var(--gold-border); }
 
-.file-upload-wrap { display: flex; align-items: center; gap: 14px; margin-top: 4px; }
+/* File upload */
+.file-upload-wrap { display: flex; align-items: center; gap: 12px; }
 .file-upload-preview {
-  width: 52px; height: 52px; border-radius: var(--r-sm); border: 1.5px solid var(--line);
-  object-fit: cover; background: var(--surface); display: none;
+  width: 48px; height: 48px; border-radius: var(--r-sm);
+  border: 1px solid var(--line); object-fit: cover;
+  background: var(--surface); display: none;
 }
 .file-upload-preview.show { display: block; }
 
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 12px 20px; border-radius: var(--r-sm); font-size: 14px; font-weight: 700;
-  font-family: inherit; cursor: pointer; border: none; transition: all 0.15s; text-decoration: none;
-}
-.btn:active { transform: scale(0.97); }
-.btn-primary { background: var(--ruby); color: #FAF7F1; box-shadow: var(--sh-ruby); }
-.btn-primary:hover { background: var(--ruby-d); }
-.btn-secondary { background: var(--surface); color: var(--ink); border: 1.5px solid var(--line); box-shadow: none; }
-.btn-secondary:hover { background: var(--line); }
-.btn-danger { background: var(--red-soft); color: var(--red); box-shadow: none; }
-.btn-success { background: var(--green-soft); color: var(--green); box-shadow: none; }
-.btn-sm { padding: 8px 14px; font-size: 12.5px; }
-.btn-full { width: 100%; }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.error-banner {
-  background: var(--red-soft); border: 1px solid rgba(176,28,28,0.25); border-radius: var(--r-sm);
-  padding: 11px 14px; font-size: 13px; color: var(--red); margin-bottom: 16px; display: none;
+/* ═══════════════════════════════════════
+   TOAST
+═══════════════════════════════════════ */
+.toast-container {
+  position: fixed; bottom: 20px; right: 20px;
+  z-index: 999; display: flex; flex-direction: column; gap: 7px;
 }
 
-/* ── APP SHELL ── */
-#appScreen { display: none; min-height: 100vh; }
-
-.sidebar {
-  position: fixed; top: 0; left: 0; bottom: 0; width: 248px;
-  background: var(--card); border-right: 1px solid var(--line);
-  display: flex; flex-direction: column; z-index: 100;
-}
-.sidebar-logo { padding: 26px 22px 22px; border-bottom: 1px solid var(--line); }
-.sidebar-logo-mark {
-  width: 40px; height: 40px; background: var(--ruby); border-radius: 12px;
-  display: inline-flex; align-items: center; justify-content: center;
-  margin-bottom: 12px; box-shadow: var(--sh-ruby);
-}
-.sidebar-logo-mark svg { width: 18px; height: 18px; stroke: #FAF7F1; stroke-width: 1.6; }
-.sidebar-product { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 700; color: var(--ink); }
-.sidebar-edition { font-size: 11px; color: var(--soft); margin-top: 2px; letter-spacing: 0.3px; }
-
-.sidebar-nav { flex: 1; padding: 18px 14px; display: flex; flex-direction: column; gap: 3px; }
-.nav-item {
-  display: flex; align-items: center; gap: 11px; padding: 11px 13px;
-  border-radius: var(--r-sm); cursor: pointer; font-size: 13.5px; font-weight: 600;
-  color: var(--soft); transition: all 0.15s;
-}
-.nav-item:hover { background: var(--surface); color: var(--ink); }
-.nav-item.active { background: var(--ruby-soft); color: var(--ruby); }
-.nav-item .icon { width: 17px; height: 17px; flex-shrink: 0; }
-
-.sidebar-footer { padding: 16px 14px; border-top: 1px solid var(--line); }
-.agency-badge {
-  background: var(--surface); border-radius: var(--r-sm);
-  padding: 12px 13px; margin-bottom: 8px;
-}
-.agency-name { font-size: 13px; font-weight: 700; color: var(--ink); }
-.agency-email { font-size: 11px; color: var(--soft); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.btn-logout {
-  width: 100%; display: flex; align-items: center; gap: 9px; padding: 10px 13px;
-  border-radius: var(--r-sm); background: none; border: none; font-size: 13px; font-weight: 600;
-  color: var(--soft); cursor: pointer; font-family: inherit; transition: all 0.15s;
-}
-.btn-logout .icon { width: 16px; height: 16px; }
-.btn-logout:hover { background: var(--red-soft); color: var(--red); }
-
-.main-content { margin-left: 248px; min-height: 100vh; }
-
-.topbar {
-  background: rgba(250,247,241,0.9); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line);
-  padding: 18px 32px; display: flex; align-items: center; justify-content: space-between;
-  position: sticky; top: 0; z-index: 50;
-}
-.topbar-title { font-family: 'Playfair Display', serif; font-size: 19px; font-weight: 700; color: var(--ink); }
-.topbar-sub { font-size: 12.5px; color: var(--soft); margin-top: 2px; }
-
-.page { padding: 28px 32px; display: none; }
-.page.active { display: block; }
-
-.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 28px; }
-.stat-card { background: var(--card); border-radius: var(--r-md); padding: 20px; box-shadow: var(--sh); }
-.stat-icon-wrap {
-  width: 38px; height: 38px; border-radius: 11px; background: var(--ruby-soft); color: var(--ruby);
-  display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
-}
-.stat-icon-wrap .icon { width: 18px; height: 18px; }
-.stat-label { font-size: 11px; font-weight: 700; color: var(--soft); text-transform: uppercase; letter-spacing: 0.6px; }
-.stat-value { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; color: var(--ink); margin-top: 6px; }
-
-.card { background: var(--card); border-radius: var(--r-lg); box-shadow: var(--sh); overflow: hidden; }
-.card-header {
-  padding: 20px 22px; border-bottom: 1px solid var(--line);
-  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-}
-.card-title { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700; color: var(--ink); }
-
-.search-box {
-  display: flex; align-items: center; gap: 8px;
-  background: var(--surface); border: 1.5px solid transparent; border-radius: var(--r-sm); padding: 9px 13px;
-}
-.search-box .icon { width: 15px; height: 15px; color: var(--soft); }
-.search-box input { border: none; background: none; outline: none; font-size: 13px; font-family: inherit; color: var(--ink); width: 200px; }
-
-table { width: 100%; border-collapse: collapse; }
-th {
-  padding: 13px 22px; text-align: left; font-size: 10.5px; font-weight: 700;
-  color: var(--soft); text-transform: uppercase; letter-spacing: 0.6px;
-  background: var(--surface); border-bottom: 1px solid var(--line);
-}
-td { padding: 16px 22px; font-size: 14px; color: var(--ink); border-bottom: 1px solid var(--line); vertical-align: top; }
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: rgba(243,236,223,0.4); }
-
-.badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 5px 11px; border-radius: 100px; font-size: 11.5px; font-weight: 700;
-}
-.badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.badge-active { background: var(--green-soft); color: var(--green); }
-.badge-active::before { background: var(--green); }
-.badge-inactive { background: var(--red-soft); color: var(--red); }
-.badge-inactive::before { background: var(--red); }
-.actions { display: flex; gap: 6px; flex-wrap: wrap; }
-
-.modal-overlay {
-  position: fixed; inset: 0; background: rgba(36,27,23,0.45);
-  z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px;
-}
-.modal-overlay.open { display: flex; }
-.modal {
-  background: var(--card); border-radius: var(--r-lg); width: 100%; max-width: 580px;
-  max-height: 90vh; overflow-y: auto; box-shadow: var(--sh-md);
-}
-.modal-header {
-  padding: 20px 24px; border-bottom: 1px solid var(--line);
-  display: flex; align-items: center; justify-content: space-between;
-  position: sticky; top: 0; background: var(--card); z-index: 1;
-}
-.modal-title { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 700; color: var(--ink); }
-.modal-close {
-  width: 32px; height: 32px; border-radius: 9px; background: var(--surface);
-  border: none; cursor: pointer; font-size: 17px; color: var(--soft);
-  display: flex; align-items: center; justify-content: center;
-}
-.modal-close:hover { background: var(--line); }
-.modal-body { padding: 24px; display: flex; flex-direction: column; gap: 14px; }
-.modal-footer {
-  padding: 16px 24px; border-top: 1px solid var(--line);
-  display: flex; justify-content: flex-end; gap: 10px;
-}
-
-.section-title {
-  font-size: 11px; font-weight: 700; color: var(--gold);
-  text-transform: uppercase; letter-spacing: 1px;
-  padding-bottom: 8px; border-bottom: 1px solid var(--line); margin-top: 6px;
-}
-
-.color-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-.color-input-wrap { position: relative; display: flex; align-items: center; }
-.color-preview {
-  position: absolute; right: 46px; top: 50%; transform: translateY(-50%);
-  width: 20px; height: 20px; border-radius: 5px; border: 1px solid var(--line); pointer-events: none;
-}
-
-.toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
 .toast {
-  background: var(--ink); color: #FAF7F1; padding: 13px 18px; border-radius: var(--r-sm);
-  font-size: 13px; font-weight: 600; box-shadow: var(--sh-md);
-  animation: slideIn 0.3s ease; max-width: 320px;
+  display: flex; align-items: center; gap: 9px;
+  background: var(--surface-3); color: var(--snow);
+  border: 1px solid var(--line);
+  padding: 11px 16px; border-radius: var(--r-md);
+  font-size: 12.5px; font-weight: 500;
+  box-shadow: var(--sh-md);
+  animation: toastIn 0.25s cubic-bezier(0.16,1,0.3,1);
+  max-width: 320px;
 }
-.toast.success { background: var(--green); }
-.toast.error { background: var(--red); }
-@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
+.toast-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+}
+
+.toast.success .toast-dot { background: var(--emerald); box-shadow: 0 0 6px rgba(34,197,94,0.6); }
+.toast.error   .toast-dot { background: var(--rose);    box-shadow: 0 0 6px rgba(244,63,94,0.6); }
+.toast.info    .toast-dot { background: var(--gold);    box-shadow: 0 0 6px rgba(201,150,58,0.6); }
+
+@keyframes toastIn {
+  from { transform: translateX(110%); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+
+/* ═══════════════════════════════════════
+   LOADING
+═══════════════════════════════════════ */
 .loading-overlay {
-  position: fixed; inset: 0; background: rgba(250,247,241,0.82);
-  z-index: 500; display: none; align-items: center; justify-content: center;
+  position: fixed; inset: 0;
+  background: rgba(13,11,9,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 500; display: none;
+  align-items: center; justify-content: center;
 }
 .loading-overlay.show { display: flex; }
+
 .spinner {
-  width: 36px; height: 36px; border: 3px solid var(--line);
-  border-top-color: var(--ruby); border-radius: 50%; animation: spin 0.7s linear infinite;
+  width: 32px; height: 32px;
+  border: 2.5px solid var(--line);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.empty-state { text-align: center; padding: 52px 20px; color: var(--soft); font-size: 14px; }
-.empty-icon { width: 34px; height: 34px; margin: 0 auto 14px; color: var(--soft); opacity: 0.6; }
+/* ═══════════════════════════════════════
+   EMPTY STATE
+═══════════════════════════════════════ */
+.empty-state {
+  text-align: center; padding: 48px 24px;
+}
+.empty-icon {
+  width: 44px; height: 44px;
+  background: var(--gold-dim); border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 14px; color: var(--gold);
+}
+.empty-icon .icon { width: 20px; height: 20px; }
+.empty-title { font-size: 14px; font-weight: 600; color: var(--snow); margin-bottom: 5px; }
+.empty-text { font-size: 12.5px; color: var(--ash); }
+
+/* ═══════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════ */
+@media (max-width: 1100px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .dash-grid { grid-template-columns: 1fr; }
+}
 
 @media (max-width: 768px) {
+  :root { --sidebar-w: 0px; }
   .sidebar { display: none; }
   .main-content { margin-left: 0; }
-  .page { padding: 16px; }
-  .topbar { padding: 14px 18px; }
+  .page { padding: 14px 16px; }
+  .topbar { padding: 0 16px; }
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
   .color-row { grid-template-columns: 1fr; }
-  .search-box input { width: 120px; }
-  td, th { padding: 12px 14px; }
+  .r-table th:nth-child(3),
+  .r-table td:nth-child(3) { display: none; }
 }
+
+/* ═══════════════════════════════════════
+   COUNTER ANIMATION
+═══════════════════════════════════════ */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.stat-value { animation: countUp 0.4s ease both; }
 </style>
 </head>
 <body>
 
+<!-- ═══ LOGIN ═══ -->
 <div id="loginScreen">
-  <div class="login-card">
-    <div class="login-logo">
-      <div class="login-logo-mark">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12"/><path d="M9 21v-6h6v6"/></svg>
+  <div class="login-wrap">
+    <div class="login-brand">
+      <div class="login-mark">
+        <svg viewBox="0 0 24 24"><path d="M3 2v7a3 3 0 0 0 6 0V2"/><path d="M15 2v7a3 3 0 0 0 6 0V2"/><path d="M9 12v9"/><path d="M15 12v9"/></svg>
       </div>
-      <div class="login-title">Taomly Agency</div>
-      <div class="login-sub">Панель управления веб-студии</div>
+      <div class="login-wordmark">Taomly</div>
+      <div class="login-sub">Agency Dashboard</div>
     </div>
-    <div class="error-banner" id="loginError"></div>
-    <div class="form-group">
-      <label class="form-label">Email</label>
-      <input class="form-control" type="email" id="loginEmail" placeholder="agency@example.com" />
+    <div class="login-card">
+      <div class="error-banner" id="loginError"></div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-control" type="email" id="loginEmail" placeholder="agency@taomly.uz" autocomplete="email" />
+      </div>
+      <div class="form-group" style="margin-bottom:20px">
+        <label class="form-label">Пароль</label>
+        <input class="form-control" type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <button class="btn btn-gold btn-full" id="loginBtn" onclick="doLogin()">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+        Войти в панель
+      </button>
     </div>
-    <div class="form-group">
-      <label class="form-label">Пароль</label>
-      <input class="form-control" type="password" id="loginPassword" placeholder="••••••••" />
-    </div>
-    <button class="btn btn-primary btn-full" id="loginBtn" onclick="doLogin()">Войти</button>
   </div>
 </div>
 
+<!-- ═══ APP ═══ -->
 <div id="appScreen">
-  <div class="sidebar">
-    <div class="sidebar-logo">
-      <div class="sidebar-logo-mark">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12"/><path d="M9 21v-6h6v6"/></svg>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-brand">
+        <div class="sidebar-mark">
+          <svg viewBox="0 0 24 24"><path d="M3 2v7a3 3 0 0 0 6 0V2"/><path d="M15 2v7a3 3 0 0 0 6 0V2"/><path d="M9 12v9"/><path d="M15 12v9"/></svg>
+        </div>
+        <div>
+          <div class="sidebar-name">Taomly</div>
+          <div class="sidebar-edition">Agency</div>
+        </div>
       </div>
-      <div class="sidebar-product">Taomly</div>
-      <div class="sidebar-edition">Agency Panel</div>
+      <div class="sidebar-search">
+        <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" id="globalSearch" placeholder="Поиск ресторана..." oninput="onGlobalSearch()" />
+      </div>
     </div>
+
     <nav class="sidebar-nav">
+      <div class="nav-section-label">Обзор</div>
       <div class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard', this)">
         <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
-        Dashboard
+        Дашборд
       </div>
+
+      <div class="nav-section-label" style="margin-top:4px">Управление</div>
       <div class="nav-item" id="nav-restaurants" onclick="showPage('restaurants', this)">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M3 2v7a3 3 0 0 0 3 3v10"/><path d="M6 2v7"/><path d="M9 2v7"/><path d="M18 2c-2 2-3 5-3 8s1 3 3 3v9"/></svg>
+        <svg class="icon" viewBox="0 0 24 24"><path d="M3 2v7a3 3 0 0 0 6 0V2"/><path d="M15 2v7a3 3 0 0 0 6 0V2"/><path d="M9 12v9"/><path d="M15 12v9"/></svg>
         Рестораны
+        <span class="nav-badge" id="navRestCount">—</span>
       </div>
     </nav>
+
     <div class="sidebar-footer">
-      <div class="agency-badge">
-        <div class="agency-name" id="sidebarAgencyName">—</div>
-        <div class="agency-email" id="sidebarAgencyEmail">—</div>
+      <div class="agency-card">
+        <div class="agency-avatar" id="sidebarAvatar">A</div>
+        <div class="agency-info">
+          <div class="agency-name" id="sidebarAgencyName">—</div>
+          <div class="agency-email" id="sidebarAgencyEmail">—</div>
+        </div>
       </div>
       <button class="btn-logout" onclick="doLogout()">
         <svg class="icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
         Выйти
       </button>
     </div>
-  </div>
+  </aside>
 
+  <!-- MAIN -->
   <div class="main-content">
+
+    <!-- TOPBAR -->
     <div class="topbar">
-      <div>
-        <div class="topbar-title" id="topbarTitle">Dashboard</div>
-        <div class="topbar-sub" id="topbarSub">Добро пожаловать</div>
+      <div class="topbar-left">
+        <div class="topbar-title" id="topbarTitle">Дашборд</div>
+        <div class="topbar-sub" id="topbarSub">Обзор платформы</div>
       </div>
-      <button class="btn btn-primary btn-sm" onclick="openCreateModal()" id="createBtn" style="display:none;">
-        <svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg>
-        Создать ресторан
-      </button>
+      <div class="topbar-right">
+        <div class="search-wrap" id="topSearchWrap" style="display:none">
+          <svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="text" id="tableSearch" placeholder="Найти ресторан..." oninput="filterRestaurants()" />
+        </div>
+        <button class="topbar-btn" onclick="loadRestaurants()" title="Обновить">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        </button>
+        <button class="btn btn-gold btn-sm" id="createBtn" style="display:none" onclick="openCreateModal()">
+          <svg class="icon" viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M12 5v14M5 12h14"/></svg>
+          Новый ресторан
+        </button>
+      </div>
     </div>
 
+    <!-- PAGE: DASHBOARD -->
     <div class="page active" id="page-dashboard">
+
       <div class="stats-grid">
         <div class="stat-card">
-          <div class="stat-icon-wrap"><svg class="icon" viewBox="0 0 24 24"><path d="M3 2v7a3 3 0 0 0 3 3v10"/><path d="M6 2v7"/><path d="M9 2v7"/><path d="M18 2c-2 2-3 5-3 8s1 3 3 3v9"/></svg></div>
-          <div class="stat-label">Всего ресторанов</div>
+          <div class="stat-card-header">
+            <span class="stat-label">Ресторанов</span>
+            <div class="stat-icon gold"><svg class="icon" viewBox="0 0 24 24"><path d="M3 2v7a3 3 0 0 0 6 0V2"/><path d="M15 2v7a3 3 0 0 0 6 0V2"/><path d="M9 12v9"/><path d="M15 12v9"/></svg></div>
+          </div>
           <div class="stat-value" id="statTotal">—</div>
+          <div class="stat-delta neutral" id="statTotalDelta">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M12 20V4M5 13l7-9 7 9"/></svg>
+            <span>Всего в платформе</span>
+          </div>
         </div>
+
         <div class="stat-card">
-          <div class="stat-icon-wrap" style="background:var(--green-soft);color:var(--green)"><svg class="icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>
-          <div class="stat-label">Активных</div>
+          <div class="stat-card-header">
+            <span class="stat-label">Активных</span>
+            <div class="stat-icon emerald"><svg class="icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>
+          </div>
           <div class="stat-value" id="statActive">—</div>
+          <div class="stat-delta up" id="statActiveDelta">
+            <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+            <span>Принимают заказы</span>
+          </div>
         </div>
+
         <div class="stat-card">
-          <div class="stat-icon-wrap" style="background:var(--red-soft);color:var(--red)"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
-          <div class="stat-label">Неактивных</div>
-          <div class="stat-value" id="statInactive">—</div>
+          <div class="stat-card-header">
+            <span class="stat-label">MRR</span>
+            <div class="stat-icon amber"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          </div>
+          <div class="stat-value" id="statMrr">—</div>
+          <div class="stat-delta neutral">
+            <span>Ежемесячный доход</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-card-header">
+            <span class="stat-label">Новых / месяц</span>
+            <div class="stat-icon blue"><svg class="icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          </div>
+          <div class="stat-value" id="statNew">—</div>
+          <div class="stat-delta neutral">
+            <span>Регистраций за 30 дней</span>
+          </div>
         </div>
       </div>
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Последние рестораны</span>
-          <button class="btn btn-secondary btn-sm" onclick="showPage('restaurants', document.getElementById('nav-restaurants'))">Все →</button>
+
+      <div class="dash-grid">
+        <!-- Restaurants table -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Последние рестораны</div>
+              <div class="card-sub">5 последних подключённых</div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="showPage('restaurants', document.getElementById('nav-restaurants'))">
+              Все →
+            </button>
+          </div>
+          <table class="r-table">
+            <thead>
+              <tr>
+                <th>Ресторан</th>
+                <th>Статус</th>
+                <th>Адрес</th>
+              </tr>
+            </thead>
+            <tbody id="dashboardTable">
+              <tr><td colspan="3"><div class="empty-state"><div class="spinner" style="margin:0 auto"></div></div></td></tr>
+            </tbody>
+          </table>
         </div>
-        <table>
-          <thead><tr><th>Название</th><th>Slug</th><th>Статус</th></tr></thead>
-          <tbody id="dashboardTable"><tr><td colspan="3"><div class="empty-state">Загрузка...</div></td></tr></tbody>
-        </table>
+
+        <!-- Right column -->
+        <div style="display:flex;flex-direction:column;gap:16px">
+
+          <!-- Top by revenue placeholder -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Топ-5 по активности</div>
+            </div>
+            <div class="top-list" id="topList">
+              <div class="empty-state" style="padding:24px">
+                <div class="empty-icon"><svg class="icon" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+                <div class="empty-text">Нет данных</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Activity feed -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Последняя активность</div>
+            </div>
+            <div class="activity-list" id="activityFeed">
+              <div class="empty-state" style="padding:24px">
+                <div class="empty-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+                <div class="empty-text">Активность появится здесь</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
       </div>
+
     </div>
 
+    <!-- PAGE: RESTAURANTS -->
     <div class="page" id="page-restaurants">
       <div class="card">
         <div class="card-header">
-          <span class="card-title">Рестораны агентства</span>
-          <div class="search-box">
-            <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-            <input type="text" id="searchInput" placeholder="Поиск..." oninput="filterRestaurants()" />
+          <div>
+            <div class="card-title">Рестораны агентства</div>
+            <div class="card-sub" id="restaurantsCount">Загрузка...</div>
           </div>
         </div>
-        <table>
+        <table class="r-table">
           <thead>
-            <tr><th>Название</th><th>Slug</th><th>Адрес</th><th>Статус</th><th>Действия</th></tr>
+            <tr>
+              <th>Ресторан</th>
+              <th>Адрес</th>
+              <th>Статус</th>
+              <th style="width:1px"></th>
+            </tr>
           </thead>
           <tbody id="restaurantsTable">
-            <tr><td colspan="5"><div class="empty-state">Загрузка...</div></td></tr>
+            <tr><td colspan="4"><div class="empty-state"><div class="spinner" style="margin:0 auto"></div></div></td></tr>
           </tbody>
         </table>
       </div>
     </div>
-  </div>
-</div>
 
+  </div><!-- /main-content -->
+</div><!-- /appScreen -->
+
+
+<!-- ═══ MODAL: CREATE ═══ -->
 <div class="modal-overlay" id="createModal">
   <div class="modal">
     <div class="modal-header">
-      <span class="modal-title">Создать ресторан</span>
+      <span class="modal-title">Новый ресторан</span>
       <button class="modal-close" onclick="closeModal('createModal')">×</button>
     </div>
     <div class="modal-body">
       <div class="error-banner" id="createError"></div>
 
-      <div class="section-title">Основная информация</div>
+      <div class="section-divider"><span class="section-divider-label">Основное</span><div class="section-divider-line"></div></div>
+
       <div class="form-group">
         <label class="form-label">Название *</label>
         <input class="form-control" id="c_name" placeholder="Чинор" oninput="autoSlug()" />
@@ -424,20 +1063,23 @@ tr:hover td { background: rgba(243,236,223,0.4); }
         <label class="form-label">Описание</label>
         <input class="form-control" id="c_description" placeholder="Ресторан узбекской кухни" />
       </div>
-      <div class="form-group">
-        <label class="form-label">Телефон</label>
-        <input class="form-control" id="c_phone" placeholder="+998901234567" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Адрес</label>
-        <input class="form-control" id="c_address" placeholder="Бухара, ул. Накшбанди 12" />
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group">
+          <label class="form-label">Телефон</label>
+          <input class="form-control" id="c_phone" placeholder="+998901234567" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Адрес</label>
+          <input class="form-control" id="c_address" placeholder="Бухара, ул. Накшбанди 12" />
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">Пароль для admin.html *</label>
         <input class="form-control" type="password" id="c_password" placeholder="Минимум 6 символов" />
       </div>
 
-      <div class="section-title">Telegram</div>
+      <div class="section-divider"><span class="section-divider-label">Telegram</span><div class="section-divider-line"></div></div>
+
       <div class="form-group">
         <label class="form-label">Bot Token</label>
         <input class="form-control" id="c_bot_token" placeholder="Оставьте пустым — будет использован общий бот" />
@@ -447,13 +1089,14 @@ tr:hover td { background: rgba(243,236,223,0.4); }
         <input class="form-control" type="number" id="c_dispatcher_id" placeholder="331294063" />
       </div>
 
-      <div class="section-title">Брендинг</div>
+      <div class="section-divider"><span class="section-divider-label">Брендинг</span><div class="section-divider-line"></div></div>
+
       <div class="form-group">
-        <label class="form-label">Логотип ресторана</label>
+        <label class="form-label">Логотип</label>
         <div class="file-upload-wrap">
           <img id="c_logo_preview" class="file-upload-preview" src="" alt="Preview">
-          <input type="file" id="c_logo_file" accept="image/*" style="display:none;" onchange="handleLogoUpload(this, 'c_logo_url', 'c_logo_preview')" />
-          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('c_logo_file').click()">Выбрать файл</button>
+          <input type="file" id="c_logo_file" accept="image/*" style="display:none" onchange="handleLogoUpload(this,'c_logo_url','c_logo_preview')" />
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('c_logo_file').click()">Выбрать файл</button>
           <input type="hidden" id="c_logo_url" />
         </div>
       </div>
@@ -461,44 +1104,50 @@ tr:hover td { background: rgba(243,236,223,0.4); }
         <div class="form-group">
           <label class="form-label">Основной цвет</label>
           <div class="color-input-wrap">
-            <input class="form-control" id="c_primary_color" placeholder="#8B1A2E" oninput="updateColorPreview('c_primary_color','cprev_primary')" style="padding-right:64px" />
+            <input class="form-control" id="c_primary_color" placeholder="#8B1A2E" oninput="updateColorPreview('c_primary_color','cprev_primary')" style="padding-right:70px" />
             <div class="color-preview" id="cprev_primary" style="background:#8B1A2E"></div>
-            <input type="color" value="#8B1A2E" oninput="document.getElementById('c_primary_color').value=this.value;updateColorPreview('c_primary_color','cprev_primary')" style="position:absolute;right:8px;width:28px;height:28px;border:none;border-radius:7px;cursor:pointer;padding:0;" title="Выбрать цвет" />
+            <input type="color" value="#8B1A2E" class="color-picker-native" oninput="syncColor(this,'c_primary_color','cprev_primary')" />
           </div>
         </div>
         <div class="form-group">
           <label class="form-label">Доп. цвет</label>
           <div class="color-input-wrap">
-            <input class="form-control" id="c_secondary_color" placeholder="#FAF6EE" oninput="updateColorPreview('c_secondary_color','cprev_secondary')" style="padding-right:64px" />
+            <input class="form-control" id="c_secondary_color" placeholder="#FAF6EE" oninput="updateColorPreview('c_secondary_color','cprev_secondary')" style="padding-right:70px" />
             <div class="color-preview" id="cprev_secondary" style="background:#FAF6EE"></div>
-            <input type="color" value="#FAF6EE" oninput="document.getElementById('c_secondary_color').value=this.value;updateColorPreview('c_secondary_color','cprev_secondary')" style="position:absolute;right:8px;width:28px;height:28px;border:none;border-radius:7px;cursor:pointer;padding:0;" title="Выбрать цвет" />
+            <input type="color" value="#FAF6EE" class="color-picker-native" oninput="syncColor(this,'c_secondary_color','cprev_secondary')" />
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Accent цвет</label>
+          <label class="form-label">Accent</label>
           <div class="color-input-wrap">
-            <input class="form-control" id="c_accent_color" placeholder="#D4A853" oninput="updateColorPreview('c_accent_color','cprev_accent')" style="padding-right:64px" />
+            <input class="form-control" id="c_accent_color" placeholder="#D4A853" oninput="updateColorPreview('c_accent_color','cprev_accent')" style="padding-right:70px" />
             <div class="color-preview" id="cprev_accent" style="background:#D4A853"></div>
-            <input type="color" value="#D4A853" oninput="document.getElementById('c_accent_color').value=this.value;updateColorPreview('c_accent_color','cprev_accent')" style="position:absolute;right:8px;width:28px;height:28px;border:none;border-radius:7px;cursor:pointer;padding:0;" title="Выбрать цвет" />
+            <input type="color" value="#D4A853" class="color-picker-native" oninput="syncColor(this,'c_accent_color','cprev_accent')" />
           </div>
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Welcome Text</label>
-        <input class="form-control" id="c_welcome_text" placeholder="Добро пожаловать!" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Custom Domain</label>
-        <input class="form-control" id="c_custom_domain" placeholder="menu.chinar.uz" />
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group">
+          <label class="form-label">Welcome Text</label>
+          <input class="form-control" id="c_welcome_text" placeholder="Добро пожаловать!" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Custom Domain</label>
+          <input class="form-control" id="c_custom_domain" placeholder="menu.chinar.uz" />
+        </div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('createModal')">Отмена</button>
-      <button class="btn btn-primary" id="createSubmitBtn" onclick="submitCreate()">Создать</button>
+      <button class="btn btn-ghost" onclick="closeModal('createModal')">Отмена</button>
+      <button class="btn btn-gold" id="createSubmitBtn" onclick="submitCreate()">
+        <svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 5v14M5 12h14"/></svg>
+        Создать
+      </button>
     </div>
   </div>
 </div>
 
+<!-- ═══ MODAL: EDIT ═══ -->
 <div class="modal-overlay" id="editModal">
   <div class="modal">
     <div class="modal-header">
@@ -509,17 +1158,18 @@ tr:hover td { background: rgba(243,236,223,0.4); }
       <div class="error-banner" id="editError"></div>
       <input type="hidden" id="e_id" />
 
-      <div class="section-title">Основная информация</div>
+      <div class="section-divider"><span class="section-divider-label">Основное</span><div class="section-divider-line"></div></div>
+
       <div class="form-group">
         <label class="form-label">Название</label>
         <input class="form-control" id="e_name" />
       </div>
       <div class="form-group">
         <label class="form-label">Slug</label>
-        <div class="input-group-copy">
+        <div class="input-group">
           <input class="form-control" id="e_slug" />
-          <button class="btn-copy" onclick="copyField('e_slug')" title="Копировать Slug">
-            <svg class="icon" viewBox="0 0 24 24" style="width:15px;height:15px"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <button class="btn-copy" onclick="copyField('e_slug')" title="Копировать">
+            <svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           </button>
         </div>
         <div class="form-hint">Изменение slug сломает существующие QR-коды.</div>
@@ -528,103 +1178,112 @@ tr:hover td { background: rgba(243,236,223,0.4); }
         <label class="form-label">Описание</label>
         <input class="form-control" id="e_description" />
       </div>
-      <div class="form-group">
-        <label class="form-label">Телефон</label>
-        <input class="form-control" id="e_phone" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Адрес</label>
-        <input class="form-control" id="e_address" />
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group">
+          <label class="form-label">Телефон</label>
+          <input class="form-control" id="e_phone" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Адрес</label>
+          <input class="form-control" id="e_address" />
+        </div>
       </div>
 
-      <div class="section-title">Telegram</div>
+      <div class="section-divider"><span class="section-divider-label">Telegram</span><div class="section-divider-line"></div></div>
+
       <div class="form-group">
         <label class="form-label">Bot Token</label>
-        <div class="input-group-copy">
+        <div class="input-group">
           <input class="form-control" id="e_bot_token" placeholder="Оставьте пустым — не изменится" />
-          <button class="btn-copy" onclick="copyField('e_bot_token')" title="Копировать Token">
-            <svg class="icon" viewBox="0 0 24 24" style="width:15px;height:15px"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <button class="btn-copy" onclick="copyField('e_bot_token')" title="Копировать">
+            <svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           </button>
         </div>
       </div>
       <div class="form-group">
         <label class="form-label">Telegram ID диспетчера</label>
-        <div class="input-group-copy">
+        <div class="input-group">
           <input class="form-control" type="number" id="e_dispatcher_id" />
-          <button class="btn-copy" onclick="copyField('e_dispatcher_id')" title="Копировать ID">
-            <svg class="icon" viewBox="0 0 24 24" style="width:15px;height:15px"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <button class="btn-copy" onclick="copyField('e_dispatcher_id')" title="Копировать">
+            <svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           </button>
         </div>
       </div>
 
-      <div class="section-title">Брендинг</div>
+      <div class="section-divider"><span class="section-divider-label">Брендинг</span><div class="section-divider-line"></div></div>
+
       <div class="form-group">
-        <label class="form-label">Логотип ресторана</label>
+        <label class="form-label">Логотип</label>
         <div class="file-upload-wrap">
           <img id="e_logo_preview" class="file-upload-preview" src="" alt="Preview">
-          <input type="file" id="e_logo_file" accept="image/*" style="display:none;" onchange="handleLogoUpload(this, 'e_logo_url', 'e_logo_preview')" />
-          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('e_logo_file').click()">Выбрать новый файл</button>
+          <input type="file" id="e_logo_file" accept="image/*" style="display:none" onchange="handleLogoUpload(this,'e_logo_url','e_logo_preview')" />
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('e_logo_file').click()">Выбрать новый файл</button>
           <input type="hidden" id="e_logo_url" />
         </div>
       </div>
       <div class="color-row">
         <div class="form-group">
-          <label class="form-label">Основной цвет</label>
+          <label class="form-label">Основной</label>
           <div class="color-input-wrap">
-            <input class="form-control" id="e_primary_color" oninput="updateColorPreview('e_primary_color','eprev_primary')" style="padding-right:64px" />
+            <input class="form-control" id="e_primary_color" oninput="updateColorPreview('e_primary_color','eprev_primary')" style="padding-right:70px" />
             <div class="color-preview" id="eprev_primary"></div>
-            <input type="color" value="#8B1A2E" id="e_primary_color_picker" oninput="document.getElementById('e_primary_color').value=this.value;updateColorPreview('e_primary_color','eprev_primary')" style="position:absolute;right:8px;width:28px;height:28px;border:none;border-radius:7px;cursor:pointer;padding:0;" title="Выбрать цвет" />
+            <input type="color" id="e_primary_color_picker" class="color-picker-native" oninput="syncColor(this,'e_primary_color','eprev_primary')" />
           </div>
         </div>
         <div class="form-group">
           <label class="form-label">Доп. цвет</label>
           <div class="color-input-wrap">
-            <input class="form-control" id="e_secondary_color" oninput="updateColorPreview('e_secondary_color','eprev_secondary')" />
+            <input class="form-control" id="e_secondary_color" oninput="updateColorPreview('e_secondary_color','eprev_secondary')" style="padding-right:70px" />
             <div class="color-preview" id="eprev_secondary"></div>
+            <input type="color" id="e_secondary_color_picker" class="color-picker-native" oninput="syncColor(this,'e_secondary_color','eprev_secondary')" />
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Accent цвет</label>
+          <label class="form-label">Accent</label>
           <div class="color-input-wrap">
-            <input class="form-control" id="e_accent_color" oninput="updateColorPreview('e_accent_color','eprev_accent')" />
+            <input class="form-control" id="e_accent_color" oninput="updateColorPreview('e_accent_color','eprev_accent')" style="padding-right:70px" />
             <div class="color-preview" id="eprev_accent"></div>
+            <input type="color" id="e_accent_color_picker" class="color-picker-native" oninput="syncColor(this,'e_accent_color','eprev_accent')" />
           </div>
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Welcome Text</label>
-        <input class="form-control" id="e_welcome_text" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Custom Domain</label>
-        <div class="input-group-copy">
-          <input class="form-control" id="e_custom_domain" />
-          <button class="btn-copy" onclick="copyField('e_custom_domain')" title="Копировать домен">
-            <svg class="icon" viewBox="0 0 24 24" style="width:15px;height:15px"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          </button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group">
+          <label class="form-label">Welcome Text</label>
+          <input class="form-control" id="e_welcome_text" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Custom Domain</label>
+          <div class="input-group">
+            <input class="form-control" id="e_custom_domain" />
+            <button class="btn-copy" onclick="copyField('e_custom_domain')" title="Копировать">
+              <svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('editModal')">Отмена</button>
-      <button class="btn btn-primary" id="editSubmitBtn" onclick="submitEdit()">Сохранить</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmDeactivate()" id="editDeactivateBtn">Деактивировать</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-ghost" onclick="closeModal('editModal')">Отмена</button>
+      <button class="btn btn-gold" id="editSubmitBtn" onclick="submitEdit()">Сохранить</button>
     </div>
   </div>
 </div>
 
+<!-- ═══ UTILITIES ═══ -->
 <div class="toast-container" id="toastContainer"></div>
 <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
 
+<!-- ═══ SCRIPT ═══ -->
 <script>
 const API = window.location.origin;
-// JWT хранится в sessionStorage, не localStorage.
-// localStorage уязвим к XSS — любой скрипт на странице может прочитать токен.
-// sessionStorage очищается при закрытии вкладки — безопаснее для админки.
 let token = sessionStorage.getItem('agency_token') || null;
 let agencyInfo = JSON.parse(sessionStorage.getItem('agency_info') || 'null');
 let allRestaurants = [];
 
-// ── TRANSLITERATION MAP ──
+// ── TRANSLITERATION ──
 const TRANSLIT = {
   'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z',
   'и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r',
@@ -639,68 +1298,52 @@ function transliterate(str) {
 
 function autoSlug() {
   const name = document.getElementById('c_name').value;
-  const slug = transliterate(name)
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-  document.getElementById('c_slug').value = slug;
+  document.getElementById('c_slug').value = transliterate(name)
+    .replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-').replace(/^-|-$/g, '');
 }
 
-// ── FILE UPLOAD HELPER ──
+// ── FILE UPLOAD ──
 function handleLogoUpload(input, urlInputId, previewId) {
   const file = input.files[0];
   if (!file) return;
-  // Проверка типа файла
-  if (!file.type.startsWith('image/')) {
-    toast('Только изображения (JPG, PNG, WebP)', 'error');
-    input.value = '';
-    return;
-  }
-  // Лимит 2MB
-  if (file.size > 2 * 1024 * 1024) {
-    toast('Файл слишком большой. Максимум 2MB', 'error');
-    input.value = '';
-    return;
-  }
+  if (!file.type.startsWith('image/')) { toast('Только изображения', 'error'); input.value = ''; return; }
+  if (file.size > 2 * 1024 * 1024) { toast('Максимум 2MB', 'error'); input.value = ''; return; }
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = e => {
     document.getElementById(urlInputId).value = e.target.result;
     const prev = document.getElementById(previewId);
     prev.src = e.target.result;
     prev.classList.add('show');
-  }
+  };
   reader.readAsDataURL(file);
 }
 
-// ── CLICK TO COPY HELPER ──
+// ── COPY ──
 function copyField(id) {
   const val = document.getElementById(id)?.value?.trim();
-  if (!val) { toast('Поле пустое, нечего копировать', 'error'); return; }
-  // Fallback для браузеров без navigator.clipboard (HTTP, старые браузеры)
+  if (!val) { toast('Поле пустое', 'error'); return; }
   if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(val).then(() => {
-      toast('Скопировано в буфер обмена!', 'success');
-    }).catch(() => {
-      toast('Ошибка копирования', 'error');
-    });
+    navigator.clipboard.writeText(val).then(() => toast('Скопировано', 'success')).catch(() => toast('Ошибка копирования', 'error'));
   } else {
-    // Fallback через execCommand (устаревший, но работает везде)
-    const textarea = document.createElement('textarea');
-    textarea.value = val;
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = '0';
-    document.body.appendChild(textarea);
-    textarea.focus();
-    textarea.select();
-    try {
-      document.execCommand('copy');
-      toast('Скопировано!', 'success');
-    } catch {
-      toast('Ошибка копирования', 'error');
-    }
-    document.body.removeChild(textarea);
+    const ta = document.createElement('textarea');
+    ta.value = val; ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast('Скопировано', 'success'); } catch { toast('Ошибка', 'error'); }
+    document.body.removeChild(ta);
   }
+}
+
+// ── COLOR ──
+function syncColor(picker, inputId, previewId) {
+  document.getElementById(inputId).value = picker.value;
+  updateColorPreview(inputId, previewId);
+}
+
+function updateColorPreview(inputId, previewId) {
+  const val = document.getElementById(inputId)?.value;
+  const el = document.getElementById(previewId);
+  if (el && val && /^#[0-9A-Fa-f]{3,6}$/.test(val)) el.style.background = val;
 }
 
 // ── INIT ──
@@ -708,7 +1351,7 @@ window.addEventListener('DOMContentLoaded', () => {
   if (token) {
     loadAgencyInfo()
       .then(() => { showApp(); loadRestaurants(); })
-      .catch(() => { doLogout(); });
+      .catch(() => doLogout());
   } else {
     showLogin();
   }
@@ -728,6 +1371,8 @@ function showApp() {
   if (agencyInfo) {
     document.getElementById('sidebarAgencyName').textContent = agencyInfo.name || '—';
     document.getElementById('sidebarAgencyEmail').textContent = agencyInfo.email || '—';
+    const letter = (agencyInfo.name || agencyInfo.email || 'A')[0].toUpperCase();
+    document.getElementById('sidebarAvatar').textContent = letter;
     document.getElementById('topbarSub').textContent = agencyInfo.name || '';
   }
 }
@@ -739,10 +1384,8 @@ async function doLogin() {
   const errEl = document.getElementById('loginError');
   errEl.style.display = 'none';
   if (!email || !password) { showErr(errEl, 'Введите email и пароль'); return; }
-
   const btn = document.getElementById('loginBtn');
   btn.disabled = true; btn.textContent = 'Вход...';
-
   try {
     const res = await fetch('/api/agency/login', {
       method: 'POST',
@@ -751,17 +1394,15 @@ async function doLogin() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Ошибка входа');
-
     token = data.access_token;
     sessionStorage.setItem('agency_token', token);
-
     await loadAgencyInfo();
     showApp();
     loadRestaurants();
   } catch (e) {
     showErr(errEl, e.message);
   } finally {
-    btn.disabled = false; btn.textContent = 'Войти';
+    btn.disabled = false; btn.textContent = 'Войти в панель';
   }
 }
 
@@ -786,9 +1427,21 @@ function showPage(name, navEl) {
   document.getElementById('page-' + name).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (navEl) navEl.classList.add('active');
-  const titles = { dashboard: 'Dashboard', restaurants: 'Рестораны' };
+  const titles = { dashboard: 'Дашборд', restaurants: 'Рестораны' };
+  const subs = { dashboard: 'Обзор платформы', restaurants: 'Все подключённые рестораны' };
   document.getElementById('topbarTitle').textContent = titles[name] || name;
+  document.getElementById('topbarSub').textContent = subs[name] || '';
   document.getElementById('createBtn').style.display = name === 'restaurants' ? 'flex' : 'none';
+  document.getElementById('topSearchWrap').style.display = name === 'restaurants' ? 'flex' : 'none';
+}
+
+// ── GLOBAL SEARCH (sidebar) ──
+function onGlobalSearch() {
+  const q = document.getElementById('globalSearch').value.toLowerCase().trim();
+  if (q.length < 1) return;
+  showPage('restaurants', document.getElementById('nav-restaurants'));
+  document.getElementById('tableSearch').value = q;
+  filterRestaurants();
 }
 
 // ── LOAD RESTAURANTS ──
@@ -797,27 +1450,18 @@ async function loadRestaurants() {
   try {
     const res = await apiFetch('/api/agency/restaurants');
     if (res.status === 401) { doLogout(); return; }
-    
-    // Если сервер вернул ошибку, разбираем её детали
     if (!res.ok) {
-      let serverError = `Статус: ${res.status}`;
-      try {
-        const data = await res.json();
-        serverError += ` | Детали: ${data.detail ? JSON.stringify(data.detail) : JSON.stringify(data)}`;
-      } catch (_) {
-        try {
-          const txt = await res.text();
-          serverError += ` | Ответ: ${txt.substring(0, 120)}`;
-        } catch (_) {
-          serverError += ` | Не удалось прочитать текст ответа`;
-        }
-      }
-      throw new Error(serverError);
+      let msg = `Статус: ${res.status}`;
+      try { const d = await res.json(); msg += ` — ${d.detail ? JSON.stringify(d.detail) : JSON.stringify(d)}`; } catch {}
+      throw new Error(msg);
     }
-    
     allRestaurants = await res.json();
-    renderRestaurants(allRestaurants);
     renderDashboard(allRestaurants);
+    renderRestaurants(allRestaurants);
+    renderStats(allRestaurants);
+    renderTopList(allRestaurants);
+    renderActivity(allRestaurants);
+    document.getElementById('navRestCount').textContent = allRestaurants.length;
   } catch (e) {
     toast(e.message, 'error');
   } finally {
@@ -825,64 +1469,166 @@ async function loadRestaurants() {
   }
 }
 
-function renderDashboard(list) {
-  document.getElementById('statTotal').textContent = list.length;
-  document.getElementById('statActive').textContent = list.filter(r => r.is_active).length;
-  document.getElementById('statInactive').textContent = list.filter(r => !r.is_active).length;
+// ── RENDER STATS ──
+function renderStats(list) {
+  animateCount('statTotal', list.length);
+  const active = list.filter(r => r.is_active).length;
+  animateCount('statActive', active);
 
+  // MRR: active restaurants × 600,000 sum/month (pricing)
+  const mrr = active * 600000;
+  document.getElementById('statMrr').textContent = mrr > 0
+    ? (mrr / 1000).toFixed(0) + 'K сум'
+    : '—';
+
+  // New this month: count restaurants created in last 30 days
+  const thirtyDaysAgo = Date.now() - 30 * 24 * 3600 * 1000;
+  const newCount = list.filter(r => r.created_at && new Date(r.created_at).getTime() > thirtyDaysAgo).length;
+  animateCount('statNew', newCount);
+}
+
+function animateCount(id, target) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (target === 0) { el.textContent = '0'; return; }
+  let start = 0;
+  const step = Math.ceil(target / 20);
+  const timer = setInterval(() => {
+    start = Math.min(start + step, target);
+    el.textContent = start;
+    if (start >= target) clearInterval(timer);
+  }, 30);
+}
+
+// ── RENDER DASHBOARD TABLE ──
+function renderDashboard(list) {
   const tbody = document.getElementById('dashboardTable');
   const recent = list.slice(0, 5);
   if (!recent.length) {
-    tbody.innerHTML = '<tr><td colspan="3"><div class="empty-state">Нет ресторанов</div></td></tr>';
+    tbody.innerHTML = `<tr><td colspan="3">${emptyHTML('Ресторанов ещё нет', 'Создайте первый ресторан')}</td></tr>`;
     return;
   }
   tbody.innerHTML = recent.map(r => `
-    <tr>
-      <td><strong>${esc(r.name)}</strong></td>
-      <td><code style="font-size:12px;color:var(--soft)">${esc(r.slug)}</code></td>
+    <tr onclick="openEditModal(${r.id})">
+      <td>
+        <div class="r-name-cell">
+          <div class="r-avatar">${esc(r.name[0] || '?')}</div>
+          <div>
+            <div class="r-name">${esc(r.name)}</div>
+            <div class="r-slug">${esc(r.slug)}</div>
+          </div>
+        </div>
+      </td>
       <td><span class="badge ${r.is_active ? 'badge-active' : 'badge-inactive'}">${r.is_active ? 'Активен' : 'Неактивен'}</span></td>
+      <td style="color:var(--ash);font-size:12px">${r.address ? esc(r.address) : '—'}</td>
     </tr>`).join('');
 }
 
+// ── RENDER RESTAURANTS PAGE ──
 function renderRestaurants(list) {
   const tbody = document.getElementById('restaurantsTable');
+  const countEl = document.getElementById('restaurantsCount');
+  countEl.textContent = `${list.length} ресторан${list.length === 1 ? '' : list.length < 5 ? 'а' : 'ов'}`;
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">Нет ресторанов. Создайте первый!</div></td></tr>';
+    tbody.innerHTML = `<tr><td colspan="4">${emptyHTML('Ресторанов пока нет', 'Нажмите «Новый ресторан» чтобы добавить первый')}</td></tr>`;
     return;
   }
+  const menuBase = `${API}/app?slug=`;
   tbody.innerHTML = list.map(r => {
-    const menuUrl = r.custom_domain ? `https://${esc(r.custom_domain)}` : `https://taomly.onrender.com/app?slug=${esc(r.slug)}`;
+    const menuUrl = r.custom_domain ? `https://${esc(r.custom_domain)}` : `${menuBase}${esc(r.slug)}`;
     return `
-    <tr style="cursor:pointer" onclick="openEditModal(${r.id})">
+    <tr onclick="openEditModal(${r.id})">
       <td>
-        <strong>${esc(r.name)}</strong>
-        <div style="font-size:11px;color:var(--soft);margin-top:2px">${esc(r.slug)}</div>
-        <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;padding-bottom:2px">
-          <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openEditModal(${r.id})">Изменить</button>
-          <a href="/admin?slug=${esc(r.slug)}" target="_blank" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">Админка</a>
-          <a href="${menuUrl}" target="_blank" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">Меню</a>
-          ${r.is_active
-            ? `<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deactivate(${r.id})">Деакт.</button>`
-            : `<button class="btn btn-success btn-sm" onclick="event.stopPropagation();activate(${r.id})">Актив.</button>`}
+        <div class="r-name-cell">
+          <div class="r-avatar">${esc(r.name[0] || '?')}</div>
+          <div>
+            <div class="r-name">${esc(r.name)}</div>
+            <div class="r-slug">${esc(r.slug)}</div>
+          </div>
         </div>
       </td>
-      <td style="display:none">${esc(r.slug)}</td>
-      <td>${r.address ? esc(r.address) : '<span style="color:var(--soft)">—</span>'}</td>
+      <td style="color:var(--ash);font-size:12.5px">${r.address ? esc(r.address) : '—'}</td>
       <td><span class="badge ${r.is_active ? 'badge-active' : 'badge-inactive'}">${r.is_active ? 'Активен' : 'Неактивен'}</span></td>
-      <td style="display:none"></td>
+      <td>
+        <div class="r-actions">
+          <a href="/admin?slug=${esc(r.slug)}" target="_blank" class="btn btn-ghost btn-sm" onclick="event.stopPropagation()" title="Админка">
+            <svg class="icon" viewBox="0 0 24 24" style="width:13px;height:13px"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+          </a>
+          <a href="${menuUrl}" target="_blank" class="btn btn-ghost btn-sm" onclick="event.stopPropagation()" title="Меню">
+            <svg class="icon" viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openEditModal(${r.id})" title="Редактировать">
+            <svg class="icon" viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+        </div>
+      </td>
     </tr>`;
   }).join('');
 }
 
+// ── TOP LIST ──
+function renderTopList(list) {
+  const el = document.getElementById('topList');
+  const active = list.filter(r => r.is_active).slice(0, 5);
+  if (!active.length) return;
+  const rankClass = ['rank-1','rank-2','rank-3','rank-n','rank-n'];
+  el.innerHTML = active.map((r, i) => `
+    <div class="top-item">
+      <div class="top-rank ${rankClass[i]}">${i + 1}</div>
+      <div class="top-info">
+        <div class="top-name">${esc(r.name)}</div>
+        <div class="top-orders">${esc(r.slug)}</div>
+      </div>
+      <span class="badge badge-active">Активен</span>
+    </div>`).join('');
+}
+
+// ── ACTIVITY FEED ──
+function renderActivity(list) {
+  const el = document.getElementById('activityFeed');
+  if (!list.length) return;
+  const events = [];
+  list.slice(0, 8).forEach(r => {
+    if (r.created_at) {
+      events.push({
+        type: r.is_active ? 'emerald' : 'amber',
+        msg: `<strong>${esc(r.name)}</strong> — ресторан ${r.is_active ? 'активен' : 'добавлен'}`,
+        time: formatTime(r.created_at)
+      });
+    }
+  });
+  if (!events.length) return;
+  el.innerHTML = events.map(e => `
+    <div class="activity-item">
+      <div class="activity-dot dot-${e.type}"></div>
+      <div class="activity-text">
+        <div class="activity-msg">${e.msg}</div>
+        <div class="activity-time">${e.time}</div>
+      </div>
+    </div>`).join('');
+}
+
+function formatTime(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    const now = new Date();
+    const diff = (now - d) / 1000;
+    if (diff < 60) return 'только что';
+    if (diff < 3600) return Math.floor(diff / 60) + ' мин назад';
+    if (diff < 86400) return Math.floor(diff / 3600) + ' ч назад';
+    return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+  } catch { return '—'; }
+}
+
+// ── SEARCH ──
 function filterRestaurants() {
-  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  const q = (document.getElementById('tableSearch')?.value || '').toLowerCase().trim();
   if (!q) { renderRestaurants(allRestaurants); return; }
   renderRestaurants(allRestaurants.filter(r =>
     r.name.toLowerCase().includes(q) ||
     r.slug.toLowerCase().includes(q) ||
     (r.address || '').toLowerCase().includes(q) ||
-    (r.phone || '').toLowerCase().includes(q) ||
-    (r.custom_domain || '').toLowerCase().includes(q) ||
     String(r.telegram_dispatcher_id || '').includes(q)
   ));
 }
@@ -893,11 +1639,9 @@ function openCreateModal() {
    'c_bot_token','c_dispatcher_id','c_logo_url','c_primary_color',
    'c_secondary_color','c_accent_color','c_welcome_text','c_custom_domain'
   ].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  
   const prev = document.getElementById('c_logo_preview');
   if (prev) { prev.src = ''; prev.classList.remove('show'); }
   document.getElementById('c_logo_file').value = '';
-
   document.getElementById('createError').style.display = 'none';
   openModal('createModal');
 }
@@ -905,18 +1649,12 @@ function openCreateModal() {
 async function submitCreate() {
   const errEl = document.getElementById('createError');
   errEl.style.display = 'none';
-
-  const name = v('c_name');
-  const slug = v('c_slug');
-  const password = document.getElementById('c_password').value;
-
+  const name = v('c_name'), slug = v('c_slug'), password = document.getElementById('c_password').value;
   if (!name) { showErr(errEl, 'Введите название ресторана'); return; }
   if (!slug) { showErr(errEl, 'Введите slug'); return; }
   if (!password || password.length < 6) { showErr(errEl, 'Пароль минимум 6 символов'); return; }
-
   const btn = document.getElementById('createSubmitBtn');
   btn.disabled = true; btn.textContent = 'Создание...';
-
   const dispId = v('c_dispatcher_id');
   const payload = {
     name, slug,
@@ -933,15 +1671,12 @@ async function submitCreate() {
     welcome_text: v('c_welcome_text') || null,
     custom_domain: v('c_custom_domain') || null,
   };
-
   try {
-    const res = await apiFetch('/api/agency/restaurants', {
-      method: 'POST', body: JSON.stringify(payload)
-    });
+    const res = await apiFetch('/api/agency/restaurants', { method: 'POST', body: JSON.stringify(payload) });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Ошибка создания');
     closeModal('createModal');
-    toast('Ресторан создан!', 'success');
+    toast('Ресторан создан', 'success');
     await loadRestaurants();
   } catch (e) {
     showErr(errEl, e.message);
@@ -954,15 +1689,14 @@ async function submitCreate() {
 function openEditModal(id) {
   const r = allRestaurants.find(x => x.id === id);
   if (!r) return;
-
-  document.getElementById('editModalTitle').textContent = 'Редактировать: ' + r.name;
+  document.getElementById('editModalTitle').textContent = r.name;
   document.getElementById('e_id').value = r.id;
   document.getElementById('e_name').value = r.name || '';
   document.getElementById('e_slug').value = r.slug || '';
   document.getElementById('e_description').value = r.description || '';
   document.getElementById('e_phone').value = r.phone || '';
   document.getElementById('e_address').value = r.address || '';
-  document.getElementById('e_bot_token').value = r.telegram_bot_token || '';
+  document.getElementById('e_bot_token').value = '';
   document.getElementById('e_dispatcher_id').value = r.telegram_dispatcher_id || '';
   document.getElementById('e_logo_url').value = r.logo_url || '';
   document.getElementById('e_primary_color').value = r.primary_color || '';
@@ -973,19 +1707,30 @@ function openEditModal(id) {
 
   document.getElementById('e_logo_file').value = '';
   const prev = document.getElementById('e_logo_preview');
-  if (prev && r.logo_url) {
-    prev.src = r.logo_url;
-    prev.classList.add('show');
-  } else if (prev) {
-    prev.src = '';
-    prev.classList.remove('show');
-  }
+  if (prev && r.logo_url) { prev.src = r.logo_url; prev.classList.add('show'); }
+  else if (prev) { prev.src = ''; prev.classList.remove('show'); }
 
-  [['e_primary_color','eprev_primary'],['e_secondary_color','eprev_secondary'],['e_accent_color','eprev_accent']].forEach(([inputId, prevId]) => {
+  [['e_primary_color','eprev_primary','e_primary_color_picker'],
+   ['e_secondary_color','eprev_secondary','e_secondary_color_picker'],
+   ['e_accent_color','eprev_accent','e_accent_color_picker']].forEach(([inputId, prevId, pickerId]) => {
     const val = document.getElementById(inputId).value;
     const el = document.getElementById(prevId);
     if (el && val) el.style.background = val;
+    const picker = document.getElementById(pickerId);
+    if (picker && val && /^#[0-9A-Fa-f]{6}$/.test(val)) picker.value = val;
   });
+
+  // Кнопка деактивации
+  const deactivateBtn = document.getElementById('editDeactivateBtn');
+  if (r.is_active) {
+    deactivateBtn.textContent = 'Деактивировать';
+    deactivateBtn.className = 'btn btn-danger btn-sm';
+    deactivateBtn.onclick = () => confirmDeactivate(id);
+  } else {
+    deactivateBtn.textContent = 'Активировать';
+    deactivateBtn.className = 'btn btn-success btn-sm';
+    deactivateBtn.onclick = () => activate(id);
+  }
 
   document.getElementById('editError').style.display = 'none';
   openModal('editModal');
@@ -995,10 +1740,8 @@ async function submitEdit() {
   const errEl = document.getElementById('editError');
   errEl.style.display = 'none';
   const id = document.getElementById('e_id').value;
-
   const btn = document.getElementById('editSubmitBtn');
   btn.disabled = true; btn.textContent = 'Сохранение...';
-
   const payload = {};
   const textFields = {
     e_name: 'name', e_slug: 'slug', e_description: 'description',
@@ -1008,18 +1751,14 @@ async function submitEdit() {
     e_accent_color: 'accent_color', e_welcome_text: 'welcome_text',
     e_custom_domain: 'custom_domain'
   };
-
   for (const [elId, key] of Object.entries(textFields)) {
     const val = v(elId);
     if (val !== '') payload[key] = val || null;
   }
   const dispId = v('e_dispatcher_id');
   if (dispId !== '') payload.telegram_dispatcher_id = dispId ? parseInt(dispId) : null;
-
   try {
-    const res = await apiFetch(`/api/agency/restaurants/${id}`, {
-      method: 'PATCH', body: JSON.stringify(payload)
-    });
+    const res = await apiFetch(`/api/agency/restaurants/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Ошибка сохранения');
     closeModal('editModal');
@@ -1033,21 +1772,21 @@ async function submitEdit() {
 }
 
 // ── DEACTIVATE / ACTIVATE ──
-async function deactivate(id) {
+async function confirmDeactivate(id) {
   if (!confirm('Деактивировать ресторан? Клиенты не смогут открыть меню.')) return;
+  closeModal('editModal');
   try {
     const res = await apiFetch(`/api/agency/restaurants/${id}`, { method: 'DELETE' });
     if (!res.ok) { const d = await res.json(); throw new Error(d.detail); }
-    toast('Ресторан деактивирован', 'success');
+    toast('Ресторан деактивирован', 'info');
     await loadRestaurants();
   } catch (e) { toast(e.message, 'error'); }
 }
 
 async function activate(id) {
+  closeModal('editModal');
   try {
-    const res = await apiFetch(`/api/agency/restaurants/${id}`, {
-      method: 'PATCH', body: JSON.stringify({ is_active: true })
-    });
+    const res = await apiFetch(`/api/agency/restaurants/${id}`, { method: 'PATCH', body: JSON.stringify({ is_active: true }) });
     if (!res.ok) { const d = await res.json(); throw new Error(d.detail); }
     toast('Ресторан активирован', 'success');
     await loadRestaurants();
@@ -1055,38 +1794,22 @@ async function activate(id) {
 }
 
 // ── HELPERS ──
-function authFetch(url, opts = {}) {
-  return fetch(url, {
-    ...opts,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      ...(opts.headers || {})
-    }
-  });
-}
-
-// При 401 — токен истёк, автоматически разлогиниваем
 async function apiFetch(url, options = {}) {
-  const res = await authFetch(url, options);
-  if (res.status === 401) {
-    doLogout();
-    throw new Error('Сессия истекла. Войдите снова.');
-  }
+  const res = await fetch(url, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...(options.headers || {}) }
+  });
+  if (res.status === 401) { doLogout(); throw new Error('Сессия истекла. Войдите снова.'); }
   return res;
 }
 
 function v(id) { return (document.getElementById(id)?.value || '').trim(); }
 
 function esc(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function openModal(id) { document.getElementById(id).classList.add('open'); }
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 function showErr(el, msg) { el.textContent = msg; el.style.display = 'block'; }
 function showLoading(on) { document.getElementById('loadingOverlay').classList.toggle('show', on); }
@@ -1094,16 +1817,32 @@ function showLoading(on) { document.getElementById('loadingOverlay').classList.t
 function toast(msg, type = '') {
   const el = document.createElement('div');
   el.className = `toast ${type}`;
-  el.textContent = (type === 'success' ? '✓ ' : type === 'error' ? '✕ ' : '') + msg;
-  document.getElementById('toastContainer').appendChild(el);
-  setTimeout(() => el.remove(), 3500);
+  el.innerHTML = `<div class="toast-dot"></div><span>${msg}</span>`;
+  const container = document.getElementById('toastContainer');
+  container.appendChild(el);
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.3s, transform 0.3s';
+    el.style.opacity = '0'; el.style.transform = 'translateX(110%)';
+    setTimeout(() => el.remove(), 300);
+  }, 3200);
 }
 
-function updateColorPreview(inputId, previewId) {
-  const val = document.getElementById(inputId)?.value;
-  const el = document.getElementById(previewId);
-  if (el && val && /^#[0-9A-Fa-f]{3,6}$/.test(val)) el.style.background = val;
+function emptyHTML(title, text) {
+  return `<div class="empty-state">
+    <div class="empty-icon">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M3 2v7a3 3 0 0 0 6 0V2"/><path d="M15 2v7a3 3 0 0 0 6 0V2"/><path d="M9 12v9"/><path d="M15 12v9"/></svg>
+    </div>
+    <div class="empty-title">${title}</div>
+    <div class="empty-text">${text}</div>
+  </div>`;
 }
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+});
 </script>
 </body>
 </html>
