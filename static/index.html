@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Taomly</title>
 
-<!-- PWA -->
-<link rel="manifest" href="/static/manifest.json">
-<meta name="theme-color" content="#8B1A2E">
+<!-- PWA — manifest обновляется динамически в applyBrandTheme() -->
+<link rel="manifest" href="/static/manifest.json" id="pwaManifest">
+<meta name="theme-color" content="#8B1A2E" id="pwaThemeColor">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Taomly">
+<meta name="apple-mobile-web-app-title" content="Taomly" id="pwaTitle">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
@@ -840,14 +840,74 @@ function fmtTwoLine(p) {
   return `${p.toLocaleString('uz-UZ')}<span class="price-currency">so'm</span>`;
 }
 
-// Бренд-шелл (тёмный орех + матовое золото + молочный фон) — единый
-// для всех ресторанов на этом этапе. Цвет конкретного ресторана
-// (primary_color/accent_color) сознательно не применяется к интерфейсу:
-// luxury-ощущение держится на дисциплине палитры, а не на том, что
-// каждый ресторан красит кнопки в свой цвет. Кастомизация цвета —
-// отдельная платная фича на будущее, не часть базового опыта.
+// White Label брендинг: применяет цвета, manifest и title конкретного ресторана.
+// Вызывается один раз после загрузки данных ресторана из API.
+// Все элементы интерфейса используют CSS variables — изменение :root
+// автоматически перекрашивает весь интерфейс без перерисовки DOM.
 function applyBrandTheme(r) {
-  // намеренно пусто
+  const root = document.documentElement;
+
+  // ── CSS Variables ──────────────────────────────────────────────
+  // primary_color → кнопки, активные элементы, cart badge
+  if (r.primary_color) {
+    root.style.setProperty('--ruby',      r.primary_color);
+    root.style.setProperty('--ruby-deep', _darken(r.primary_color, 15));
+    root.style.setProperty('--shadow-ruby',
+      `0 3px 10px ${_hexToRgba(r.primary_color, 0.22)}`);
+  }
+
+  // accent_color → золотые акценты, разделители, цена
+  if (r.accent_color) {
+    root.style.setProperty('--gold',      r.accent_color);
+    root.style.setProperty('--gold-soft', r.accent_color);
+  }
+
+  // secondary_color → фон страницы
+  if (r.secondary_color) {
+    root.style.setProperty('--bg',      r.secondary_color);
+    root.style.setProperty('--surface', _darken(r.secondary_color, 5));
+  }
+
+  // ── <meta name="theme-color"> ──────────────────────────────────
+  // Меняет цвет строки браузера/статус-бара на мобильных
+  if (r.primary_color) {
+    const tc = document.getElementById('pwaThemeColor');
+    if (tc) tc.setAttribute('content', r.primary_color);
+  }
+
+  // ── PWA: apple-mobile-web-app-title ───────────────────────────
+  if (r.name) {
+    const pt = document.getElementById('pwaTitle');
+    if (pt) pt.setAttribute('content', r.name);
+    document.title = r.name;
+  }
+
+  // ── Dynamic manifest ──────────────────────────────────────────
+  // Браузер читает manifest при первой загрузке — смена href
+  // влияет на установку PWA при следующем визите.
+  if (restaurantSlug) {
+    const ml = document.getElementById('pwaManifest');
+    if (ml) ml.setAttribute('href', `/manifest/${restaurantSlug}.json`);
+  }
+}
+
+// ── Утилиты для цветовых вычислений ───────────────────────────────
+// Конвертирует HEX в rgba строку для теней и оверлеев.
+function _hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// Затемняет HEX цвет на amount (0-255).
+// Используется для --ruby-deep и --surface.
+function _darken(hex, amount) {
+  if (!hex || hex.length < 7) return hex;
+  const r = Math.max(0, parseInt(hex.slice(1,3), 16) - amount);
+  const g = Math.max(0, parseInt(hex.slice(3,5), 16) - amount);
+  const b = Math.max(0, parseInt(hex.slice(5,7), 16) - amount);
+  return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
 }
 
 async function loadMenu() {
