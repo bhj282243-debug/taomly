@@ -1,0 +1,111 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "taomly"
+version = "2.1.0"
+description = "White Label Multi-Tenant Restaurant SaaS Platform"
+requires-python = ">=3.11"
+readme = "README.md"
+
+# ──────────────────────────────────────────
+# RUFF — linter + formatter (replaces flake8 + pycodestyle)
+# ──────────────────────────────────────────
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+exclude = [
+    ".git",
+    "__pycache__",
+    ".venv",
+    "alembic/versions",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "S",   # flake8-bandit (security)
+    "C4",  # flake8-comprehensions
+    "DTZ", # flake8-datetimez (naive datetime)
+    "T20", # flake8-print
+]
+ignore = [
+    "S101",  # assert used in tests — OK
+    "S105",  # hardcoded password — false positives on test fixtures
+    "S106",  # hardcoded password in func args
+    "B008",  # fastapi Depends() in default args — by design
+    "N805",  # pydantic validators use cls
+    "T201",  # print in scripts is fine
+    "E501",  # line too long — handled by black
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S", "DTZ"]  # security and datetime checks off in tests
+"alembic/*" = ["E", "F"]  # alembic generated code
+
+[tool.ruff.lint.isort]
+known-first-party = ["config", "database", "models", "schemas", "auth", "handlers", "telegram_service"]
+force-sort-within-sections = true
+
+# ──────────────────────────────────────────
+# BLACK — formatter
+# ──────────────────────────────────────────
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+exclude = '''
+/(
+    \.git
+  | __pycache__
+  | \.venv
+  | alembic/versions
+)/
+'''
+
+# ──────────────────────────────────────────
+# PYTEST
+# ──────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "-p", "no:warnings",
+]
+markers = [
+    "unit: pure unit tests, no DB",
+    "integration: tests that require DB",
+    "security: security-focused tests",
+]
+
+# ──────────────────────────────────────────
+# COVERAGE
+# ──────────────────────────────────────────
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "tests/*",
+    "alembic/*",
+    ".venv/*",
+    "static/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
+fail_under = 40  # Stage 1 baseline; raise to 70 in Stage 2
