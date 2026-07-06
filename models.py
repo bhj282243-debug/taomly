@@ -2,17 +2,17 @@
 models.py — Taomly Platform
 SQLAlchemy ORM-модели для Multi-Tenant White Label архитектуры.
 
-Изменения относительно v1:
-  - User.telegram_id: глобальный unique=True → UniqueConstraint("restaurant_id",
-    "telegram_id"). Один пользователь Telegram может быть клиентом нескольких
-    ресторанов — глобальный unique ломал бы эту логику.
-  - agency_id: nullable=True → NOT NULL (ресторан без агентства — логическая дыра),
-    ondelete="RESTRICT" защищает от удаления агентства с активными ресторанами
-  - Добавлены updated_at на мутируемые таблицы (аудит, дебаггинг на проде)
-  - TIMESTAMP(timezone=True) везде вместо naive datetime
-  - Составные индексы на горячие запросы (заказы по статусу, меню по доступности)
-  - ondelete и cascade согласованы между Python ORM и БД
-  - lazy="select" задан явно (документирует поведение, нет сюрпризов)
+Изменения v3:
+  - Product: добавлены badge-поля is_bestseller, is_new, is_spicy, is_chef_choice (M-2)
+    Ранее бейджи кодировались в Product.description через #хэштеги — антипаттерн.
+    Теперь отдельные булевые колонки:
+      • SQL-индекс для AI-аналитики Этапа 2 (поиск хитов продаж)
+      • Нет зависимости от текстового парсинга
+      • Управляется через PATCH /api/menu/products/{id}
+  - Product.price: задокументировано что цена хранится в сомах (целое число)
+    L-2: без документации следующий разработчик не поймёт единицы измерения
+
+  Миграция для существующей БД — MIGRATION_badges.sql
 """
 
 from sqlalchemy import (
@@ -197,10 +197,29 @@ class Product(Base):
     )
     name         = Column(String(255), nullable=False)
     description  = Column(Text)
+
+    # ЦЕНА: хранится в целых сомах (UZS).
+    # Например: price=45000 → 45 000 сум.
+    # Отображать: f"{price:,} so'm"
+    # При выходе на международный рынок (Этап 3+) заменить на Numeric(12, 2)
+    # и добавить колонку currency_code.
     price        = Column(Integer, nullable=False)
+
     photo_url    = Column(Text)
     is_available = Column(Boolean, default=True, nullable=False)
     sort_order   = Column(Integer, default=0, nullable=False)
+
+    # ── Badges (M-2) ──────────────────────────────────────────────────
+    # Заменяют #хэштеги в description. Отдельные булевые колонки:
+    #   - быстрый SQL-запрос без LIKE '%#bestseller%'
+    #   - готовы к AI-аналитике Этапа 2 (топ блюд, рекомендации)
+    #   - управляются через PATCH /api/menu/products/{id}
+    # Миграция существующей БД: MIGRATION_badges.sql
+    is_bestseller = Column(Boolean, default=False, nullable=False, server_default="false")
+    is_new        = Column(Boolean, default=False, nullable=False, server_default="false")
+    is_spicy      = Column(Boolean, default=False, nullable=False, server_default="false")
+    is_chef_choice = Column(Boolean, default=False, nullable=False, server_default="false")
+
     updated_at   = Column(
         TIMESTAMP(timezone=True),
         server_default=func.now(),
