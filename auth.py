@@ -2,20 +2,15 @@
 auth.py — Taomly Platform
 Аутентификация: JWT, bcrypt, Fernet, Telegram initData HMAC-SHA256.
 
-Изменения v4:
-  - TelegramUser получил поле restaurant_id и ссылку на объект restaurant —
-    устранён AttributeError в orders.py (tg_user.restaurant_id)
-  - get_telegram_user() возвращает TelegramUser с вложенным restaurant,
-    чтобы роутеры не делали повторный SQL-запрос (убран лишний db.query)
-  - TelegramContext переименован в TelegramUser для простоты —
-    один объект содержит и пользователя и его ресторан
+Изменения v5:
+  - Все env-переменные читаются из config.py (единый источник)
+  - Убраны прямые os.getenv вызовы
 """
 
 import hashlib
 import hmac
 import json
 import logging
-import os
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -29,34 +24,13 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
+from config import settings
 from database import get_db
 from models import Agency, Restaurant
 
 logger = logging.getLogger(__name__)
 
-# ──────────────────────────────────────────
-# КОНФИГ
-# ──────────────────────────────────────────
-SECRET_KEY = os.getenv("SECRET_KEY")
-if not SECRET_KEY:
-    raise RuntimeError(
-        "SECRET_KEY is required. "
-        "Сгенерируй: python -c \"import secrets; print(secrets.token_hex(32))\""
-    )
-
-_FERNET_KEY_RAW = os.getenv("FERNET_KEY")
-if not _FERNET_KEY_RAW:
-    raise RuntimeError(
-        "FERNET_KEY is required для шифрования Telegram Bot Token. "
-        "Сгенерируй: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
-    )
-
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_HOURS = int(os.getenv("ACCESS_TOKEN_EXPIRE_HOURS", "24"))
-
-# initData старше этого порога отклоняется (Replay Attack).
-# Telegram рекомендует 86400 (24ч). Для повышенной безопасности — 3600 (1ч).
-MAX_INIT_DATA_AGE_SECONDS = int(os.getenv("MAX_INIT_DATA_AGE_SECONDS", "86400"))
 
 # ──────────────────────────────────────────
 # PASSWORD HASHING (bcrypt)
@@ -75,7 +49,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 # ──────────────────────────────────────────
 # FERNET — шифрование/расшифровка Bot Token
 # ──────────────────────────────────────────
-_fernet = Fernet(_FERNET_KEY_RAW.encode())
+_fernet = Fernet(settings.FERNET_KEY.encode())
 
 
 def encrypt_token(token: str) -> str:
@@ -114,18 +88,13 @@ class TelegramUser:
 
     Содержит как данные пользователя из initData, так и загруженный
     объект ресторана — чтобы роутеры не делали повторный SQL-запрос.
-
-    Поля пользователя соответствуют объекту User из Telegram WebApp API.
     """
-    # Данные пользователя из initData
     id: int
     first_name: str
     last_name: Optional[str]
     username: Optional[str]
     language_code: Optional[str]
 
-    # Контекст ресторана — загружен и проверен в get_telegram_user()
-    # Роутеры используют напрямую, без повторного SQL-запроса
     restaurant_id: int = field(default=0)
     restaurant: Optional[Restaurant] = field(default=None, repr=False)
 
@@ -155,23 +124,8 @@ def verify_telegram_init_data(init_data: str, bot_token: str) -> dict:
     """
     Верифицирует initData от Telegram Mini App.
 
-    White Label Multi-Tenant: принимает bot_token конкретного ресторана,
-    а не глобальный токен платформы. Каждый ресторан проверяет своим ботом.
-
-    Алгоритм (официальная документация Telegram):
-      1. Разбиваем init_data на пары ключ=значение
-      2. Извлекаем и удаляем поле hash
-      3. Сортируем оставшиеся пары по ключу, соединяем через \n
-      4. secret_key = HMAC-SHA256(key="WebAppData", msg=bot_token)
-      5. expected = HMAC-SHA256(key=secret_key, msg=data_check_string)
-      6. Сравниваем через compare_digest (защита от timing attack)
-      7. Проверяем auth_date — защита от Replay Attack
-
-    Returns:
-        dict с распарсенными полями initData (включая user)
-
-    Raises:
-        HTTPException 401 при невалидной подписи, истёкших или неполных данных
+    White Label Multi-Tenant: принимает bot_token конкретного ресторана.
+    Алгоритм по официальной документации Telegram.
     """
     if not init_data:
         raise HTTPException(
@@ -188,7 +142,7 @@ def verify_telegram_init_data(init_data: str, bot_token: str) -> dict:
             detail="Поле hash отсутствует в initData",
         )
 
-    # ── Проверка auth_date (Replay Attack) ──────────────────────────
+    # Проверка auth_date (Replay Attack)
     auth_date_str = parsed.get("auth_date")
     if not auth_date_str:
         raise HTTPException(
@@ -210,17 +164,17 @@ def verify_telegram_init_data(init_data: str, bot_token: str) -> dict:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Невалидный auth_date: время из будущего",
         )
-    if age_seconds > MAX_INIT_DATA_AGE_SECONDS:
+    if age_seconds > settings.MAX_INIT_DATA_AGE_SECONDS:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=(
                 f"initData устарела (возраст {age_seconds}с, "
-                f"максимум {MAX_INIT_DATA_AGE_SECONDS}с). "
+                f"максимум {settings.MAX_INIT_DATA_AGE_SECONDS}с). "
                 "Перезапустите Mini App."
             ),
         )
 
-    # ── Верификация подписи ──────────────────────────────────────────
+    # Верификация подписи
     data_check_string = "\n".join(
         f"{k}={v}" for k, v in sorted(parsed.items())
     )
@@ -247,7 +201,7 @@ def verify_telegram_init_data(init_data: str, bot_token: str) -> dict:
             detail="Невалидная подпись Telegram initData",
         )
 
-    # ── Извлекаем и парсим user ──────────────────────────────────────
+    # Извлекаем и парсим user
     user_json = parsed.get("user")
     if not user_json:
         raise HTTPException(
@@ -283,40 +237,8 @@ def get_telegram_user(
 ) -> TelegramUser:
     """
     FastAPI-зависимость для клиентских роутеров Mini App.
-
-    Фронтенд передаёт два заголовка:
-      X-Telegram-Init-Data: <window.Telegram.WebApp.initData>
-      X-Restaurant-Id:      <restaurant.id>
-
-    Что делает:
-      1. Загружает ресторан из БД по X-Restaurant-Id
-      2. Проверяет наличие бота у ресторана
-      3. Расшифровывает токен бота через Fernet
-      4. Верифицирует initData HMAC-SHA256 токеном этого бота
-      5. Проверяет auth_date (Replay Attack)
-      6. Возвращает TelegramUser с вложенным restaurant
-
-    Роутеры получают всё необходимое из одного объекта:
-      tg_user.id            — верифицированный Telegram ID
-      tg_user.restaurant_id — ID ресторана (из заголовка, проверен)
-      tg_user.restaurant    — ORM-объект Restaurant (без повторного SQL)
-      tg_user.display_name  — имя для client_name
-
-    Использование:
-        @router.post("/orders/")
-        def create_order(
-            data: OrderCreate,
-            tg_user: TelegramUser = Depends(get_telegram_user),
-            db: Session = Depends(get_db),
-        ):
-            restaurant = tg_user.restaurant  # уже загружен, SQL не нужен
-            order = Order(
-                restaurant_id=tg_user.restaurant_id,
-                client_telegram_id=tg_user.id,
-                ...
-            )
+    Загружает ресторан, расшифровывает токен бота, верифицирует initData.
     """
-    # Загружаем ресторан — единственный SQL-запрос для всего клиентского контекста
     restaurant = db.query(Restaurant).filter(
         Restaurant.id == x_restaurant_id,
         Restaurant.is_active == True,
@@ -334,13 +256,9 @@ def get_telegram_user(
             detail="Telegram Bot не настроен для этого ресторана",
         )
 
-    # Расшифровываем токен бота этого конкретного ресторана
     bot_token = decrypt_token(restaurant.telegram_bot_token_encrypted)
-
-    # Верифицируем initData токеном именно этого ресторана
     user_dict = verify_telegram_init_data(x_init_data, bot_token)
 
-    # Возвращаем единый объект контекста: пользователь + ресторан
     return TelegramUser.from_dict(user_dict, restaurant)
 
 
@@ -352,9 +270,9 @@ def create_agency_token(agency: Agency) -> str:
         "sub": str(agency.id),
         "role": "agency_owner",
         "agency_id": agency.id,
-        "exp": datetime.now(timezone.utc) + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS),
+        "exp": datetime.now(timezone.utc) + timedelta(hours=settings.ACCESS_TOKEN_EXPIRE_HOURS),
     }
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
 
 
 def create_restaurant_token(restaurant: Restaurant) -> str:
@@ -363,14 +281,14 @@ def create_restaurant_token(restaurant: Restaurant) -> str:
         "role": "restaurant_admin",
         "restaurant_id": restaurant.id,
         "agency_id": restaurant.agency_id,
-        "exp": datetime.now(timezone.utc) + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS),
+        "exp": datetime.now(timezone.utc) + timedelta(hours=settings.ACCESS_TOKEN_EXPIRE_HOURS),
     }
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
 
 
 def decode_token(token: str) -> dict:
     try:
-        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
     except JWTError as exc:
         logger.warning("JWT decode failed: %s", exc)
         raise HTTPException(
@@ -392,10 +310,7 @@ def get_current_agency(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> Agency:
-    """
-    Зависимость для роутеров Agency Owner.
-    Проверяет JWT, role == 'agency_owner', наличие агентства в БД.
-    """
+    """Зависимость для роутеров Agency Owner."""
     payload = decode_token(credentials.credentials)
 
     if payload.get("role") != "agency_owner":
@@ -432,10 +347,7 @@ def get_current_restaurant_admin(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> Restaurant:
-    """
-    Зависимость для роутеров ресторанного администратора.
-    Проверяет JWT, role == 'restaurant_admin', наличие ресторана в БД.
-    """
+    """Зависимость для роутеров ресторанного администратора."""
     payload = decode_token(credentials.credentials)
 
     if payload.get("role") != "restaurant_admin":
