@@ -9,7 +9,7 @@ routers/orders.py — Taomly Platform
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session, joinedload
 
 from auth import TelegramUser, get_current_restaurant_admin, get_telegram_user
@@ -17,6 +17,7 @@ from database import get_db
 from models import Order, OrderItem, Product, Restaurant, RestaurantTable
 from schemas import OrderCreate, OrderResponse, OrderStatusUpdate
 import handlers
+from api import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,9 @@ VALID_STATUS_TRANSITIONS: dict[str, list[str]] = {
 # POST / — создать заказ (клиент Mini App)
 # ──────────────────────────────────────────
 @router.post("/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")  # защита от flood заказов
 def create_order(
+    request: Request,
     data: OrderCreate,
     background_tasks: BackgroundTasks,
     tg_user: TelegramUser = Depends(get_telegram_user),
