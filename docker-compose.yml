@@ -1,0 +1,71 @@
+# ══════════════════════════════════════════════════════════════════
+# Taomly — docker-compose.yml
+# Local development environment
+# Usage: docker compose up --build
+# ══════════════════════════════════════════════════════════════════
+
+services:
+
+  # ── PostgreSQL (local dev) ───────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: taomly
+      POSTGRES_USER: taomly
+      POSTGRES_PASSWORD: taomly_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taomly -d taomly"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Taomly API ───────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      target: runtime
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Override DATABASE_URL to point to local postgres
+      DATABASE_URL: postgresql://taomly:taomly_dev@db:5432/taomly
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # Hot reload in dev: mount source code
+      - .:/app
+    command: >
+      uvicorn api:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+      --reload-dir /app
+
+  # ── Alembic migrations runner ────────────────────────────────────
+  migrate:
+    build:
+      context: .
+      target: runtime
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://taomly:taomly_dev@db:5432/taomly
+    depends_on:
+      db:
+        condition: service_healthy
+    command: alembic upgrade head
+    profiles:
+      - migrate  # run with: docker compose --profile migrate up migrate
+
+volumes:
+  postgres_data:
+    driver: local
