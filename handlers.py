@@ -345,3 +345,141 @@ def notify_client_accepted(order, restaurant) -> None:
             order.client_telegram_id,
             restaurant.name,
         )
+
+
+def notify_client_preparing(order, restaurant) -> None:
+    """Клиенту: заказ готовится."""
+    if not order.client_telegram_id:
+        return
+    text = (
+        f"👨‍🍳 Buyurtmangiz tayyorlanmoqda!\n"
+        f"{'─' * 28}\n"
+        f"Buyurtma #{order.id} — {int(order.total_amount):,} so'm\n"
+        f"Biroz kuting 🙏"
+    )
+    try:
+        bot = get_restaurant_bot(restaurant)
+        bot.send_message(order.client_telegram_id, text)
+        logger.info(
+            "notify_client_preparing: заказ #%s клиент %s",
+            order.id, order.client_telegram_id,
+        )
+    except ValueError as e:
+        logger.warning("notify_client_preparing: %s", e)
+    except Exception:
+        logger.exception(
+            "Ошибка notify_client_preparing: заказ #%s клиент %s ресторан «%s»",
+            order.id, order.client_telegram_id, restaurant.name,
+        )
+
+
+def notify_client_ready(order, restaurant) -> None:
+    """Клиенту: заказ готов."""
+    if not order.client_telegram_id:
+        return
+    labels = {
+        "delivery":  "Kuryer tez orada yo'lga chiqadi 🚗",
+        "takeaway":  "Olib ketishingiz mumkin! 🛍",
+        "dine_in":   "Stolingizga olib kelinadi! 🍽",
+    }
+    detail = labels.get(order.order_type, "Tayyor!")
+    text = (
+        f"🔔 Buyurtmangiz tayyor!\n"
+        f"{'─' * 28}\n"
+        f"Buyurtma #{order.id} — {int(order.total_amount):,} so'm\n"
+        f"{detail}"
+    )
+    try:
+        bot = get_restaurant_bot(restaurant)
+        bot.send_message(order.client_telegram_id, text)
+        logger.info(
+            "notify_client_ready: заказ #%s клиент %s",
+            order.id, order.client_telegram_id,
+        )
+    except ValueError as e:
+        logger.warning("notify_client_ready: %s", e)
+    except Exception:
+        logger.exception(
+            "Ошибка notify_client_ready: заказ #%s клиент %s ресторан «%s»",
+            order.id, order.client_telegram_id, restaurant.name,
+        )
+
+
+def notify_client_delivering(order, restaurant) -> None:
+    """Клиенту: курьер в пути."""
+    if not order.client_telegram_id:
+        return
+    text = (
+        f"🚗 Kuryer yo'lda!\n"
+        f"{'─' * 28}\n"
+        f"Buyurtma #{order.id} — {int(order.total_amount):,} so'm\n"
+        f"Tez orada yetib boradi 📍"
+    )
+    try:
+        bot = get_restaurant_bot(restaurant)
+        bot.send_message(order.client_telegram_id, text)
+        logger.info(
+            "notify_client_delivering: заказ #%s клиент %s",
+            order.id, order.client_telegram_id,
+        )
+    except ValueError as e:
+        logger.warning("notify_client_delivering: %s", e)
+    except Exception:
+        logger.exception(
+            "Ошибка notify_client_delivering: заказ #%s клиент %s ресторан «%s»",
+            order.id, order.client_telegram_id, restaurant.name,
+        )
+
+
+def notify_client_completed(order, restaurant) -> None:
+    """Клиенту: заказ доставлен / завершён."""
+    if not order.client_telegram_id:
+        return
+    text = (
+        f"🎉 Buyurtma yetkazildi!\n"
+        f"{'─' * 28}\n"
+        f"Buyurtma #{order.id} — {int(order.total_amount):,} so'm\n"
+        f"Rahmat! Yana tashrif buyuring 🙏"
+    )
+    try:
+        bot = get_restaurant_bot(restaurant)
+        bot.send_message(order.client_telegram_id, text)
+        logger.info(
+            "notify_client_completed: заказ #%s клиент %s",
+            order.id, order.client_telegram_id,
+        )
+    except ValueError as e:
+        logger.warning("notify_client_completed: %s", e)
+    except Exception:
+        logger.exception(
+            "Ошибка notify_client_completed: заказ #%s клиент %s ресторан «%s»",
+            order.id, order.client_telegram_id, restaurant.name,
+        )
+
+
+def notify_client_cancelled(order, restaurant, comment: str = "") -> None:
+    """Клиенту: заказ отменён."""
+    if not order.client_telegram_id:
+        return
+    reason = f"\nSabab: {comment}" if comment and comment.strip() else ""
+    text = (
+        f"❌ Buyurtma bekor qilindi.\n"
+        f"{'─' * 28}\n"
+        f"Buyurtma #{order.id} — {int(order.total_amount):,} so'm"
+        f"{reason}\n"
+        f"Uzr so'raymiz 🙏"
+    )
+    try:
+        bot = get_restaurant_bot(restaurant)
+        bot.send_message(order.client_telegram_id, text)
+        logger.info(
+            "notify_client_cancelled: заказ #%s клиент %s",
+            order.id, order.client_telegram_id,
+        )
+    except ValueError as e:
+        logger.warning("notify_client_cancelled: %s", e)
+    except Exception:
+        logger.exception(
+            "Ошибка notify_client_cancelled: заказ #%s клиент %s ресторан «%s»",
+            order.id, order.client_telegram_id, restaurant.name,
+        )
