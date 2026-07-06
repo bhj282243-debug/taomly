@@ -4,6 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Taomly</title>
+
+<!-- PWA -->
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#8B1A2E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Taomly">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+
+<!-- Telegram -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1258,6 +1271,37 @@ window.addEventListener('DOMContentLoaded', () => {
   if (tg) { tg.ready(); tg.expand(); }
   parseParams();
   loadMenu();
+});
+
+// ── PWA: Service Worker Registration ──────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/static/sw.js')
+      .then((reg) => {
+        console.log('[SW] Registered:', reg.scope);
+      })
+      .catch((err) => {
+        console.warn('[SW] Registration failed:', err);
+      });
+  });
+}
+
+// ── PWA: Install Prompt ────────────────────────────────────────────────
+// Сохраняем событие beforeinstallprompt для кастомной кнопки установки
+let _deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _deferredInstallPrompt = e;
+  // Показываем баннер "Добавить на рабочий стол" если он есть в DOM
+  const installBanner = document.getElementById('installBanner');
+  if (installBanner) installBanner.style.display = 'flex';
+});
+
+window.addEventListener('appinstalled', () => {
+  _deferredInstallPrompt = null;
+  const installBanner = document.getElementById('installBanner');
+  if (installBanner) installBanner.style.display = 'none';
+  console.log('[PWA] App installed');
 });
 </script>
 </body>
