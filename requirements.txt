@@ -1,13 +1,33 @@
-fastapi
-uvicorn
-psycopg2-binary
-sqlalchemy
-python-dotenv
-pytelegrambotapi
-python-multipart
-Pillow
-python-jose[cryptography]
-passlib[bcrypt]
-bcrypt==4.0.1
-cryptography
-email-validator
+# Taomly — зафиксированные версии зависимостей
+# Обновлять через: pip install -U <package> && pip freeze > requirements.txt
+# Проверять совместимость перед обновлением.
+
+# ── Web Framework ────────────────────────────────────────────────────
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+python-multipart==0.0.20
+
+# ── Database ─────────────────────────────────────────────────────────
+sqlalchemy==2.0.36
+psycopg2-binary==2.9.10
+
+# ── Auth & Security ──────────────────────────────────────────────────
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.2.1
+cryptography==44.0.0
+
+# ── Telegram ─────────────────────────────────────────────────────────
+pytelegrambotapi==4.23.0
+
+# ── Rate Limiting ────────────────────────────────────────────────────
+slowapi==0.1.9
+
+# ── Monitoring ───────────────────────────────────────────────────────
+sentry-sdk[fastapi]==2.19.2
+
+# ── Config ───────────────────────────────────────────────────────────
+python-dotenv==1.0.1
+
+# ── HTTP Client (для telegram_service.py) ────────────────────────────
+httpx==0.28.1
