@@ -1,0 +1,15 @@
+User-agent: *
+Disallow: /admin
+Disallow: /agency-admin
+Disallow: /api/
+Disallow: /webhook/
+Disallow: /webhook
+Disallow: /health
+Disallow: /static/admin.html
+Disallow: /static/agency_admin.html
+
+# Allow public restaurant mini app
+Allow: /app
+Allow: /static/index.html
+
+Sitemap: https://taomly.uz/sitemap.xml
