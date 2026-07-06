@@ -13,6 +13,7 @@ api.py — Taomly Platform
   - robots.txt и favicon отдаются из static/
 """
 
+import hmac
 import logging
 from contextlib import asynccontextmanager
 
@@ -123,10 +124,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 # ──────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # MVP: create_all создаёт таблицы если не существуют.
-    # TODO Stage 2: заменить на Alembic-миграции.
-    models.Base.metadata.create_all(bind=engine)
-    logger.info("БД инициализирована")
+    logger.info("Lifespan: запуск приложения. Схема управляется Alembic.")
 
     # Устанавливаем webhook для платформенного бота
     if handlers.platform_bot:
@@ -296,7 +294,10 @@ def restaurant_webhook(
     WEBHOOK_SECRET. Запросы без валидного секрета → 403.
     Всегда возвращает 200 при успешной авторизации (требование Telegram).
     """
-    if x_telegram_bot_api_secret_token != settings.WEBHOOK_SECRET:
+    if not hmac.compare_digest(
+        x_telegram_bot_api_secret_token or "",
+        settings.WEBHOOK_SECRET,
+    ):
         logger.warning(
             "Webhook[%s]: отклонён запрос с невалидным секретом от %s",
             slug, request.client.host if request.client else "unknown",
@@ -337,7 +338,10 @@ def webhook(
     """
     Принимает обновления от Telegram для платформенного бота.
     """
-    if x_telegram_bot_api_secret_token != settings.WEBHOOK_SECRET:
+    if not hmac.compare_digest(
+        x_telegram_bot_api_secret_token or "",
+        settings.WEBHOOK_SECRET,
+    ):
         logger.warning(
             "Webhook: отклонён запрос с невалидным секретом от %s",
             request.client.host if request.client else "unknown",
