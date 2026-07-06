@@ -152,6 +152,31 @@ svg{display:block}
 .bar-track{flex:1;background:var(--surface);border-radius:6px;height:18px;overflow:hidden}
 .bar-fill{height:100%;border-radius:6px;background:var(--ruby);transition:width 0.5s ease;opacity:0.85}
 .bar-val{font-size:12px;font-weight:700;color:var(--ink);width:50px;flex-shrink:0}
+/* ── QR Management ───────────────────────────────────────────── */
+.qr-content{padding:0 0 32px}
+.qr-type-tabs{display:flex;background:var(--card);border-bottom:1px solid var(--line);padding:0 12px;gap:4px}
+.qr-type-btn{flex:1;padding:13px 4px;font-size:13px;font-weight:600;color:var(--soft);background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;font-family:inherit;transition:all 0.15s;white-space:nowrap}
+.qr-type-btn.active{color:var(--ruby);border-bottom-color:var(--ruby)}
+.qr-tab-panel{display:none;padding:0 0 16px}
+.qr-tab-panel.active{display:block}
+.qr-hint{font-size:13px;color:var(--soft);padding:8px 16px 12px;line-height:1.5}
+.qr-add-row{display:flex;gap:10px;padding:0 16px 16px;align-items:center}
+.qr-input{flex:1;padding:13px 14px;border-radius:var(--r-sm);border:1.5px solid var(--line);font-size:14px;color:var(--ink);background:var(--bg);font-family:inherit;outline:none;transition:border-color 0.15s}
+.qr-input:focus{border-color:var(--ruby)}
+.qr-gen-btn{padding:13px 18px;background:var(--ruby);color:#FAF7F1;border:none;border-radius:var(--r-sm);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;box-shadow:var(--sh-ruby);transition:opacity 0.15s}
+.qr-gen-btn:active{opacity:0.85}
+.qr-list{display:flex;flex-direction:column;gap:12px;padding:0 16px}
+.qr-single-container{padding:16px}
+.qr-card{background:var(--card);border-radius:var(--r-lg);padding:20px;display:flex;flex-direction:column;align-items:center;gap:12px;box-shadow:var(--sh)}
+.qr-canvas-wrap canvas{border-radius:10px;display:block}
+.qr-label{font-size:15px;font-weight:700;color:var(--ink);text-align:center}
+.qr-url-text{font-size:11px;color:var(--soft);text-align:center;word-break:break-all;max-width:280px;line-height:1.4}
+.qr-download-btn{padding:12px 24px;background:var(--surface);color:var(--ruby);border:1.5px solid var(--ruby);border-radius:var(--r-sm);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;width:100%}
+.qr-download-btn:active{background:var(--ruby);color:#FAF7F1}
+.qr-card-header{display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:4px}
+.qr-table-label{font-size:14px;font-weight:700;color:var(--ink)}
+.qr-remove-btn{background:none;border:none;color:var(--soft);cursor:pointer;font-size:18px;padding:4px;line-height:1}
+.qr-remove-btn:hover{color:var(--red)}
 .dish-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
 .dish-row:last-child{border-bottom:none}
 .dish-rank{width:26px;height:26px;border-radius:8px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--soft);flex-shrink:0}
@@ -246,6 +271,7 @@ svg{display:block}
     <div class="main-tab active" id="mtab-orders" onclick="switchPage('orders')">Buyurtmalar</div>
     <div class="main-tab" id="mtab-menu" onclick="switchPage('menu')">Menyu</div>
     <div class="main-tab" id="mtab-analytics" onclick="switchPage('analytics')">Analitika</div>
+    <div class="main-tab" id="mtab-qr" onclick="switchPage('qr')">QR</div>
   </div>
 
   <!-- ORDERS PAGE -->
@@ -311,6 +337,57 @@ svg{display:block}
       </div>
     </div>
   </div>
+
+  <!-- QR PAGE -->
+  <div class="page" id="page-qr">
+    <div class="qr-content">
+      <div class="qr-type-tabs">
+        <button class="qr-type-btn active" id="qrtab-tables" onclick="switchQrTab('tables')">Stollar</button>
+        <button class="qr-type-btn" id="qrtab-takeaway" onclick="switchQrTab('takeaway')">Olib ketish</button>
+        <button class="qr-type-btn" id="qrtab-delivery" onclick="switchQrTab('delivery')">Yetkazib berish</button>
+      </div>
+
+      <!-- Tables QR -->
+      <div class="qr-tab-panel active" id="qrpanel-tables">
+        <div class="section-title" style="padding:16px 16px 0">Stol QR-kodlari</div>
+        <div class="qr-hint">Har bir stol uchun QR-kod yarating. Mijoz skanerlasa, to'g'ri stolga buyurtma qiladi.</div>
+        <div class="qr-add-row">
+          <input class="qr-input" type="text" id="newTableNumber" placeholder="Stol raqami (1, 2, VIP...)" maxlength="20" />
+          <button class="qr-gen-btn" onclick="generateTableQR()">Yaratish</button>
+        </div>
+        <div id="qr-tables-list" class="qr-list"></div>
+      </div>
+
+      <!-- Takeaway QR -->
+      <div class="qr-tab-panel" id="qrpanel-takeaway">
+        <div class="section-title" style="padding:16px 16px 0">Olib ketish QR-kodi</div>
+        <div class="qr-hint">Kassaga yoki do'kon oynasiga joylashtiring. Mijoz skanerlasa, olib ketish buyurtmasi qiladi.</div>
+        <div class="qr-single-container">
+          <div class="qr-card">
+            <div class="qr-canvas-wrap" id="qr-takeaway-canvas"></div>
+            <div class="qr-label">Olib ketish</div>
+            <div class="qr-url-text" id="qr-takeaway-url"></div>
+            <button class="qr-download-btn" onclick="downloadQR('qr-takeaway-canvas', 'takeaway')">↓ PNG yuklab olish</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delivery QR -->
+      <div class="qr-tab-panel" id="qrpanel-delivery">
+        <div class="section-title" style="padding:16px 16px 0">Yetkazib berish QR-kodi</div>
+        <div class="qr-hint">Reklama materiallari va ijtimoiy tarmoqlar uchun. Mijoz skanerlasa, yetkazib berish buyurtmasi qiladi.</div>
+        <div class="qr-single-container">
+          <div class="qr-card">
+            <div class="qr-canvas-wrap" id="qr-delivery-canvas"></div>
+            <div class="qr-label">Yetkazib berish</div>
+            <div class="qr-url-text" id="qr-delivery-url"></div>
+            <button class="qr-download-btn" onclick="downloadQR('qr-delivery-canvas', 'delivery')">↓ PNG yuklab olish</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- EDIT PRICE MODAL -->
@@ -352,6 +429,8 @@ svg{display:block}
   </div>
 </div>
 
+<!-- qrcode.js — QR генерация в браузере, без бэкенд зависимостей -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 const API = '';
 const SESSION_KEY = 'taomly_admin_session';
@@ -509,6 +588,10 @@ function switchPage(page) {
   if (page === 'orders') loadOrders();
   if (page === 'menu') loadMenu();
   if (page === 'analytics') renderAnalytics();
+  if (page === 'qr' && !qrPageInitialized) {
+    qrPageInitialized = true;
+    initQrPage();
+  }
 }
 
 function refreshCurrent() {
@@ -951,6 +1034,139 @@ function renderDailyChart(orders) {
     return `<div class="bar-row"><div class="bar-label wide">${b.label}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><div class="bar-val">${b.count} ta</div></div>`;
   }).join('');
 }
+
+// ─── QR MANAGEMENT ───────────────────────────────────────────
+// Использует qrcode.js (CDN) — нет бэкенд зависимостей.
+// URL формируется из текущего origin + slug ресторана.
+// Таблы хранятся в памяти (массив qrTables) — не нужна БД.
+
+let qrTables = [];         // [{number, qrInstance}]
+let qrCurrentTab = 'tables';
+
+function switchQrTab(tab) {
+  qrCurrentTab = tab;
+  document.querySelectorAll('.qr-type-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.qr-tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('qrtab-' + tab).classList.add('active');
+  document.getElementById('qrpanel-' + tab).classList.add('active');
+}
+
+// Строит URL для QR: /app?slug=chinar&table=3&type=dine_in
+function buildQrUrl(type, tableNumber) {
+  const base = `${window.location.origin}/app`;
+  const slug = RESTAURANT_SLUG || '';
+  if (type === 'table') {
+    return `${base}?slug=${slug}&table=${encodeURIComponent(tableNumber)}&type=dine_in`;
+  }
+  if (type === 'takeaway') {
+    return `${base}?slug=${slug}&type=takeaway`;
+  }
+  if (type === 'delivery') {
+    return `${base}?slug=${slug}&type=delivery`;
+  }
+  return base;
+}
+
+// Создаёт QR через qrcode.js в указанном контейнере
+function makeQR(container, url) {
+  container.innerHTML = '';
+  return new QRCode(container, {
+    text: url,
+    width: 220,
+    height: 220,
+    colorDark: '#1A0A0A',
+    colorLight: '#FFFFFF',
+    correctLevel: QRCode.CorrectLevel.M,
+  });
+}
+
+// Скачивает QR как PNG
+function downloadQR(containerId, label) {
+  const wrap = document.getElementById(containerId);
+  if (!wrap) return;
+  const img = wrap.querySelector('img');
+  const canvas = wrap.querySelector('canvas');
+
+  let dataUrl;
+  if (canvas) {
+    dataUrl = canvas.toDataURL('image/png');
+  } else if (img) {
+    // qrcode.js иногда рендерит img вместо canvas
+    const c = document.createElement('canvas');
+    c.width = img.naturalWidth || 220;
+    c.height = img.naturalHeight || 220;
+    c.getContext('2d').drawImage(img, 0, 0);
+    dataUrl = c.toDataURL('image/png');
+  } else {
+    return;
+  }
+
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = `qr-${RESTAURANT_SLUG || 'restaurant'}-${label}.png`;
+  a.click();
+}
+
+// Генерирует QR для нового стола
+function generateTableQR() {
+  const input = document.getElementById('newTableNumber');
+  const num = input.value.trim();
+  if (!num) {
+    input.focus();
+    return;
+  }
+  // Проверяем дубликат
+  if (qrTables.find(t => t.number === num)) {
+    input.value = '';
+    input.placeholder = `Stol ${num} allaqachon mavjud`;
+    setTimeout(() => { input.placeholder = 'Stol raqami (1, 2, VIP...)'; }, 2500);
+    return;
+  }
+
+  const url = buildQrUrl('table', num);
+  const canvasId = `qr-table-canvas-${num.replace(/\s+/g, '-')}`;
+
+  const card = document.createElement('div');
+  card.className = 'qr-card';
+  card.id = `qr-table-card-${num}`;
+  card.innerHTML = `
+    <div class="qr-card-header">
+      <div class="qr-table-label">Stol № ${num}</div>
+      <button class="qr-remove-btn" onclick="removeTableQR('${num}')" title="O'chirish">×</button>
+    </div>
+    <div class="qr-canvas-wrap" id="${canvasId}"></div>
+    <div class="qr-url-text">${url}</div>
+    <button class="qr-download-btn" onclick="downloadQR('${canvasId}', 'stol-${num}')">↓ PNG yuklab olish</button>
+  `;
+
+  document.getElementById('qr-tables-list').prepend(card);
+  const qrInstance = makeQR(document.getElementById(canvasId), url);
+  qrTables.push({ number: num, qrInstance });
+
+  input.value = '';
+  input.focus();
+}
+
+function removeTableQR(num) {
+  qrTables = qrTables.filter(t => t.number !== num);
+  const card = document.getElementById(`qr-table-card-${num}`);
+  if (card) card.remove();
+}
+
+// Инициализация QR страницы при первом открытии
+function initQrPage() {
+  // Takeaway QR
+  const takeawayUrl = buildQrUrl('takeaway');
+  document.getElementById('qr-takeaway-url').textContent = takeawayUrl;
+  makeQR(document.getElementById('qr-takeaway-canvas'), takeawayUrl);
+
+  // Delivery QR
+  const deliveryUrl = buildQrUrl('delivery');
+  document.getElementById('qr-delivery-url').textContent = deliveryUrl;
+  makeQR(document.getElementById('qr-delivery-canvas'), deliveryUrl);
+}
+
+let qrPageInitialized = false;
 
 // ─── INIT ────────────────────────────────────────────────────
 checkAuth();
