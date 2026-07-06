@@ -1,26 +1,34 @@
 """
 schemas.py — Taomly Platform
 
-Изменения v2:
-  - OrderCreate: restaurant_id и client_telegram_id удалены (берутся из заголовков)
-  - OrderCreate.items: min_length=1 — пустой заказ не проходит Pydantic
-  - RestaurantCreate.slug: validator разрешает только [a-z0-9-]
-  - primary_color / secondary_color / accent_color: validator проверяет HEX (#RRGGBB)
-  - telegram_dispatcher_id: gt=0 — исключает 0 и отрицательные Telegram ID
+Изменения v3:
+  - OrderResponse: добавлен updated_at (M-3)
+  - OrderCreate: валидация address обязателен при order_type=delivery (M-10)
+  - OrderCreate: client_phone — regex валидация формата (M-12)
+  - ReservationCreate: reservation_time должна быть в будущем (M-9)
+  - ReservationCreate: client_phone — regex валидация
+  - AgencyRegister: max_length=100 на name и password (L-3)
+  - RestaurantCreate.name: max_length=100 (L-4)
+  - ProductCreate/ProductUpdate: photo_url — HttpUrl-style валидация (L-8)
+  - RestaurantCreate/Update: logo_url — URL валидация (L-8)
+  - ProductResponse: добавлены badge поля (is_bestseller, is_new, is_spicy, is_chef_choice) (M-2)
+  - ProductCreate/Update: добавлены badge поля (M-2)
 """
 
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 
 # ──────────────────────────────────────────
 # ВСПОМОГАТЕЛЬНЫЕ ВАЛИДАТОРЫ
 # ──────────────────────────────────────────
-_SLUG_RE = re.compile(r"^[a-z0-9-]+$")
-_HEX_RE  = re.compile(r"^#[0-9A-Fa-f]{6}$")
+_SLUG_RE  = re.compile(r"^[a-z0-9-]+$")
+_HEX_RE   = re.compile(r"^#[0-9A-Fa-f]{6}$")
+_PHONE_RE = re.compile(r"^\+?[0-9\s\-\(\)]{7,20}$")
+_URL_RE   = re.compile(r"^https?://", re.IGNORECASE)
 
 
 def _validate_slug(value: str) -> str:
@@ -37,6 +45,32 @@ def _validate_hex_color(value: Optional[str]) -> Optional[str]:
     return value
 
 
+def _validate_phone(value: Optional[str]) -> Optional[str]:
+    """
+    Принимает международные номера: +998901234567, +7 (999) 123-45-67.
+    Пустая строка → None. None → None.
+    """
+    if not value:
+        return None
+    v = value.strip()
+    if not _PHONE_RE.match(v):
+        raise ValueError(
+            "Неверный формат номера телефона. "
+            "Допустимые форматы: +998901234567, +7 (999) 123-45-67"
+        )
+    return v
+
+
+def _validate_url(value: Optional[str]) -> Optional[str]:
+    """Принимает только http:// или https:// URL."""
+    if not value:
+        return None
+    v = value.strip()
+    if not _URL_RE.match(v):
+        raise ValueError("URL должен начинаться с http:// или https://")
+    return v
+
+
 # ──────────────────────────────────────────
 # ПРОДУКТЫ
 # ──────────────────────────────────────────
@@ -48,6 +82,11 @@ class ProductResponse(BaseModel):
     photo_url: Optional[str] = None
     is_available: bool
     sort_order: int
+    # Badges (M-2) — добавлены как отдельные поля, не парсятся из description
+    is_bestseller: bool = False
+    is_new: bool = False
+    is_spicy: bool = False
+    is_chef_choice: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -68,24 +107,38 @@ class CategoryResponse(BaseModel):
 # ЗАКАЗЫ — создание
 # ──────────────────────────────────────────
 class OrderItemCreate(BaseModel):
-    product_id: int
-    # ge=1: Pydantic отклоняет quantity <= 0 до попадания в роутер
-    quantity: int = Field(..., ge=1)
+    product_id: int = Field(..., gt=0)
+    quantity: int = Field(..., ge=1, le=99)  # не больше 99 штук одного блюда
 
 
 class OrderCreate(BaseModel):
-    # restaurant_id убран — берётся из X-Restaurant-Id (верифицирован в get_telegram_user)
-    # client_telegram_id убран — берётся из TelegramUser.id (верифицирован HMAC-SHA256)
-    client_name: Optional[str] = None
+    client_name: Optional[str] = Field(None, max_length=100)
     client_phone: Optional[str] = None
     order_type: Literal["delivery", "takeaway", "dine_in"]
-    address: Optional[str] = None
+    address: Optional[str] = Field(None, max_length=300)
     location_lat: Optional[float] = None
     location_lng: Optional[float] = None
-    table_id: Optional[int] = None
-    comment: Optional[str] = None
-    # min_length=1: пустой список items не пройдёт до роутера
-    items: List[OrderItemCreate] = Field(..., min_length=1)
+    table_id: Optional[int] = Field(None, gt=0)
+    comment: Optional[str] = Field(None, max_length=500)
+    items: List[OrderItemCreate] = Field(..., min_length=1, max_length=50)
+
+    @field_validator("client_phone", mode="before")
+    @classmethod
+    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_phone(v)
+
+    @model_validator(mode="after")
+    def validate_order_type_fields(self) -> "OrderCreate":
+        """
+        Кросс-полевая валидация:
+        - delivery требует address
+        - dine_in требует table_id
+        """
+        if self.order_type == "delivery" and not self.address:
+            raise ValueError("Для заказа с доставкой укажите адрес (address)")
+        if self.order_type == "dine_in" and not self.table_id:
+            raise ValueError("Для заказа в зале укажите номер стола (table_id)")
+        return self
 
 
 # ЗАКАЗЫ — ответ
@@ -111,6 +164,7 @@ class OrderResponse(BaseModel):
     comment: Optional[str] = None
     items: List[OrderItemResponse] = Field(default_factory=list)
     created_at: datetime
+    updated_at: datetime  # M-3: добавлен для отслеживания смены статуса
 
     model_config = {"from_attributes": True}
 
@@ -132,12 +186,35 @@ class OrderStatusUpdate(BaseModel):
 # БРОНЬ
 # ──────────────────────────────────────────
 class ReservationCreate(BaseModel):
-    # restaurant_id убран — берётся из TelegramUser.restaurant_id
-    client_name: str
+    client_name: str = Field(..., min_length=1, max_length=100)
     client_phone: str
-    guests_count: int = Field(..., ge=1)
+    guests_count: int = Field(..., ge=1, le=100)
     reservation_time: datetime
-    comment: Optional[str] = None
+    comment: Optional[str] = Field(None, max_length=500)
+
+    @field_validator("client_phone", mode="before")
+    @classmethod
+    def validate_phone(cls, v: str) -> str:
+        result = _validate_phone(v)
+        if not result:
+            raise ValueError("Номер телефона обязателен для брони")
+        return result
+
+    @field_validator("reservation_time", mode="after")
+    @classmethod
+    def validate_future_date(cls, v: datetime) -> datetime:
+        """
+        Бронь должна быть в будущем.
+        Если клиент передаёт naive datetime — считаем UTC.
+        """
+        now = datetime.now(timezone.utc)
+        # Если dt naive — добавляем UTC timezone для сравнения
+        if v.tzinfo is None:
+            from datetime import timezone as _tz
+            v = v.replace(tzinfo=_tz.utc)
+        if v <= now:
+            raise ValueError("Время брони должно быть в будущем")
+        return v
 
 
 class ReservationResponse(BaseModel):
@@ -161,7 +238,6 @@ class ReservationStatusUpdate(BaseModel):
 # ВЫЗОВ ОФИЦИАНТА
 # ──────────────────────────────────────────
 class WaiterCallCreate(BaseModel):
-    # restaurant_id убран — берётся из TelegramUser.restaurant_id
     table_id: int = Field(..., gt=0)
 
 
@@ -183,13 +259,13 @@ class WaiterCallStatusUpdate(BaseModel):
 # ──────────────────────────────────────────
 class AgencyLogin(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(..., min_length=1, max_length=128)
 
 
 class AgencyRegister(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1, max_length=100)   # L-3
     email: EmailStr
-    password: str = Field(..., min_length=8)
+    password: str = Field(..., min_length=8, max_length=128)  # L-3
 
 
 class AgencyResponse(BaseModel):
@@ -211,24 +287,23 @@ class TokenResponse(BaseModel):
 # RESTAURANT — создание (Agency Owner)
 # ──────────────────────────────────────────
 class RestaurantCreate(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1, max_length=100)  # L-4
     slug: str = Field(..., min_length=2, max_length=100)
-    description: Optional[str] = None
+    description: Optional[str] = Field(None, max_length=500)
     phone: Optional[str] = None
-    address: Optional[str] = None
-    admin_password: str = Field(..., min_length=6)
+    address: Optional[str] = Field(None, max_length=300)
+    admin_password: str = Field(..., min_length=6, max_length=128)
 
     # White Label Branding
-    logo_url: Optional[str] = None
+    logo_url: Optional[str] = None       # L-8
     primary_color: Optional[str] = "#8B1A2E"
     secondary_color: Optional[str] = "#FAF6EE"
     accent_color: Optional[str] = "#D4A853"
-    welcome_text: Optional[str] = None
+    welcome_text: Optional[str] = Field(None, max_length=300)
     custom_domain: Optional[str] = None
 
     # Telegram
     telegram_bot_token: Optional[str] = None
-    # gt=0: Telegram ID не может быть нулём или отрицательным
     telegram_dispatcher_id: Optional[int] = Field(None, gt=0)
 
     @field_validator("slug")
@@ -241,24 +316,34 @@ class RestaurantCreate(BaseModel):
     def validate_hex_color(cls, v: Optional[str]) -> Optional[str]:
         return _validate_hex_color(v)
 
+    @field_validator("logo_url", mode="before")
+    @classmethod
+    def validate_logo_url(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_url(v)
+
+    @field_validator("phone", mode="before")
+    @classmethod
+    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_phone(v)
+
 
 # ──────────────────────────────────────────
 # RESTAURANT — обновление (Agency Owner)
 # ──────────────────────────────────────────
 class RestaurantUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = Field(None, max_length=500)
     phone: Optional[str] = None
-    address: Optional[str] = None
+    address: Optional[str] = Field(None, max_length=300)
     is_active: Optional[bool] = None
-    admin_password: Optional[str] = None
+    admin_password: Optional[str] = Field(None, min_length=6, max_length=128)
 
     # White Label Branding
     logo_url: Optional[str] = None
     primary_color: Optional[str] = None
     secondary_color: Optional[str] = None
     accent_color: Optional[str] = None
-    welcome_text: Optional[str] = None
+    welcome_text: Optional[str] = Field(None, max_length=300)
     custom_domain: Optional[str] = None
 
     # Telegram
@@ -269,6 +354,16 @@ class RestaurantUpdate(BaseModel):
     @classmethod
     def validate_hex_color(cls, v: Optional[str]) -> Optional[str]:
         return _validate_hex_color(v)
+
+    @field_validator("logo_url", mode="before")
+    @classmethod
+    def validate_logo_url(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_url(v)
+
+    @field_validator("phone", mode="before")
+    @classmethod
+    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_phone(v)
 
 
 class RestaurantAdminResponse(BaseModel):
@@ -294,13 +389,12 @@ class RestaurantAdminResponse(BaseModel):
 class RestaurantCreateResponse(RestaurantAdminResponse):
     """
     Ответ на создание ресторана — расширяет RestaurantAdminResponse
-    статусом автоматической настройки Telegram-бота (getMe/setWebhook).
+    статусом автоматической настройки Telegram-бота.
 
     webhook_status:
-      - "ok"        — бот проверен, webhook зарегистрирован
-      - "skipped"   — telegram_bot_token не был передан при создании
-      - "failed"    — токен невалиден или Telegram API недоступен,
-                       подробности в webhook_detail (ресторан всё равно создан)
+      "ok"      — бот проверен, webhook зарегистрирован
+      "skipped" — telegram_bot_token не был передан
+      "failed"  — токен невалиден или Telegram API недоступен
     """
     webhook_status: str = "skipped"
     webhook_detail: Optional[str] = None
@@ -310,33 +404,51 @@ class RestaurantCreateResponse(RestaurantAdminResponse):
 # RESTAURANT ADMIN — авторизация
 # ──────────────────────────────────────────
 class RestaurantAdminLogin(BaseModel):
-    slug: str
-    password: str
+    slug: str = Field(..., min_length=2, max_length=100)
+    password: str = Field(..., min_length=1, max_length=128)
 
 
 # ──────────────────────────────────────────
-# MENU — схемы для ProductCreate/Update и Category
-# (перенесены из routers/menu.py)
+# MENU — ProductCreate/Update и Category
 # ──────────────────────────────────────────
 class ProductCreate(BaseModel):
     category_id: int = Field(..., gt=0)
     name: str = Field(..., min_length=1, max_length=255)
-    # gt=0: цена обязана быть положительной — проверяется до роутера
     price: int = Field(..., gt=0)
-    description: Optional[str] = None
-    photo_url: Optional[str] = None
+    description: Optional[str] = Field(None, max_length=1000)
+    photo_url: Optional[str] = None   # L-8
     is_available: bool = True
     sort_order: int = Field(0, ge=0)
+    # Badges (M-2)
+    is_bestseller: bool = False
+    is_new: bool = False
+    is_spicy: bool = False
+    is_chef_choice: bool = False
+
+    @field_validator("photo_url", mode="before")
+    @classmethod
+    def validate_photo_url(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_url(v)
 
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     price: Optional[int] = Field(None, gt=0)
-    description: Optional[str] = None
+    description: Optional[str] = Field(None, max_length=1000)
     photo_url: Optional[str] = None
     is_available: Optional[bool] = None
     sort_order: Optional[int] = Field(None, ge=0)
     category_id: Optional[int] = Field(None, gt=0)
+    # Badges (M-2)
+    is_bestseller: Optional[bool] = None
+    is_new: Optional[bool] = None
+    is_spicy: Optional[bool] = None
+    is_chef_choice: Optional[bool] = None
+
+    @field_validator("photo_url", mode="before")
+    @classmethod
+    def validate_photo_url(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_url(v)
 
 
 class CategoryCreate(BaseModel):
