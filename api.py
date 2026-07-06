@@ -11,6 +11,9 @@ api.py — Taomly Platform
     ограничены 10 req/min; публичные API — 120 req/min
   - Sentry: инициализируется при наличии SENTRY_DSN в env
   - robots.txt и favicon отдаются из static/
+
+Изменения v4 (Stage 2 Sprint 1):
+  - GET /manifest/{slug}.json — динамический PWA manifest per-restaurant
 """
 
 import hmac
@@ -271,6 +274,73 @@ def serve_favicon():
     if os.path.exists("static/favicon.ico"):
         return FileResponse("static/favicon.ico")
     return FileResponse("static/favicon.svg", media_type="image/svg+xml")
+
+
+# ──────────────────────────────────────────
+# DYNAMIC PWA MANIFEST (White Label)
+# ──────────────────────────────────────────
+@app.get("/manifest/{slug}.json")
+def dynamic_manifest(slug: str):
+    """
+    Динамический PWA manifest для конкретного ресторана.
+
+    White Label: каждый ресторан получает manifest со своим именем,
+    цветами и start_url.
+
+    Fallback: если ресторан не найден — возвращает стандартный manifest.
+    Браузер всегда получает валидный JSON (никогда не 404).
+    """
+    with SessionLocal() as db:
+        restaurant = db.query(models.Restaurant).filter(
+            models.Restaurant.slug == slug.lower().strip(),
+            models.Restaurant.is_active == True,
+        ).first()
+
+    if not restaurant:
+        # Fallback — стандартный manifest без брендинга
+        return JSONResponse(content={
+            "name": "Taomly",
+            "short_name": "Taomly",
+            "description": "Заказ еды через Telegram Mini App",
+            "start_url": "/app",
+            "display": "standalone",
+            "background_color": "#FAF6EE",
+            "theme_color": "#8B1A2E",
+            "orientation": "portrait-primary",
+            "lang": "uz",
+            "scope": "/",
+            "icons": [
+                {"src": "/static/icon-192.png", "sizes": "192x192",
+                 "type": "image/png", "purpose": "any"},
+                {"src": "/static/icon-512.png", "sizes": "512x512",
+                 "type": "image/png", "purpose": "any maskable"},
+                {"src": "/static/apple-touch-icon.png", "sizes": "180x180",
+                 "type": "image/png", "purpose": "any"},
+            ],
+            "categories": ["food", "lifestyle"],
+        }, media_type="application/manifest+json")
+
+    return JSONResponse(content={
+        "name": restaurant.name,
+        "short_name": restaurant.name[:12],  # max 12 chars for home screen
+        "description": restaurant.description or f"Заказ еды в {restaurant.name}",
+        "start_url": f"/app?slug={restaurant.slug}",
+        "display": "standalone",
+        "background_color": restaurant.secondary_color or "#FAF6EE",
+        "theme_color": restaurant.primary_color or "#8B1A2E",
+        "orientation": "portrait-primary",
+        "lang": "uz",
+        "scope": "/",
+        "icons": [
+            {"src": "/static/icon-192.png", "sizes": "192x192",
+             "type": "image/png", "purpose": "any"},
+            {"src": "/static/icon-512.png", "sizes": "512x512",
+             "type": "image/png", "purpose": "any maskable"},
+            {"src": "/static/apple-touch-icon.png", "sizes": "180x180",
+             "type": "image/png", "purpose": "any"},
+        ],
+        "categories": ["food", "lifestyle"],
+    }, media_type="application/manifest+json")
 
 
 # ──────────────────────────────────────────
