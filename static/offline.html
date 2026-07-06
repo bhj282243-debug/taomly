@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Taomly — Ulanish yo'q</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #FAF6EE;
+      color: #2C211B;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+      text-align: center;
+    }
+    .icon {
+      font-size: 64px;
+      margin-bottom: 24px;
+    }
+    h1 {
+      font-family: Georgia, serif;
+      font-size: 24px;
+      color: #8B1A2E;
+      margin-bottom: 12px;
+    }
+    p {
+      font-size: 15px;
+      color: #6B5C54;
+      line-height: 1.6;
+      max-width: 280px;
+      margin-bottom: 32px;
+    }
+    button {
+      background: #8B1A2E;
+      color: #D4A853;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 40px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+    }
+    button:active { opacity: 0.8; }
+  </style>
+</head>
+<body>
+  <div class="icon">🍽️</div>
+  <h1>Internet aloqasi yo'q</h1>
+  <p>Iltimos, internet aloqangizni tekshiring va qayta urinib ko'ring.</p>
+  <button onclick="window.location.reload()">Qayta urinish</button>
+</body>
+</html>
