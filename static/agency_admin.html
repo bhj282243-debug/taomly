@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Taomly — Agency</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<meta name="theme-color" content="#8B1A2E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -1279,7 +1281,11 @@ svg { display: block; }
 <!-- ═══ SCRIPT ═══ -->
 <script>
 const API = window.location.origin;
-let token = sessionStorage.getItem('agency_token') || null;
+// C-3 FIX: JWT хранится ТОЛЬКО в памяти — не в sessionStorage/localStorage.
+// sessionStorage доступен через XSS. Agency Owner имеет полный доступ ко всем ресторанам.
+// При перезагрузке страницы — повторный логин. Это приемлемый trade-off для безопасности.
+// Non-sensitive данные (email) можно хранить в sessionStorage.
+let token = null; // ← JWT только в памяти, сбрасывается при закрытии вкладки
 let agencyInfo = JSON.parse(sessionStorage.getItem('agency_info') || 'null');
 let allRestaurants = [];
 
@@ -1394,8 +1400,7 @@ async function doLogin() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Ошибка входа');
-    token = data.access_token;
-    sessionStorage.setItem('agency_token', token);
+    token = data.access_token; // JWT только в памяти (C-3)
     await loadAgencyInfo();
     showApp();
     loadRestaurants();
@@ -1416,8 +1421,7 @@ async function loadAgencyInfo() {
 
 function doLogout() {
   token = null; agencyInfo = null;
-  sessionStorage.removeItem('agency_token');
-  sessionStorage.removeItem('agency_info');
+  sessionStorage.removeItem('agency_info'); // email для UX — не JWT
   showLogin();
 }
 
