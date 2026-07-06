@@ -2,51 +2,120 @@
 api.py — Taomly Platform
 Точка входа FastAPI приложения.
 
-Изменения v2:
-  - /health: утечка соединения закрыта через контекстный менеджер with SessionLocal()
-  - /webhook: добавлена проверка X-Telegram-Bot-Api-Secret-Token —
-    запросы без валидного секрета отклоняются с 403
-  - lifespan: set_webhook передаёт secret_token → Telegram будет подписывать запросы
-  - StaticFiles: проверяем существование папки static/ перед монтированием
-  - WEBHOOK_SECRET генерируется из SECRET_KEY если не задан отдельно
-  - create_all() оставлен для MVP, комментарий о миграциях добавлен
+Изменения v3:
+  - config.py: все env-переменные читаются из единого модуля
+  - CORSMiddleware: настроен с ALLOWED_ORIGINS из config
+  - SecurityHeadersMiddleware: CSP, X-Frame-Options, X-Content-Type-Options,
+    Referrer-Policy, Permissions-Policy
+  - slowapi Rate Limiting: /api/agency/login и /api/agency/restaurant-login
+    ограничены 10 req/min; публичные API — 120 req/min
+  - Sentry: инициализируется при наличии SENTRY_DSN в env
+  - robots.txt и favicon отдаются из static/
 """
 
-import hashlib
 import logging
-import os
 from contextlib import asynccontextmanager
 
-from dotenv import load_dotenv
+import sentry_sdk
 from fastapi import FastAPI, Header, HTTPException, Request, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+from starlette.middleware.base import BaseHTTPMiddleware
 
 import handlers
 import models
 import telebot
+from config import settings
 from database import SessionLocal, engine
 from routers import agency, menu, orders, reservations, restaurants, waiter_calls
 
-load_dotenv()
-
+# ──────────────────────────────────────────
+# LOGGING
+# ──────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
 
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+# ──────────────────────────────────────────
+# SENTRY (опционально — включается при наличии SENTRY_DSN)
+# ──────────────────────────────────────────
+if settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        # Трассировка 10% запросов — баланс между видимостью и стоимостью
+        traces_sample_rate=0.1,
+        # Профилировщик для медленных запросов
+        profiles_sample_rate=0.1,
+        environment="production",
+    )
+    logger.info("Sentry инициализирован")
+else:
+    logger.warning("SENTRY_DSN не задан — мониторинг ошибок отключён")
 
-# Секрет для верификации webhook-запросов от Telegram.
-# Telegram передаёт его в заголовке X-Telegram-Bot-Api-Secret-Token.
-# Если WEBHOOK_SECRET не задан явно — деривируем из SECRET_KEY.
-# Telegram принимает только [A-Za-z0-9_-], длина 1–256.
-_SECRET_KEY = os.getenv("SECRET_KEY", "")
-WEBHOOK_SECRET = os.getenv(
-    "WEBHOOK_SECRET",
-    hashlib.sha256(_SECRET_KEY.encode()).hexdigest()[:64],
-)
+# ──────────────────────────────────────────
+# RATE LIMITER
+# ──────────────────────────────────────────
+limiter = Limiter(key_func=get_remote_address)
+
+
+# ──────────────────────────────────────────
+# SECURITY HEADERS MIDDLEWARE
+# ──────────────────────────────────────────
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """
+    Добавляет security headers ко всем ответам.
+
+    CSP: разрешаем только домены, реально используемые в проекте.
+    Не используем 'unsafe-eval' — повышает защиту от XSS.
+    'unsafe-inline' для scripts и styles временно — до рефакторинга
+    inline-скриптов в HTML файлах на Stage 2.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+
+        # Запрещаем встраивание в iframe — защита от clickjacking
+        response.headers["X-Frame-Options"] = "DENY"
+
+        # Запрещаем браузеру угадывать MIME-тип — защита от MIME sniffing attacks
+        response.headers["X-Content-Type-Options"] = "nosniff"
+
+        # Передаём только origin при cross-origin запросах (без full URL)
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+        # Ограничиваем доступ к browser features
+        response.headers["Permissions-Policy"] = (
+            "geolocation=(self), camera=(), microphone=(), payment=()"
+        )
+
+        # Content Security Policy
+        # TODO Stage 2: вынести inline JS/CSS во внешние файлы и убрать 'unsafe-inline'
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' "
+            "  https://cdn.jsdelivr.net "
+            "  https://cdnjs.cloudflare.com "
+            "  https://telegram.org; "
+            "style-src 'self' 'unsafe-inline' "
+            "  https://fonts.googleapis.com "
+            "  https://cdnjs.cloudflare.com "
+            "  https://cdn.jsdelivr.net; "
+            "font-src 'self' "
+            "  https://fonts.gstatic.com "
+            "  https://cdnjs.cloudflare.com; "
+            "img-src 'self' data: https: blob:; "
+            "connect-src 'self' https://api.telegram.org; "
+            "worker-src 'self'; "
+            "manifest-src 'self';"
+        )
+
+        return response
 
 
 # ──────────────────────────────────────────
@@ -55,8 +124,7 @@ WEBHOOK_SECRET = os.getenv(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # MVP: create_all создаёт таблицы если не существуют.
-    # TODO: заменить на Alembic-миграции перед масштабированием —
-    # create_all не применяет изменения к уже существующим таблицам.
+    # TODO Stage 2: заменить на Alembic-миграции.
     models.Base.metadata.create_all(bind=engine)
     logger.info("БД инициализирована")
 
@@ -64,19 +132,16 @@ async def lifespan(app: FastAPI):
     if handlers.platform_bot:
         try:
             handlers.platform_bot.remove_webhook()
-            if WEBHOOK_URL:
+            if settings.WEBHOOK_URL:
                 handlers.platform_bot.set_webhook(
-                    url=f"{WEBHOOK_URL}/webhook",
-                    # Telegram будет подписывать каждый запрос этим секретом
-                    secret_token=WEBHOOK_SECRET,
+                    url=f"{settings.WEBHOOK_URL}/webhook",
+                    secret_token=settings.WEBHOOK_SECRET,
                 )
-                logger.info("Webhook установлен: %s/webhook", WEBHOOK_URL)
+                logger.info("Webhook установлен: %s/webhook", settings.WEBHOOK_URL)
             else:
                 logger.warning("WEBHOOK_URL не задан — webhook не установлен")
         except Exception:
-            logger.exception(
-                "Не удалось установить webhook — приложение продолжает работу"
-            )
+            logger.exception("Не удалось установить webhook — приложение продолжает работу")
     else:
         logger.warning("BOT_TOKEN не задан — платформенный бот отключён")
 
@@ -97,9 +162,44 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Taomly White Label Platform",
     description="Multi-tenant restaurant SaaS engine",
-    version="2.0.0",
+    version="2.1.0",
     lifespan=lifespan,
+    # Отключаем /docs и /redoc в продакшене — не раскрываем API структуру
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
+
+# ──────────────────────────────────────────
+# RATE LIMITER — должен быть добавлен ДО middleware
+# ──────────────────────────────────────────
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# ──────────────────────────────────────────
+# CORS
+# ──────────────────────────────────────────
+# ALLOWED_ORIGINS из env: "https://taomly.uz,https://taomly.onrender.com"
+# Если не задан — в development mode разрешаем всё (["*"])
+_cors_origins = settings.ALLOWED_ORIGINS if settings.ALLOWED_ORIGINS else ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-Telegram-Init-Data",
+        "X-Restaurant-Id",
+    ],
+)
+
+# ──────────────────────────────────────────
+# SECURITY HEADERS
+# ──────────────────────────────────────────
+app.add_middleware(SecurityHeadersMiddleware)
 
 # ──────────────────────────────────────────
 # ROUTERS
@@ -114,10 +214,11 @@ app.include_router(agency.router)
 # ──────────────────────────────────────────
 # STATIC
 # ──────────────────────────────────────────
+import os
 if os.path.exists("static"):
     app.mount("/static", StaticFiles(directory="static"), name="static")
 else:
-    logger.warning("Папка static/ не найдена — статические файлы не будут отдаваться")
+    logger.warning("Папка static/ не найдена")
 
 
 # ──────────────────────────────────────────
@@ -125,19 +226,19 @@ else:
 # ──────────────────────────────────────────
 @app.get("/")
 def root():
-    return {"status": "running", "app": "Taomly", "version": "2.0.0"}
+    return {"status": "running", "app": "Taomly", "version": "2.1.0"}
 
 
 @app.get("/health")
 def health():
     """
-    Проверка состояния приложения.
-    Используется Render для health check — возвращает 503 если БД недоступна.
-    Соединение гарантированно закрывается через контекстный менеджер.
+    Health check для Render.
+    Возвращает 503 если БД недоступна.
     """
     try:
+        import sqlalchemy
         with SessionLocal() as db:
-            db.execute(__import__("sqlalchemy").text("SELECT 1"))
+            db.execute(sqlalchemy.text("SELECT 1"))
         return {"status": "healthy", "db": "ok"}
     except Exception:
         logger.exception("Health check: БД недоступна")
@@ -162,10 +263,26 @@ def serve_agency_admin():
     return FileResponse("static/agency_admin.html")
 
 
+@app.get("/robots.txt")
+def serve_robots():
+    return FileResponse("static/robots.txt", media_type="text/plain")
+
+
+@app.get("/favicon.ico")
+def serve_favicon():
+    if os.path.exists("static/favicon.ico"):
+        return FileResponse("static/favicon.ico")
+    return FileResponse("static/favicon.svg", media_type="image/svg+xml")
+
+
+# ──────────────────────────────────────────
+# WEBHOOK — ресторанный бот (Multi-Tenant)
+# ──────────────────────────────────────────
 @app.post("/webhook/{slug}")
+@limiter.limit("300/minute")  # защита от webhook flooding
 def restaurant_webhook(
-    slug: str,
     request: Request,
+    slug: str,
     update: dict,
     x_telegram_bot_api_secret_token: str = Header(
         default=None,
@@ -175,15 +292,11 @@ def restaurant_webhook(
     """
     Принимает обновления от Telegram для бота конкретного ресторана.
 
-    Multi-Tenant: slug определяет ресторан, бот которого обрабатывает update.
-    Webhook регистрируется автоматически при создании ресторана
-    (см. telegram_service.register_restaurant_webhook), вызывается из
-    routers/agency.py — никаких ручных действий через Postman не требуется.
-
-    Безопасность: тот же WEBHOOK_SECRET, что и у платформенного бота —
-    Telegram подписывает запрос секретом, переданным при setWebhook.
+    Безопасность: X-Telegram-Bot-Api-Secret-Token проверяется против
+    WEBHOOK_SECRET. Запросы без валидного секрета → 403.
+    Всегда возвращает 200 при успешной авторизации (требование Telegram).
     """
-    if x_telegram_bot_api_secret_token != WEBHOOK_SECRET:
+    if x_telegram_bot_api_secret_token != settings.WEBHOOK_SECRET:
         logger.warning(
             "Webhook[%s]: отклонён запрос с невалидным секретом от %s",
             slug, request.client.host if request.client else "unknown",
@@ -198,7 +311,6 @@ def restaurant_webhook(
 
         if not restaurant or not restaurant.telegram_bot_token_encrypted:
             logger.warning("Webhook[%s]: ресторан не найден или бот не настроен", slug)
-            # 200 — чтобы Telegram не повторял запрос бесконечно
             return {"ok": False, "detail": "Ресторан не найден"}
 
         try:
@@ -213,6 +325,7 @@ def restaurant_webhook(
 # WEBHOOK — платформенный бот
 # ──────────────────────────────────────────
 @app.post("/webhook")
+@limiter.limit("300/minute")
 def webhook(
     request: Request,
     update: dict,
@@ -223,24 +336,13 @@ def webhook(
 ):
     """
     Принимает обновления от Telegram для платформенного бота.
-
-    Безопасность:
-      - Проверяет заголовок X-Telegram-Bot-Api-Secret-Token.
-        Telegram отправляет его при каждом запросе если secret_token был
-        передан при set_webhook(). Запросы без валидного секрета → 403.
-      - Всегда возвращает 200 при успешной авторизации — Telegram требует 200,
-        иначе будет повторять запрос до 10 раз.
     """
-    # Проверяем секрет — защита от посторонних POST-запросов на /webhook
-    if x_telegram_bot_api_secret_token != WEBHOOK_SECRET:
+    if x_telegram_bot_api_secret_token != settings.WEBHOOK_SECRET:
         logger.warning(
             "Webhook: отклонён запрос с невалидным секретом от %s",
             request.client.host if request.client else "unknown",
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden",
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
     if not handlers.platform_bot:
         return {"ok": False, "detail": "Платформенный бот не настроен"}
@@ -251,5 +353,4 @@ def webhook(
         return {"ok": True}
     except Exception:
         logger.exception("Ошибка обработки webhook update")
-        # 200 чтобы Telegram не повторял запрос
         return {"ok": False}
