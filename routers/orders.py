@@ -287,12 +287,23 @@ def update_order_status(
         order_id, old_status, data.status, restaurant.id,
     )
 
-    if data.status == "accepted":
-        # Передаём restaurant — notify_client_accepted Multi-Tenant
+    # Уведомления клиенту при каждой смене статуса.
+    # Все вызовы через BackgroundTasks — не блокируют HTTP-ответ.
+    _status_notify = {
+        "accepted":          handlers.notify_client_accepted,
+        "preparing":         handlers.notify_client_preparing,
+        "ready_for_delivery": handlers.notify_client_ready,
+        "delivering":        handlers.notify_client_delivering,
+        "completed":         handlers.notify_client_completed,
+    }
+    if data.status in _status_notify:
+        background_tasks.add_task(_status_notify[data.status], order, restaurant)
+    elif data.status == "cancelled":
         background_tasks.add_task(
-            handlers.notify_client_accepted,
+            handlers.notify_client_cancelled,
             order,
             restaurant,
+            data.comment or "",
         )
 
     return order
