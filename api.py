@@ -35,7 +35,7 @@ import models
 import telebot
 from config import settings
 from database import SessionLocal, engine
-from routers import agency, menu, orders, reservations, restaurants, waiter_calls
+from routers import agency, analytics, menu, orders, reservations, restaurants, waiter_calls
 
 # ──────────────────────────────────────────
 # LOGGING
@@ -209,6 +209,7 @@ app.include_router(menu.router,         prefix="/api/menu",         tags=["menu"
 app.include_router(orders.router,       prefix="/api/orders",       tags=["orders"])
 app.include_router(reservations.router, prefix="/api/reservations", tags=["reservations"])
 app.include_router(waiter_calls.router, prefix="/api/waiter-calls", tags=["waiter-calls"])
+app.include_router(analytics.router)
 app.include_router(restaurants.router)
 app.include_router(agency.router)
 
