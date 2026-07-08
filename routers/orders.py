@@ -17,7 +17,7 @@ from database import get_db
 from models import Order, OrderItem, Product, Restaurant, RestaurantTable
 from schemas import OrderCreate, OrderResponse, OrderStatusUpdate
 import handlers
-from api import limiter
+from limiter import limiter
 
 logger = logging.getLogger(__name__)
 
