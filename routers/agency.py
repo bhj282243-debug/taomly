@@ -12,7 +12,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
-from api import limiter
+from limiter import limiter
 from auth import (
     create_agency_token,
     create_restaurant_token,
