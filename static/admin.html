@@ -274,6 +274,7 @@ svg{display:block}
     <div class="main-tab" id="mtab-menu" onclick="switchPage('menu')">Menyu</div>
     <div class="main-tab" id="mtab-analytics" onclick="switchPage('analytics')">Analitika</div>
     <div class="main-tab" id="mtab-qr" onclick="switchPage('qr')">QR</div>
+    <div class="main-tab" id="mtab-billing" onclick="switchPage('billing')">Tarif</div>
   </div>
 
   <!-- ORDERS PAGE -->
@@ -445,6 +446,75 @@ svg{display:block}
   </div>
 </div>
 
+<!-- BILLING PAGE -->
+  <div class="page" id="page-billing">
+    <div class="analytics-content">
+
+      <!-- ── Текущий тариф ── -->
+      <div class="analytics-card" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div style="font-size:13px;font-weight:700;color:var(--ink)">Joriy tarif</div>
+          <div id="billing-badge" style="padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;background:var(--ruby);color:#fff">—</div>
+        </div>
+        <!-- Метаданные подписки -->
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;font-size:12px">
+            <span style="color:var(--soft)">Narxi</span>
+            <span id="billing-price" style="font-weight:700;color:var(--ink)">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px">
+            <span style="color:var(--soft)">Ulangan sana</span>
+            <span id="billing-started" style="color:var(--ink)">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px">
+            <span style="color:var(--soft)">Amal qilish muddati</span>
+            <span id="billing-expires" style="color:var(--ink)">Muddatsiz</span>
+          </div>
+        </div>
+        <!-- Использование: заказы -->
+        <div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--soft);margin-bottom:4px">
+            <span>Buyurtmalar (bu oy)</span>
+            <span id="orders-usage-label">—</span>
+          </div>
+          <div style="background:var(--line);border-radius:6px;height:7px">
+            <div id="orders-bar" style="height:100%;border-radius:6px;background:var(--ruby);transition:width 0.5s;width:0%"></div>
+          </div>
+        </div>
+        <!-- Использование: продукты -->
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--soft);margin-bottom:4px">
+            <span>Mahsulotlar</span>
+            <span id="products-usage-label">—</span>
+          </div>
+          <div style="background:var(--line);border-radius:6px;height:7px">
+            <div id="products-bar" style="height:100%;border-radius:6px;background:#D4A853;transition:width 0.5s;width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Тарифные планы ── -->
+      <div class="section-title">Tariflar</div>
+      <div id="billing-plans-list"></div>
+
+      <!-- ── PDF подтверждение подписки ── -->
+      <div class="section-title" style="margin-top:4px">Obuna tasdiq (PDF)</div>
+      <div class="analytics-card">
+        <div style="font-size:12px;color:var(--soft);margin-bottom:12px">Joriy tarif bo'yicha tasdiqlash hujjatini yuklash</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="invoice-month" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-family:inherit;font-size:13px">
+            <option value="1">Yanvar</option><option value="2">Fevral</option><option value="3">Mart</option>
+            <option value="4">Aprel</option><option value="5">May</option><option value="6">Iyun</option>
+            <option value="7">Iyul</option><option value="8">Avgust</option><option value="9">Sentabr</option>
+            <option value="10">Oktabr</option><option value="11">Noyabr</option><option value="12">Dekabr</option>
+          </select>
+          <button onclick="downloadInvoice()" style="padding:10px 18px;border-radius:10px;border:none;background:var(--ruby);color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap">PDF yuklash</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
 <!-- qrcode.js — QR генерация в браузере, без бэкенд зависимостей -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
@@ -614,6 +684,7 @@ function refreshCurrent() {
   if (currentPage === 'orders') loadOrders();
   if (currentPage === 'menu') loadMenu();
   if (currentPage === 'analytics') { renderAnalytics(); }
+  if (currentPage === 'billing') { loadBilling(); }
 }
 
 // ─── ORDERS ──────────────────────────────────────────────────
@@ -1193,6 +1264,117 @@ function initQrPage() {
 }
 
 let qrPageInitialized = false;
+
+// ─── BILLING ─────────────────────────────────────────────────
+const PLAN_COLORS = { Free: '#888888', Basic: '#C8703A', Pro: '#D4A853' };
+
+async function loadBilling() {
+  try {
+    const h = authHeaders();
+    const [sub, usage, plans] = await Promise.all([
+      apiFetch(`${API}/api/billing/subscription`, { headers: h }).then(r => r.json()),
+      apiFetch(`${API}/api/billing/usage`,         { headers: h }).then(r => r.json()),
+      apiFetch(`${API}/api/billing/plans`).then(r => r.json()),
+    ]);
+    _renderBillingSub(sub, usage);
+    _renderBillingPlans(plans, sub.plan_id);
+    document.getElementById('invoice-month').value = new Date().getMonth() + 1;
+  } catch(e) {
+    console.error('Billing load error:', e);
+  }
+}
+
+function _renderBillingSub(sub, usage) {
+  // Badge + meta
+  const badge = document.getElementById('billing-badge');
+  badge.textContent = sub.plan_name;
+  badge.style.background = PLAN_COLORS[sub.plan_name] || 'var(--ruby)';
+
+  const priceLabel = sub.price === 0 ? 'Bepul' : `${sub.currency} ${sub.price}/oy`;
+  document.getElementById('billing-price').textContent = priceLabel;
+
+  const startDate = sub.started_at ? new Date(sub.started_at).toLocaleDateString('uz-UZ') : '—';
+  document.getElementById('billing-started').textContent = startDate;
+
+  const expiresEl = document.getElementById('billing-expires');
+  expiresEl.textContent = sub.expires_at
+    ? new Date(sub.expires_at).toLocaleDateString('uz-UZ')
+    : 'Muddatsiz';
+
+  // Orders bar
+  const oUsed = usage.orders_used;
+  const oLimit = usage.orders_limit;
+  const oPct  = usage.orders_pct;
+  const oRem  = usage.orders_remaining;
+  document.getElementById('orders-usage-label').textContent =
+    oLimit === -1 ? `${oUsed} ta (cheksiz)` : `${oUsed} / ${oLimit} (qoldi: ${oRem})`;
+  const oBar = document.getElementById('orders-bar');
+  oBar.style.width = (oPct === -1 ? 0 : oPct) + '%';
+  oBar.style.background = oPct > 85 ? '#e53935' : 'var(--ruby)';
+
+  // Products bar
+  const pUsed = usage.products_used;
+  const pLimit = usage.products_limit;
+  const pPct  = usage.products_pct;
+  const pRem  = usage.products_remaining;
+  document.getElementById('products-usage-label').textContent =
+    pLimit === -1 ? `${pUsed} ta (cheksiz)` : `${pUsed} / ${pLimit} (qoldi: ${pRem})`;
+  const pBar = document.getElementById('products-bar');
+  pBar.style.width = (pPct === -1 ? 0 : pPct) + '%';
+  pBar.style.background = pPct > 85 ? '#e53935' : '#D4A853';
+}
+
+function _renderBillingPlans(plans, currentPlanId) {
+  document.getElementById('billing-plans-list').innerHTML = plans.map(p => {
+    const isCurrent  = p.id === currentPlanId;
+    const ordersLbl  = p.orders_per_month === -1 ? 'Cheksiz' : `${p.orders_per_month} ta/oy`;
+    const prodLbl    = p.products_limit   === -1 ? 'Cheksiz' : `${p.products_limit} ta`;
+    const priceLbl   = p.price === 0 ? 'Bepul' : `${p.currency} ${p.price}/oy`;
+    const color      = PLAN_COLORS[p.name] || 'var(--ink)';
+    return `<div class="analytics-card" style="margin-bottom:10px;${isCurrent ? 'border:1.5px solid var(--ruby)' : ''}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="font-size:15px;font-weight:800;color:${color}">${p.name}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">${priceLbl}</div>
+      </div>
+      <div style="font-size:12px;color:var(--soft);margin-bottom:10px">${p.description || ''}</div>
+      <div style="display:flex;gap:16px;margin-bottom:10px;flex-wrap:wrap">
+        <div style="font-size:12px"><span style="color:var(--soft)">Buyurtmalar: </span><b>${ordersLbl}</b></div>
+        <div style="font-size:12px"><span style="color:var(--soft)">Mahsulotlar: </span><b>${prodLbl}</b></div>
+      </div>
+      ${isCurrent
+        ? `<div style="padding:8px;text-align:center;border-radius:8px;background:var(--surface);font-size:12px;font-weight:700;color:var(--ruby)">✓ Joriy tarif</div>`
+        : `<button onclick="subscribePlan(${p.id},'${p.name}')" style="width:100%;padding:10px;border:none;border-radius:10px;background:var(--ruby);color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">Tanlash</button>`}
+    </div>`;
+  }).join('');
+}
+
+async function subscribePlan(planId, planName) {
+  if (!confirm(`"${planName}" tarifiga o'tishni xohlaysizmi?`)) return;
+  try {
+    const res = await apiFetch(`${API}/api/billing/subscribe/${planId}`, {
+      method: 'POST', headers: authHeaders(),
+    });
+    if (!res.ok) throw new Error('Xato');
+    loadBilling();
+  } catch(e) {
+    alert('Xatolik yuz berdi');
+  }
+}
+
+function downloadInvoice() {
+  const month = document.getElementById('invoice-month').value;
+  const url = `${API}/api/billing/invoice/${month}`;
+  apiFetch(url, { headers: authHeaders() })
+    .then(r => { if (!r.ok) throw new Error(); return r.blob(); })
+    .then(blob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `taomly-subscription-${new Date().getFullYear()}${String(month).padStart(2,'0')}.pdf`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    })
+    .catch(() => alert('PDF yaratishda xatolik'));
+}
 
 // ─── INIT ────────────────────────────────────────────────────
 checkAuth();
