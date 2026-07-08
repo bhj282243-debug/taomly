@@ -1265,6 +1265,10 @@ svg { display: block; }
         </div>
       </div>
     </div>
+    <div class="form-group" style="margin-top:12px">
+      <label class="form-label">Новый пароль <span style="color:var(--text-muted);font-weight:400">(оставьте пустым чтобы не менять)</span></label>
+      <input class="form-control" id="e_admin_password" type="password" placeholder="Введите новый пароль..." autocomplete="new-password" />
+    </div>
     <div class="modal-footer">
       <button class="btn btn-danger btn-sm" onclick="confirmDeactivate()" id="editDeactivateBtn">Деактивировать</button>
       <div style="flex:1"></div>
@@ -1708,6 +1712,7 @@ function openEditModal(id) {
   document.getElementById('e_accent_color').value = r.accent_color || '';
   document.getElementById('e_welcome_text').value = r.welcome_text || '';
   document.getElementById('e_custom_domain').value = r.custom_domain || '';
+  document.getElementById('e_admin_password').value = '';
 
   document.getElementById('e_logo_file').value = '';
   const prev = document.getElementById('e_logo_preview');
@@ -1761,6 +1766,8 @@ async function submitEdit() {
   }
   const dispId = v('e_dispatcher_id');
   if (dispId !== '') payload.telegram_dispatcher_id = dispId ? parseInt(dispId) : null;
+  const newPassword = document.getElementById('e_admin_password').value.trim();
+  if (newPassword) payload.admin_password = newPassword;
   try {
     const res = await apiFetch(`/api/agency/restaurants/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
     const data = await res.json();
