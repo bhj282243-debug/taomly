@@ -31,3 +31,5 @@ python-dotenv==1.0.1
 
 # ── HTTP Client (для telegram_service.py) ────────────────────────────
 httpx==0.28.1
+
+reportlab==4.2.5
