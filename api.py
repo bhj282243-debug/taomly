@@ -14,6 +14,9 @@ api.py — Taomly Platform
 
 Изменения v4 (Stage 2 Sprint 1):
   - GET /manifest/{slug}.json — динамический PWA manifest per-restaurant
+
+Изменения v5 (Stage 2 Sprint 3):
+  - AI роутер подключён (заглушки, AI_ENABLED=false по умолчанию)
 """
 
 import hmac
@@ -34,7 +37,7 @@ import models
 import telebot
 from config import settings
 from database import SessionLocal, engine
-from routers import agency, analytics, billing, menu, orders, reservations, restaurants, waiter_calls
+from routers import agency, analytics, billing, menu, orders, reservations, restaurants, waiter_calls, ai
 
 # ──────────────────────────────────────────
 # LOGGING
@@ -51,9 +54,7 @@ logger = logging.getLogger(__name__)
 if settings.SENTRY_DSN:
     sentry_sdk.init(
         dsn=settings.SENTRY_DSN,
-        # Трассировка 10% запросов — баланс между видимостью и стоимостью
         traces_sample_rate=0.1,
-        # Профилировщик для медленных запросов
         profiles_sample_rate=0.1,
         environment="production",
     )
@@ -71,34 +72,14 @@ from limiter import limiter
 # SECURITY HEADERS MIDDLEWARE
 # ──────────────────────────────────────────
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """
-    Добавляет security headers ко всем ответам.
-
-    CSP: разрешаем только домены, реально используемые в проекте.
-    Не используем 'unsafe-eval' — повышает защиту от XSS.
-    'unsafe-inline' для scripts и styles временно — до рефакторинга
-    inline-скриптов в HTML файлах на Stage 2.
-    """
-
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
-
-        # Запрещаем встраивание в iframe — защита от clickjacking
         response.headers["X-Frame-Options"] = "DENY"
-
-        # Запрещаем браузеру угадывать MIME-тип — защита от MIME sniffing attacks
         response.headers["X-Content-Type-Options"] = "nosniff"
-
-        # Передаём только origin при cross-origin запросах (без full URL)
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-
-        # Ограничиваем доступ к browser features
         response.headers["Permissions-Policy"] = (
             "geolocation=(self), camera=(), microphone=(), payment=()"
         )
-
-        # Content Security Policy
-        # TODO Stage 2: вынести inline JS/CSS во внешние файлы и убрать 'unsafe-inline'
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' "
@@ -117,7 +98,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "worker-src 'self'; "
             "manifest-src 'self';"
         )
-
         return response
 
 
@@ -128,7 +108,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 async def lifespan(app: FastAPI):
     logger.info("Lifespan: запуск приложения. Схема управляется Alembic.")
 
-    # Устанавливаем webhook для платформенного бота
     if handlers.platform_bot:
         try:
             handlers.platform_bot.remove_webhook()
@@ -147,7 +126,6 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # Shutdown
     if handlers.platform_bot:
         try:
             handlers.platform_bot.remove_webhook()
@@ -164,14 +142,13 @@ app = FastAPI(
     description="Multi-tenant restaurant SaaS engine",
     version="2.1.0",
     lifespan=lifespan,
-    # Отключаем /docs и /redoc в продакшене — не раскрываем API структуру
     docs_url=None,
     redoc_url=None,
     openapi_url=None,
 )
 
 # ──────────────────────────────────────────
-# RATE LIMITER — должен быть добавлен ДО middleware
+# RATE LIMITER
 # ──────────────────────────────────────────
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -179,8 +156,6 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # ──────────────────────────────────────────
 # CORS
 # ──────────────────────────────────────────
-# ALLOWED_ORIGINS из env: "https://taomly.uz,https://taomly.onrender.com"
-# Если не задан — в development mode разрешаем всё (["*"])
 _cors_origins = settings.ALLOWED_ORIGINS if settings.ALLOWED_ORIGINS else ["*"]
 
 app.add_middleware(
@@ -212,6 +187,7 @@ app.include_router(analytics.router)
 app.include_router(billing.router)
 app.include_router(restaurants.router)
 app.include_router(agency.router)
+app.include_router(ai.router)
 
 # ──────────────────────────────────────────
 # STATIC
@@ -233,10 +209,6 @@ def root():
 
 @app.get("/health")
 def health():
-    """
-    Health check для Render.
-    Возвращает 503 если БД недоступна.
-    """
     try:
         import sqlalchemy
         with SessionLocal() as db:
@@ -282,15 +254,6 @@ def serve_favicon():
 # ──────────────────────────────────────────
 @app.get("/manifest/{slug}.json")
 def dynamic_manifest(slug: str):
-    """
-    Динамический PWA manifest для конкретного ресторана.
-
-    White Label: каждый ресторан получает manifest со своим именем,
-    цветами и start_url.
-
-    Fallback: если ресторан не найден — возвращает стандартный manifest.
-    Браузер всегда получает валидный JSON (никогда не 404).
-    """
     with SessionLocal() as db:
         restaurant = db.query(models.Restaurant).filter(
             models.Restaurant.slug == slug.lower().strip(),
@@ -298,7 +261,6 @@ def dynamic_manifest(slug: str):
         ).first()
 
     if not restaurant:
-        # Fallback — стандартный manifest без брендинга
         return JSONResponse(content={
             "name": "Taomly",
             "short_name": "Taomly",
@@ -323,7 +285,7 @@ def dynamic_manifest(slug: str):
 
     return JSONResponse(content={
         "name": restaurant.name,
-        "short_name": restaurant.name[:12],  # max 12 chars for home screen
+        "short_name": restaurant.name[:12],
         "description": restaurant.description or f"Заказ еды в {restaurant.name}",
         "start_url": f"/app?slug={restaurant.slug}",
         "display": "standalone",
@@ -348,7 +310,7 @@ def dynamic_manifest(slug: str):
 # WEBHOOK — ресторанный бот (Multi-Tenant)
 # ──────────────────────────────────────────
 @app.post("/webhook/{slug}")
-@limiter.limit("300/minute")  # защита от webhook flooding
+@limiter.limit("300/minute")
 def restaurant_webhook(
     request: Request,
     slug: str,
@@ -358,13 +320,6 @@ def restaurant_webhook(
         alias="X-Telegram-Bot-Api-Secret-Token",
     ),
 ):
-    """
-    Принимает обновления от Telegram для бота конкретного ресторана.
-
-    Безопасность: X-Telegram-Bot-Api-Secret-Token проверяется против
-    WEBHOOK_SECRET. Запросы без валидного секрета → 403.
-    Всегда возвращает 200 при успешной авторизации (требование Telegram).
-    """
     if not hmac.compare_digest(
         x_telegram_bot_api_secret_token or "",
         settings.WEBHOOK_SECRET,
@@ -406,9 +361,6 @@ def webhook(
         alias="X-Telegram-Bot-Api-Secret-Token",
     ),
 ):
-    """
-    Принимает обновления от Telegram для платформенного бота.
-    """
     if not hmac.compare_digest(
         x_telegram_bot_api_secret_token or "",
         settings.WEBHOOK_SECRET,
