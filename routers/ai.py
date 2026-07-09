@@ -7,7 +7,7 @@ Endpoints для AI-функций. Все провайдер-независим
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import Optional
-from auth import get_current_restaurant
+from auth import get_current_restaurant_admin
 from ai_service import (
     generate_dish_description,
     translate_menu,
@@ -48,7 +48,7 @@ class MenuSeoRequest(BaseModel):
 @router.post("/generate-description")
 async def api_generate_description(
     body: DishDescriptionRequest,
-    current_restaurant=Depends(get_current_restaurant)
+    current_restaurant=Depends(get_current_restaurant_admin)
 ):
     """Генерация описания блюда для ресторана."""
     return await generate_dish_description(
@@ -61,7 +61,7 @@ async def api_generate_description(
 @router.post("/translate-menu")
 async def api_translate_menu(
     body: TranslateMenuRequest,
-    current_restaurant=Depends(get_current_restaurant)
+    current_restaurant=Depends(get_current_restaurant_admin)
 ):
     """Перевод позиций меню на целевой язык (ru/en/uz)."""
     return await translate_menu(
@@ -73,7 +73,7 @@ async def api_translate_menu(
 @router.post("/suggest-tags")
 async def api_suggest_tags(
     body: SuggestTagsRequest,
-    current_restaurant=Depends(get_current_restaurant)
+    current_restaurant=Depends(get_current_restaurant_admin)
 ):
     """Генерация тегов блюда: острое, вегетарианское, халяль и т.д."""
     return await suggest_dish_tags(
@@ -86,7 +86,7 @@ async def api_suggest_tags(
 @router.post("/generate-seo")
 async def api_generate_seo(
     body: MenuSeoRequest,
-    current_restaurant=Depends(get_current_restaurant)
+    current_restaurant=Depends(get_current_restaurant_admin)
 ):
     """Генерация SEO-описания меню ресторана."""
     return await generate_menu_seo(
