@@ -1,1134 +1,1367 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Taomly — White Label Restaurant SaaS Platform</title>
-  <meta name="description" content="Launch your branded restaurant ordering platform in days, not months. Multi-tenant SaaS with Telegram Mini App, PWA, analytics and billing — ready for white label." />
-  <meta name="keywords" content="white label restaurant software, telegram mini app ordering, restaurant SaaS platform, multi-tenant restaurant system, food ordering platform" />
-  <meta name="author" content="Taomly" />
-  <meta name="robots" content="index, follow" />
-  <link rel="canonical" href="https://taomly.uz/" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Taomly</title>
 
-  <!-- Open Graph -->
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://taomly.uz/" />
-  <meta property="og:title" content="Taomly — White Label Restaurant SaaS Platform" />
-  <meta property="og:description" content="Launch your branded restaurant ordering platform in days, not months." />
-  <meta property="og:image" content="https://taomly.uz/og-image.png" />
+<!-- PWA — manifest обновляется динамически в applyBrandTheme() -->
+<link rel="manifest" href="/static/manifest.json" id="pwaManifest">
+<meta name="theme-color" content="#8B1A2E" id="pwaThemeColor">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Taomly" id="pwaTitle">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 
-  <!-- Twitter -->
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Taomly — White Label Restaurant SaaS Platform" />
-  <meta name="twitter:description" content="Launch your branded restaurant ordering platform in days, not months." />
+<!-- Telegram -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%234F6EF7'/><text x='16' y='22' text-anchor='middle' font-size='18' fill='white' font-family='sans-serif' font-weight='bold'>T</text></svg>" />
+:root {
+  --bg:          #F7F4EE;
+  --card:        #FFFFFF;
+  --surface:     #EFEAE0;
+  --ink:         #1C1A18;
+  --ink-soft:    #7A726A;
+  --ruby:        #2C211B;
+  --ruby-deep:   #1C1512;
+  --gold:        #B08A45;
+  --gold-soft:   #B08A45;
+  --line:        rgba(28,26,24,0.09);
+  --line-strong: rgba(28,26,24,0.16);
+  --shadow-sm:   0 1px 2px rgba(28,26,24,0.05);
+  --shadow-md:   0 4px 16px rgba(28,26,24,0.07);
+  --shadow-ruby: 0 3px 10px rgba(44,33,27,0.16);
+  --radius-lg:   10px;
+  --radius-md:   8px;
+  --radius-sm:   6px;
+}
 
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+body {
+  font-family:'Inter',sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  min-height:100vh;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
 
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+svg { display:block; }
+.icon { width:18px; height:18px; stroke:currentColor; stroke-width:1.5; fill:none; stroke-linecap:round; stroke-linejoin:round; }
 
-    :root {
-      --bg: #0A0A0F;
-      --surface: #111118;
-      --elevated: #1C1C28;
-      --border: #1E1E2E;
-      --text: #E8E8F0;
-      --muted: #6B6B80;
-      --accent: #4F6EF7;
-      --accent-dim: rgba(79, 110, 247, 0.12);
-      --accent-glow: rgba(79, 110, 247, 0.25);
-      --green: #34D399;
-      --radius: 12px;
-      --max: 1200px;
-    }
+/* ─── SPLASH ─── */
+#splash {
+  position:fixed; inset:0;
+  background:var(--bg);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  z-index:999; transition:opacity 0.5s ease;
+}
+#splash.hidden { opacity:0; pointer-events:none; }
 
-    html { scroll-behavior: smooth; }
+.splash-name {
+  font-family:'Playfair Display',serif;
+  font-size:32px; font-weight:700;
+  color:var(--ink); letter-spacing:0.3px;
+}
+.splash-line {
+  width:30px; height:1px; background:var(--gold);
+  margin:16px 0;
+}
+.splash-tagline {
+  font-size:13px; font-weight:500;
+  color:var(--ink-soft);
+  letter-spacing:0.3px;
+}
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Inter', sans-serif;
-      font-size: 16px;
-      line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
-    }
+/* ─── HEADER ─── */
+.header {
+  background:var(--bg);
+  position:sticky; top:0; z-index:100;
+  padding:22px 22px 0;
+}
 
-    a { color: inherit; text-decoration: none; }
-    img { display: block; max-width: 100%; }
+.restaurant-row {
+  display:flex; align-items:center; gap:14px;
+  padding-bottom:16px;
+}
+.restaurant-logo {
+  width:52px; height:52px; border-radius:16px;
+  background:var(--ruby);
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0; overflow:hidden;
+  box-shadow:var(--shadow-ruby);
+}
+.restaurant-logo img { width:100%; height:100%; object-fit:cover; }
+.restaurant-logo-letter {
+  font-family:'Playfair Display',serif;
+  font-size:20px; font-weight:700; color:#FAF7F1;
+  letter-spacing:1px;
+}
+.restaurant-name {
+  font-family:'Playfair Display',serif;
+  font-size:21px; font-weight:700; color:var(--ink);
+  letter-spacing:0.1px; line-height:1.2;
+}
+.restaurant-address {
+  font-size:13px; color:var(--ink-soft); margin-top:3px;
+  display:flex; align-items:center; gap:5px;
+}
+.restaurant-address .icon { width:13px; height:13px; flex-shrink:0; }
+.table-badge {
+  display:inline-flex; align-items:center; gap:6px;
+  margin-top:7px; padding:4px 11px;
+  border-radius:8px; background:var(--surface);
+  font-size:12px; font-weight:600; color:var(--ruby);
+}
+.table-badge .icon { width:13px; height:13px; }
 
-    .mono { font-family: 'JetBrains Mono', monospace; }
-    .container { max-width: var(--max); margin: 0 auto; padding: 0 24px; }
+/* ─── WELCOME LINE (replaces hero banner) ─── */
+.welcome-line { margin:2px 0 24px; }
+.welcome-rule { width:26px; height:1px; background:var(--gold); margin-bottom:11px; }
+.welcome-text {
+  font-family:'Cormorant Garamond',serif; font-style:italic;
+  font-size:15px; color:var(--ink-soft); line-height:1.4;
+}
 
-    /* ── NAV ── */
-    nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      background: rgba(10, 10, 15, 0.85);
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border);
-    }
-    .nav-inner {
-      max-width: var(--max); margin: 0 auto; padding: 0 24px;
-      height: 64px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .nav-logo {
-      font-size: 20px; font-weight: 800;
-      letter-spacing: -0.5px;
-      color: var(--text);
-    }
-    .nav-logo span { color: var(--accent); }
-    .nav-links {
-      display: flex; align-items: center; gap: 32px;
-      list-style: none;
-    }
-    .nav-links a {
-      font-size: 14px; font-weight: 500;
-      color: var(--muted);
-      transition: color 0.2s;
-    }
-    .nav-links a:hover { color: var(--text); }
-    .nav-right { display: flex; align-items: center; gap: 16px; }
-    .lang-btn {
-      background: var(--elevated); border: 1px solid var(--border);
-      color: var(--muted); font-family: 'Inter', sans-serif;
-      font-size: 13px; font-weight: 500;
-      padding: 6px 14px; border-radius: 6px;
-      cursor: pointer; transition: all 0.2s;
-    }
-    .lang-btn:hover { color: var(--text); border-color: var(--accent); }
-    .btn-nav {
-      background: var(--accent); color: #fff;
-      font-size: 14px; font-weight: 600;
-      padding: 8px 20px; border-radius: 8px;
-      border: none; cursor: pointer;
-      transition: opacity 0.2s;
-    }
-    .btn-nav:hover { opacity: 0.85; }
-    .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; background: none; border: none; padding: 4px; }
-    .hamburger span { display: block; width: 22px; height: 2px; background: var(--text); border-radius: 2px; transition: all 0.3s; }
+/* ─── FEATURED SECTION (Bugungi tavsiya) ─── */
+.featured-scroll {
+  display:flex; gap:12px; overflow-x:auto;
+  padding-bottom:4px; margin-bottom:4px; scrollbar-width:none;
+}
+.featured-scroll::-webkit-scrollbar { display:none; }
+.featured-card {
+  flex-shrink:0; width:200px;
+  background:var(--card); border-radius:var(--radius-lg);
+  overflow:hidden; cursor:pointer;
+  box-shadow:var(--shadow-sm);
+  transition:transform 0.15s ease;
+}
+.featured-card:active { transform:scale(0.97); }
+.featured-img {
+  width:100%; height:120px;
+  background:linear-gradient(135deg, var(--surface), #EBE0CC);
+  position:relative;
+  display:flex; align-items:center; justify-content:center;
+}
+.featured-img img { width:100%; height:100%; object-fit:cover; }
+.featured-img .icon { width:30px; height:30px; stroke:var(--gold-soft); opacity:0.6; }
+.featured-body { padding:11px 13px 13px; }
+.featured-name { font-size:13.5px; font-weight:600; color:var(--ink); margin-bottom:5px; }
+.featured-price { font-family:'Playfair Display',serif; font-size:15px; font-weight:600; color:var(--ruby); }
 
-    /* ── HERO ── */
-    .hero {
-      padding: 160px 0 120px;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-    .hero::before {
-      content: '';
-      position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
-      width: 800px; height: 600px;
-      background: radial-gradient(ellipse at center, rgba(79,110,247,0.15) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: var(--accent-dim); border: 1px solid rgba(79,110,247,0.3);
-      color: #8BA4FA; font-size: 13px; font-weight: 500;
-      padding: 6px 14px; border-radius: 100px;
-      margin-bottom: 32px;
-    }
-    .hero-badge::before { content: '●'; font-size: 8px; color: var(--green); }
-    h1 {
-      font-size: clamp(40px, 6vw, 76px);
-      font-weight: 800;
-      letter-spacing: -2px;
-      line-height: 1.05;
-      margin-bottom: 24px;
-    }
-    h1 em { font-style: normal; color: var(--accent); }
-    .hero-sub {
-      font-size: clamp(17px, 2vw, 20px);
-      color: var(--muted); max-width: 600px;
-      margin: 0 auto 48px;
-      line-height: 1.65;
-    }
-    .hero-cta { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; margin-bottom: 80px; }
-    .btn-primary {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: var(--accent); color: #fff;
-      font-size: 16px; font-weight: 600;
-      padding: 14px 28px; border-radius: 10px;
-      border: none; cursor: pointer;
-      transition: all 0.2s;
-      box-shadow: 0 0 0 0 var(--accent-glow);
-    }
-    .btn-primary:hover { opacity: 0.88; box-shadow: 0 8px 32px var(--accent-glow); transform: translateY(-1px); }
-    .btn-secondary {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: transparent; color: var(--text);
-      font-size: 16px; font-weight: 500;
-      padding: 14px 28px; border-radius: 10px;
-      border: 1px solid var(--border); cursor: pointer;
-      transition: all 0.2s;
-    }
-    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+/* ─── CATEGORIES ─── */
+.categories-scroll {
+  display:flex; gap:24px; overflow-x:auto;
+  padding-bottom:12px; scrollbar-width:none;
+  border-bottom:1px solid var(--line);
+}
+.categories-scroll::-webkit-scrollbar { display:none; }
+.cat-btn {
+  flex-shrink:0; padding:0 0 12px; border:none;
+  background:none;
+  font-family:'Inter',sans-serif;
+  font-size:13.5px; font-weight:600;
+  color:var(--ink-soft); cursor:pointer;
+  transition:color 0.2s ease, opacity 0.15s ease;
+  white-space:nowrap; position:relative;
+}
+.cat-btn::after {
+  content:''; position:absolute; left:0; right:0; bottom:-1px; height:2px;
+  background:var(--ruby); transform:scaleX(0); transition:transform 0.25s ease;
+}
+.cat-btn:active { opacity:0.65; }
+.cat-btn.active { color:var(--ink); }
+.cat-btn.active::after { transform:scaleX(1); }
 
-    /* ── METRICS ── */
-    .metrics {
-      display: grid; grid-template-columns: repeat(4, 1fr);
-      gap: 1px; background: var(--border);
-      border: 1px solid var(--border); border-radius: var(--radius);
-      overflow: hidden; max-width: 900px; margin: 0 auto;
-    }
-    .metric {
-      background: var(--surface);
-      padding: 32px 24px; text-align: center;
-    }
-    .metric-num {
-      font-size: 40px; font-weight: 800;
-      letter-spacing: -1.5px; color: var(--text);
-      line-height: 1;
-      margin-bottom: 8px;
-    }
-    .metric-num span { color: var(--accent); }
-    .metric-label { font-size: 13px; color: var(--muted); font-weight: 500; }
+/* ─── MAIN CONTENT ─── */
+.main { padding:26px 22px 140px; }
+.category-section { margin-bottom:44px; scroll-margin-top: 132px; }
 
-    /* ── SECTION COMMON ── */
-    section { padding: 100px 0; }
-    .section-label {
-      font-size: 12px; font-weight: 600;
-      letter-spacing: 2px; text-transform: uppercase;
-      color: var(--accent); margin-bottom: 16px;
-    }
-    h2 {
-      font-size: clamp(28px, 4vw, 48px);
-      font-weight: 800; letter-spacing: -1.5px;
-      line-height: 1.1; margin-bottom: 20px;
-    }
-    .section-sub {
-      font-size: 18px; color: var(--muted);
-      max-width: 560px; line-height: 1.65;
-    }
-    .section-header { margin-bottom: 64px; }
+.category-title-wrap {
+  display:flex; align-items:baseline; gap:8px; margin-bottom:22px;
+}
+.category-title {
+  font-family:'Playfair Display',serif;
+  font-size:19px; font-weight:700; color:var(--ink);
+  letter-spacing:0.1px;
+}
+.category-count {
+  font-size:12.5px; color:var(--ink-soft); font-weight:500;
+}
 
-    /* ── FEATURES GRID ── */
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1px; background: var(--border);
-      border: 1px solid var(--border); border-radius: var(--radius);
-      overflow: hidden;
-    }
-    .feature-card {
-      background: var(--surface);
-      padding: 40px 32px;
-      transition: background 0.2s;
-      position: relative;
-    }
-    .feature-card:hover { background: var(--elevated); }
-    .feature-icon {
-      width: 44px; height: 44px;
-      background: var(--accent-dim); border: 1px solid rgba(79,110,247,0.2);
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 20px; margin-bottom: 24px;
-    }
-    .feature-title {
-      font-size: 17px; font-weight: 700;
-      letter-spacing: -0.3px; margin-bottom: 10px;
-    }
-    .feature-desc { font-size: 14px; color: var(--muted); line-height: 1.7; }
+.products-grid { display:flex; flex-direction:column; gap:20px; }
 
-    /* ── WHITE LABEL SECTION ── */
-    .wl-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 64px;
-      align-items: center;
-    }
-    .wl-list { list-style: none; margin-top: 32px; }
-    .wl-list li {
-      display: flex; align-items: flex-start; gap: 14px;
-      padding: 16px 0; border-bottom: 1px solid var(--border);
-      font-size: 15px; color: var(--muted);
-    }
-    .wl-list li:last-child { border-bottom: none; }
-    .wl-list li::before {
-      content: '✓';
-      color: var(--green); font-weight: 700; font-size: 14px;
-      margin-top: 2px; flex-shrink: 0;
-    }
-    .wl-visual {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 32px;
-      position: relative;
-    }
-    .wl-browser-bar {
-      display: flex; align-items: center; gap: 8px;
-      margin-bottom: 24px;
-    }
-    .wl-dot { width: 10px; height: 10px; border-radius: 50%; }
-    .wl-url {
-      flex: 1; background: var(--elevated); border-radius: 6px;
-      padding: 6px 12px; font-size: 12px; color: var(--muted);
-      font-family: 'JetBrains Mono', monospace;
-    }
-    .wl-preview {
-      background: var(--bg); border-radius: 8px;
-      padding: 20px; border: 1px solid var(--border);
-    }
-    .wl-restaurant-name {
-      font-size: 20px; font-weight: 700; margin-bottom: 4px;
-    }
-    .wl-restaurant-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
-    .wl-menu-item {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 0; border-bottom: 1px solid var(--border);
-      font-size: 14px;
-    }
-    .wl-menu-item:last-child { border-bottom: none; }
-    .wl-price { font-weight: 700; }
-    .wl-badge {
-      font-size: 11px; font-weight: 600; padding: 2px 8px;
-      border-radius: 4px; margin-left: 8px;
-    }
+/* ─── PRODUCT CARD ─── */
+.product-card {
+  background:var(--card);
+  border-radius:var(--radius-lg);
+  display:flex; align-items:center; gap:16px; padding:16px;
+  transition:transform 0.15s ease, box-shadow 0.15s ease;
+  cursor:pointer;
+  box-shadow:var(--shadow-sm);
+  opacity:0; transform:translateY(8px);
+  animation:cardIn 0.45s ease forwards;
+}
+@keyframes cardIn { to { opacity:1; transform:translateY(0); } }
+.product-card:active {
+  transform:scale(0.99);
+  box-shadow:var(--shadow-md);
+}
 
-    /* ── TECH STACK ── */
-    .tech-grid {
-      display: flex; flex-wrap: wrap; gap: 12px;
-      margin-top: 48px;
-    }
-    .tech-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: var(--surface); border: 1px solid var(--border);
-      padding: 8px 16px; border-radius: 8px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 13px; color: var(--muted);
-      transition: all 0.2s;
-    }
-    .tech-badge:hover { border-color: var(--accent); color: var(--text); }
-    .tech-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.product-img {
+  position:relative;
+  width:92px; height:92px; border-radius:var(--radius-md);
+  background:linear-gradient(135deg, var(--surface), #EBE0CC);
+  flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  overflow:hidden;
+}
+.product-img img { width:100%; height:100%; object-fit:cover; }
 
-    /* ── ANALYTICS SECTION ── */
-    .analytics-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 64px;
-      align-items: center;
-    }
-    .analytics-visual {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 28px;
-    }
-    .analytics-header {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 24px;
-    }
-    .analytics-title { font-size: 15px; font-weight: 600; }
-    .analytics-period {
-      font-size: 12px; color: var(--muted);
-      background: var(--elevated); padding: 4px 10px; border-radius: 6px;
-    }
-    .kpi-row {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
-      margin-bottom: 24px;
-    }
-    .kpi-card {
-      background: var(--bg); border-radius: 8px; border: 1px solid var(--border);
-      padding: 16px;
-    }
-    .kpi-val { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
-    .kpi-lbl { font-size: 11px; color: var(--muted); margin-top: 4px; }
-    .kpi-delta { font-size: 11px; color: var(--green); margin-top: 2px; }
-    .bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 80px; }
-    .bar {
-      flex: 1; border-radius: 4px 4px 0 0;
-      background: var(--accent-dim); border: 1px solid rgba(79,110,247,0.2);
-      transition: background 0.2s; min-width: 0;
-    }
-    .bar.active { background: var(--accent); border-color: var(--accent); }
-    .bar:hover { background: var(--accent); }
+.badge-tag {
+  font-size:9.5px; font-weight:600; letter-spacing:0.5px;
+  text-transform:uppercase; color:var(--gold);
+  border:1px solid var(--gold); border-radius:4px;
+  padding:2px 6px; white-space:nowrap; flex-shrink:0;
+}
 
-    /* ── PRICING ── */
-    .pricing-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
-    }
-    .pricing-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 36px 32px;
-      transition: border-color 0.2s;
-      position: relative;
-    }
-    .pricing-card:hover { border-color: var(--accent); }
-    .pricing-card.featured {
-      border-color: var(--accent);
-      background: linear-gradient(135deg, rgba(79,110,247,0.08) 0%, var(--surface) 100%);
-    }
-    .popular-badge {
-      position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
-      background: var(--accent); color: #fff;
-      font-size: 11px; font-weight: 700; letter-spacing: 1px;
-      padding: 4px 14px; border-radius: 100px; white-space: nowrap;
-    }
-    .plan-name { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
-    .plan-price {
-      font-size: 48px; font-weight: 800; letter-spacing: -2px;
-      line-height: 1; margin-bottom: 8px;
-    }
-    .plan-price sup { font-size: 20px; font-weight: 600; vertical-align: top; margin-top: 8px; }
-    .plan-period { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
-    .plan-features { list-style: none; margin-bottom: 36px; }
-    .plan-features li {
-      display: flex; align-items: center; gap: 10px;
-      font-size: 14px; color: var(--muted); padding: 8px 0;
-    }
-    .plan-features li::before { content: '✓'; color: var(--green); font-weight: 700; flex-shrink: 0; }
-    .plan-features li.off { opacity: 0.4; }
-    .plan-features li.off::before { content: '–'; color: var(--muted); }
-    .btn-plan {
-      width: 100%; padding: 12px; border-radius: 8px;
-      font-size: 15px; font-weight: 600; cursor: pointer;
-      transition: all 0.2s; border: 1px solid var(--border);
-      background: transparent; color: var(--text);
-    }
-    .btn-plan:hover { border-color: var(--accent); color: var(--accent); }
-    .btn-plan.featured { background: var(--accent); color: #fff; border-color: var(--accent); }
-    .btn-plan.featured:hover { opacity: 0.85; }
+.product-info { flex:1; min-width:0; }
+.product-name-row { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
+.product-name {
+  font-size:14.5px; font-weight:600; color:var(--ink);
+  line-height:1.3;
+}
+.product-desc {
+  font-size:12.5px; color:var(--ink-soft); line-height:1.4;
+  margin-bottom:10px;
+  overflow:hidden; display:-webkit-box;
+  -webkit-line-clamp:2; -webkit-box-orient:vertical;
+}
+.product-footer { display:flex; align-items:center; justify-content:space-between; }
+.product-price {
+  font-family:'Playfair Display',serif;
+  font-size:17px; font-weight:600;
+  color:var(--ink); line-height:1.15;
+  display:flex; flex-direction:column;
+}
+.product-price .price-currency {
+  font-family:'Inter',sans-serif;
+  font-size:10px; font-weight:600; color:var(--ink-soft);
+  letter-spacing:0.4px; text-transform:uppercase;
+}
 
-    /* ── FAQ ── */
-    .faq-list { max-width: 760px; margin: 0 auto; }
-    .faq-item {
-      border-bottom: 1px solid var(--border);
-      padding: 24px 0;
-    }
-    .faq-q {
-      display: flex; justify-content: space-between; align-items: center;
-      cursor: pointer; gap: 24px;
-    }
-    .faq-q-text { font-size: 16px; font-weight: 600; line-height: 1.4; }
-    .faq-icon {
-      flex-shrink: 0; width: 28px; height: 28px;
-      background: var(--elevated); border-radius: 6px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 16px; color: var(--muted); transition: all 0.25s;
-    }
-    .faq-item.open .faq-icon { background: var(--accent-dim); color: var(--accent); transform: rotate(45deg); }
-    .faq-a {
-      font-size: 15px; color: var(--muted); line-height: 1.7;
-      max-height: 0; overflow: hidden; transition: max-height 0.35s ease, padding 0.3s;
-    }
-    .faq-item.open .faq-a { max-height: 300px; padding-top: 16px; }
+.add-btn {
+  width:32px; height:32px; border-radius:50%;
+  background:transparent; border:1.3px solid var(--ruby);
+  color:var(--ruby);
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+  flex-shrink:0;
+}
+.add-btn .icon { width:15px; height:15px; }
+.add-btn:active { transform:scale(0.92); background:var(--ruby); color:#F7F4EE; }
 
-    /* ── CONTACT ── */
-    .contact-section { text-align: center; }
-    .contact-box {
-      max-width: 640px; margin: 0 auto;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 64px 48px;
-    }
-    .contact-box h2 { margin-bottom: 16px; }
-    .contact-box p { color: var(--muted); margin-bottom: 40px; font-size: 17px; }
-    .contact-form { display: flex; flex-direction: column; gap: 16px; text-align: left; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .form-group { display: flex; flex-direction: column; gap: 8px; }
-    label { font-size: 13px; font-weight: 600; color: var(--muted); }
-    input, textarea, select {
-      background: var(--bg); border: 1px solid var(--border);
-      color: var(--text); font-family: 'Inter', sans-serif;
-      font-size: 15px; padding: 12px 16px; border-radius: 8px;
-      transition: border-color 0.2s; outline: none; width: 100%;
-    }
-    input:focus, textarea:focus, select:focus { border-color: var(--accent); }
-    textarea { resize: vertical; min-height: 120px; }
-    .btn-submit {
-      width: 100%; padding: 14px; background: var(--accent); color: #fff;
-      font-size: 16px; font-weight: 600; border: none; border-radius: 10px;
-      cursor: pointer; transition: opacity 0.2s; margin-top: 8px;
-    }
-    .btn-submit:hover { opacity: 0.85; }
-    .form-success {
-      display: none; text-align: center; padding: 24px;
-      color: var(--green); font-weight: 600; font-size: 16px;
-    }
+.qty-control {
+  display:flex; align-items:center; gap:13px;
+}
+.qty-btn {
+  width:22px; height:22px; border-radius:50%;
+  border:1.3px solid var(--line-strong);
+  background:transparent; color:var(--ink);
+  cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:opacity 0.15s ease, border-color 0.15s ease;
+}
+.qty-btn:active { opacity:0.6; }
+.qty-btn .icon { width:12px; height:12px; }
+.qty-num {
+  font-size:14px; font-weight:700; color:var(--ink);
+  min-width:18px; text-align:center;
+  animation:qtyPop 0.2s ease;
+}
+@keyframes qtyPop { from { transform:scale(1.15); } to { transform:scale(1); } }
 
-    /* ── FOOTER ── */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 48px 0;
-    }
-    .footer-inner {
-      display: flex; justify-content: space-between; align-items: center;
-      flex-wrap: wrap; gap: 16px;
-    }
-    .footer-left { font-size: 14px; color: var(--muted); }
-    .footer-left strong { color: var(--text); }
-    .footer-links { display: flex; gap: 24px; }
-    .footer-links a { font-size: 14px; color: var(--muted); transition: color 0.2s; }
-    .footer-links a:hover { color: var(--text); }
+/* ─── SCREENS ─── */
+.screen {
+  display:none; position:fixed; inset:0;
+  background:var(--bg); z-index:300; overflow-y:auto;
+  animation:slideUp 0.3s cubic-bezier(0.22,1,0.36,1);
+}
+.screen.active { display:block; }
+@keyframes slideUp {
+  from { transform:translateY(24px); opacity:0; }
+  to   { transform:translateY(0); opacity:1; }
+}
 
-    /* ── SCROLL REVEAL ── */
-    .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
-    .reveal.visible { opacity: 1; transform: none; }
+.screen-header {
+  background:rgba(247,244,238,0.86);
+  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+  padding:18px 20px;
+  display:flex; align-items:center; gap:14px;
+  position:sticky; top:0; z-index:10;
+}
+.back-btn {
+  width:38px; height:38px; border-radius:8px;
+  border:none;
+  background:var(--card); cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  color:var(--ink);
+  box-shadow:var(--shadow-sm);
+  transition:transform 0.12s ease;
+}
+.back-btn:active { transform:scale(0.9); }
+.back-btn .icon { width:18px; height:18px; }
+.screen-title {
+  font-family:'Playfair Display',serif;
+  font-size:19px; font-weight:700; color:var(--ink);
+}
 
-    /* ── MOBILE MENU ── */
-    .mobile-menu {
-      display: none; position: fixed; top: 64px; left: 0; right: 0; bottom: 0;
-      background: var(--bg); z-index: 99; padding: 32px 24px;
-      flex-direction: column; gap: 8px;
-    }
-    .mobile-menu.open { display: flex; }
-    .mobile-menu a {
-      font-size: 20px; font-weight: 600; color: var(--muted);
-      padding: 14px 0; border-bottom: 1px solid var(--border);
-      transition: color 0.2s;
-    }
-    .mobile-menu a:hover { color: var(--text); }
-    .mobile-cta { margin-top: 24px; }
+/* ─── CART ITEMS ─── */
+.cart-items { padding:4px 20px 16px; display:flex; flex-direction:column; gap:10px; }
+.cart-item {
+  background:var(--card);
+  border-radius:var(--radius-md); padding:12px 14px;
+  display:flex; align-items:center; gap:12px;
+  box-shadow:var(--shadow-sm);
+  animation:cardIn 0.3s ease;
+}
+.cart-item-gem {
+  width:42px; height:42px; border-radius:var(--radius-sm);
+  background:var(--surface);
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+.cart-item-gem .icon { width:18px; height:18px; stroke:var(--gold-soft); }
+.cart-item-info { flex:1; min-width:0; }
+.cart-item-name { font-size:14px; font-weight:600; color:var(--ink); }
+.cart-item-price {
+  font-size:13px; color:var(--ink-soft); margin-top:3px;
+}
 
-    /* ── RESPONSIVE ── */
-    @media (max-width: 900px) {
-      .features-grid { grid-template-columns: 1fr 1fr; }
-      .pricing-grid { grid-template-columns: 1fr; max-width: 400px; margin: 0 auto; }
-      .wl-grid, .analytics-grid { grid-template-columns: 1fr; gap: 48px; }
-      .metrics { grid-template-columns: repeat(2, 1fr); }
-      .nav-links { display: none; }
-      .hamburger { display: flex; }
-      .kpi-row { grid-template-columns: repeat(3, 1fr); }
-    }
-    @media (max-width: 600px) {
-      .features-grid { grid-template-columns: 1fr; }
-      .form-row { grid-template-columns: 1fr; }
-      .hero { padding: 120px 0 80px; }
-      section { padding: 72px 0; }
-      .contact-box { padding: 40px 24px; }
-      .metrics { grid-template-columns: repeat(2, 1fr); }
-      .hero-cta { flex-direction: column; align-items: center; }
-      .btn-primary, .btn-secondary { width: 100%; justify-content: center; }
-      .footer-inner { flex-direction: column; align-items: flex-start; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .reveal { opacity: 1; transform: none; transition: none; }
-      * { animation: none !important; }
-    }
-  </style>
+/* ─── ORDER TYPE ─── */
+.order-type-section { padding:8px 20px 18px; }
+.section-label {
+  font-size:11.5px; font-weight:700; color:var(--ink-soft);
+  text-transform:uppercase; letter-spacing:1.2px; margin-bottom:11px;
+}
+.order-type-btns { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.type-btn {
+  padding:16px 10px; border-radius:var(--radius-md);
+  border:1.5px solid var(--line);
+  background:var(--card); text-align:center; cursor:pointer;
+  transition:all 0.18s ease;
+}
+.type-btn.active {
+  border-color:var(--ruby);
+  background:rgba(44,33,27,0.05);
+  box-shadow:0 4px 16px rgba(44,33,27,0.09);
+}
+.type-btn-icon {
+  width:30px; height:30px; margin:0 auto 8px;
+  display:flex; align-items:center; justify-content:center;
+}
+.type-btn-icon .icon { width:24px; height:24px; stroke:var(--ruby); stroke-width:1.5; }
+.type-btn-label { font-size:13.5px; font-weight:600; color:var(--ink); }
+
+.table-info-banner {
+  margin:0 20px 18px; padding:16px 18px;
+  background:var(--surface);
+  border-radius:var(--radius-md); display:flex; align-items:center; gap:14px;
+}
+.table-info-banner-icon {
+  width:38px; height:38px; border-radius:8px;
+  background:var(--card); flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+}
+.table-info-banner-icon .icon { width:19px; height:19px; stroke:var(--ruby); }
+.table-info-banner-title { font-size:14.5px; font-weight:700; color:var(--ink); }
+.table-info-banner-sub { font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
+
+/* ─── FORM ─── */
+.form-section { padding:0 22px 20px; display:flex; flex-direction:column; gap:14px; }
+.form-input {
+  width:100%; padding:15px 16px; border-radius:var(--radius-md);
+  border:1.5px solid var(--line);
+  background:var(--card); font-size:15px; color:var(--ink);
+  outline:none; transition:border-color 0.15s ease;
+  font-family:'Inter',sans-serif;
+}
+.form-input:focus { border-color:var(--ruby); }
+.form-input::placeholder { color:var(--ink-soft); opacity:0.7; }
+.form-textarea { resize:none; height:78px; }
+
+/* ─── SUMMARY ─── */
+.summary-card {
+  margin:0 20px 18px; background:var(--card);
+  border-radius:var(--radius-md); padding:16px 18px;
+  box-shadow:var(--shadow-sm);
+}
+.summary-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:6px 0; font-size:14px; color:var(--ink-soft);
+}
+.summary-row.total {
+  border-top:1px solid var(--line); margin-top:6px; padding-top:13px;
+  font-size:15px; font-weight:700; color:var(--ink);
+}
+.summary-row.total span:last-child {
+  font-family:'Playfair Display',serif;
+  font-size:21px; font-weight:600; color:var(--ruby);
+}
+
+.checkout-btn {
+  margin:0 20px 40px; width:calc(100% - 40px); padding:17px;
+  background:var(--ruby);
+  border:none;
+  border-radius:var(--radius-md); color:#FAF7F1;
+  font-family:'Inter',sans-serif;
+  font-size:15.5px; font-weight:700; cursor:pointer;
+  transition:transform 0.1s ease;
+  box-shadow:var(--shadow-ruby);
+}
+.checkout-btn:active { transform:scale(0.98); }
+.checkout-btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+/* ─── PRODUCT MODAL ─── */
+.product-modal-overlay {
+  display:none; position:fixed; inset:0; z-index:400;
+  background:rgba(36,27,23,0.5);
+  backdrop-filter:blur(4px);
+  animation:fadeIn 0.2s ease;
+}
+.product-modal-overlay.active { display:flex; align-items:flex-end; }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+.product-modal {
+  width:100%; max-height:88vh; overflow-y:auto;
+  background:var(--bg);
+  border-radius:18px 18px 0 0;
+  position:relative;
+  animation:modalSlideUp 0.32s cubic-bezier(0.22,1,0.36,1);
+}
+@keyframes modalSlideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+.product-modal-grip {
+  width:36px; height:4px; border-radius:3px;
+  background:var(--line-strong);
+  margin:12px auto 0;
+}
+.product-modal-img {
+  width:100%; height:260px;
+  background:linear-gradient(135deg, var(--surface), #EBE0CC);
+  position:relative; margin-top:14px;
+  display:flex; align-items:center; justify-content:center;
+}
+.product-modal-img img { width:100%; height:100%; object-fit:cover; }
+.product-modal-img .icon { width:54px; height:54px; stroke:var(--gold-soft); opacity:0.55; }
+.product-modal-close {
+  position:absolute; top:16px; right:16px;
+  width:36px; height:36px; border-radius:50%;
+  background:rgba(247,244,238,0.92);
+  backdrop-filter:blur(8px);
+  border:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:var(--shadow-sm);
+}
+.product-modal-close .icon { width:17px; height:17px; }
+.product-modal-body { padding:54px 24px 28px; }
+.product-modal-badge-row { margin-bottom:10px; }
+.product-modal-name {
+  font-family:'Playfair Display',serif;
+  font-size:24px; font-weight:700; color:var(--ink); margin-bottom:10px;
+}
+.product-modal-desc {
+  font-size:14.5px; color:var(--ink-soft); line-height:1.6; margin-bottom:22px;
+}
+.product-modal-footer {
+  display:flex; align-items:center; justify-content:space-between;
+  gap:16px; padding-top:18px; border-top:1px solid var(--line);
+}
+.product-modal-price {
+  font-family:'Playfair Display',serif;
+  font-size:24px; font-weight:700; color:var(--ink);
+}
+.product-modal-price .price-currency { font-size:12px; }
+.product-modal-add-btn {
+  flex-shrink:0; padding:15px 28px;
+  background:var(--ruby);
+  border:none; border-radius:var(--radius-md);
+  color:#FAF7F1; font-family:'Inter',sans-serif;
+  font-size:14.5px; font-weight:700; cursor:pointer;
+  display:flex; align-items:center; gap:10px;
+  box-shadow:var(--shadow-ruby);
+  transition:transform 0.12s ease;
+}
+.product-modal-add-btn:active { transform:scale(0.96); }
+.product-modal-qty { display:flex; align-items:center; gap:14px; }
+.product-modal-qty .qty-btn { width:34px; height:34px; }
+.product-modal-qty .qty-num { font-size:16px; min-width:26px; }
+
+/* ─── SUCCESS ─── */
+#successScreen.active {
+  display:flex !important; flex-direction:column; align-items:center;
+  justify-content:center; min-height:100vh; padding:32px; text-align:center;
+}
+.success-anim {
+  position:relative;
+  width:108px; height:108px;
+  background:var(--ruby);
+  border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  margin-bottom:28px;
+  animation:popIn 0.6s cubic-bezier(0.22,1,0.36,1);
+  box-shadow:var(--shadow-ruby);
+}
+.success-anim::before {
+  content:'';
+  position:absolute; inset:-10px;
+  border-radius:50%;
+  border:1.5px solid rgba(44,33,27,0.2);
+  animation:ringPulse 2.2s ease-out 0.4s infinite;
+}
+.success-anim .icon {
+  width:42px; height:42px; stroke:#F7F4EE;
+  stroke-dasharray:40; stroke-dashoffset:40;
+  animation:checkDraw 0.6s ease 0.35s forwards;
+}
+@keyframes popIn { from { transform:scale(0.9); opacity:0; } to { transform:scale(1); opacity:1; } }
+@keyframes checkDraw { to { stroke-dashoffset:0; } }
+@keyframes ringPulse {
+  0%   { transform:scale(1);   opacity:0.5; }
+  100% { transform:scale(1.3); opacity:0; }
+}
+.success-title {
+  font-family:'Playfair Display',serif;
+  font-size:26px; font-weight:700; color:var(--ink); margin-bottom:10px;
+  opacity:0; animation:fadeUp 0.4s ease 0.35s forwards;
+}
+.success-subtitle {
+  font-size:14.5px; color:var(--ink-soft); line-height:1.5; margin-bottom:30px;
+  opacity:0; animation:fadeUp 0.4s ease 0.42s forwards;
+}
+.success-order-id {
+  background:var(--card);
+  border-radius:var(--radius-md); padding:16px 30px;
+  font-size:12.5px; color:var(--ink-soft); margin-bottom:30px;
+  box-shadow:var(--shadow-sm);
+  opacity:0; animation:fadeUp 0.4s ease 0.49s forwards;
+}
+@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.success-order-id strong {
+  font-family:'Playfair Display',serif;
+  color:var(--ruby);
+  font-size:28px; display:block; margin-top:5px;
+}
+.back-to-menu-btn {
+  padding:16px 42px;
+  background:var(--ruby);
+  border:none;
+  border-radius:var(--radius-md); color:#FAF7F1;
+  font-family:'Inter',sans-serif;
+  font-size:15px; font-weight:700; cursor:pointer;
+  box-shadow:var(--shadow-ruby);
+  opacity:0; animation:fadeUp 0.4s ease 0.56s forwards;
+  transition:transform 0.12s ease;
+}
+.back-to-menu-btn:active { transform:scale(0.97); }
+
+/* ─── UTILS ─── */
+.loading {
+  display:flex; flex-direction:column; align-items:center;
+  justify-content:center; min-height:60vh; gap:16px;
+  color:var(--ink-soft); font-size:14px;
+}
+.spinner {
+  width:34px; height:34px;
+  border:2.5px solid var(--line);
+  border-top-color:var(--ruby);
+  border-radius:50%;
+  animation:spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.error-msg { text-align:center; padding:40px 20px; color:var(--ink-soft); font-size:14px; line-height:1.6; }
+
+/* ─── SKELETON LOADING ─── */
+.skeleton-wrap { padding:8px 0; }
+.skeleton-card {
+  display:flex; align-items:center; gap:14px; padding:12px;
+  background:var(--card); border-radius:var(--radius-lg);
+  margin-bottom:12px; box-shadow:var(--shadow-sm);
+}
+.skeleton-block {
+  background:linear-gradient(90deg, var(--surface) 25%, #EAE0CE 37%, var(--surface) 63%);
+  background-size:400% 100%;
+  animation:skeletonShine 1.4s ease infinite;
+  border-radius:var(--radius-md);
+}
+@keyframes skeletonShine { 0% { background-position:100% 50%; } 100% { background-position:0 50%; } }
+.skeleton-img { width:92px; height:92px; flex-shrink:0; }
+.skeleton-lines { flex:1; display:flex; flex-direction:column; gap:8px; }
+.skeleton-line { height:11px; border-radius:6px; }
+.skeleton-line.w60 { width:60%; }
+.skeleton-line.w90 { width:90%; }
+.skeleton-line.w40 { width:40%; height:18px; margin-top:6px; }
+
+/* ─── CART CAPSULE ─── */
+.cart-bar {
+  position:fixed; bottom:24px; left:0; right:0;
+  display:flex; justify-content:center;
+  z-index:200; pointer-events:none;
+  transform:translateY(140%);
+  transition:transform 0.3s cubic-bezier(0.22,1,0.36,1);
+}
+.cart-bar.visible { transform:translateY(0); }
+.cart-btn {
+  pointer-events:all;
+  display:flex; align-items:center; gap:12px;
+  padding:12px 20px 12px 15px;
+  background:var(--ruby);
+  border:1px solid rgba(176,138,69,0.22);
+  border-radius:100px; color:#F7F4EE;
+  font-family:'Inter',sans-serif;
+  cursor:pointer;
+  box-shadow:var(--shadow-ruby);
+  transition:transform 0.12s ease;
+}
+.cart-btn:active { transform:scale(0.96); }
+.cart-btn-left { display:flex; align-items:center; gap:9px; }
+.cart-count-badge {
+  background:rgba(247,244,238,0.2);
+  border-radius:50%; width:22px; height:22px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:12.5px; font-weight:700;
+}
+.cart-btn-icon { display:flex; align-items:center; justify-content:center; }
+.cart-btn-icon .icon { width:18px; height:18px; stroke-width:1.5; }
+.cart-divider { width:1px; height:18px; background:rgba(247,244,238,0.22); }
+.cart-total-text {
+  font-family:'Playfair Display',serif;
+  font-size:15.5px; font-weight:600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:0.01ms !important; transition-duration:0.01ms !important; }
+}
+</style>
 </head>
 <body>
 
-<!-- NAV -->
-<nav>
-  <div class="nav-inner">
-    <a class="nav-logo" href="#">Taom<span>ly</span></a>
-    <ul class="nav-links" id="navLinks">
-      <li><a href="#features" data-i18n="nav.features">Features</a></li>
-      <li><a href="#whitelabel" data-i18n="nav.whitelabel">White Label</a></li>
-      <li><a href="#analytics" data-i18n="nav.analytics">Analytics</a></li>
-      <li><a href="#pricing" data-i18n="nav.pricing">Pricing</a></li>
-      <li><a href="#contact" data-i18n="nav.contact">Contact</a></li>
-    </ul>
-    <div class="nav-right">
-      <button class="lang-btn" id="langBtn" onclick="toggleLang()">RU</button>
-      <a href="#contact"><button class="btn-nav" data-i18n="nav.cta">Request Demo</button></a>
-      <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Menu">
-        <span></span><span></span><span></span>
-      </button>
-    </div>
-  </div>
-</nav>
-
-<!-- MOBILE MENU -->
-<div class="mobile-menu" id="mobileMenu">
-  <a href="#features" onclick="toggleMenu()" data-i18n="nav.features">Features</a>
-  <a href="#whitelabel" onclick="toggleMenu()" data-i18n="nav.whitelabel">White Label</a>
-  <a href="#analytics" onclick="toggleMenu()" data-i18n="nav.analytics">Analytics</a>
-  <a href="#pricing" onclick="toggleMenu()" data-i18n="nav.pricing">Pricing</a>
-  <a href="#faq" onclick="toggleMenu()" data-i18n="nav.faq">FAQ</a>
-  <a href="#contact" onclick="toggleMenu()" data-i18n="nav.contact">Contact</a>
-  <div class="mobile-cta"><a href="#contact"><button class="btn-primary" style="width:100%;justify-content:center" data-i18n="nav.cta">Request Demo</button></a></div>
+<!-- ─── SPLASH ─── -->
+<div id="splash">
+  <div class="splash-name" id="splashName">Taomly</div>
+  <div class="splash-line"></div>
+  <div class="splash-tagline">Mazali taomlar buyurtmasi</div>
 </div>
 
-<!-- HERO -->
-<section class="hero">
-  <div class="container">
-    <div class="hero-badge reveal" data-i18n="hero.badge">Multi-tenant · White Label · Production Ready</div>
-    <h1 class="reveal">
-      <span data-i18n="hero.h1a">Launch your branded</span><br>
-      <em data-i18n="hero.h1b">restaurant platform</em><br>
-      <span data-i18n="hero.h1c">in days, not months.</span>
-    </h1>
-    <p class="hero-sub reveal" data-i18n="hero.sub">
-      A complete white label SaaS for restaurant ordering — Telegram Mini App, PWA, multi-tenant architecture, analytics and billing. Ready to deploy under your brand.
-    </p>
-    <div class="hero-cta reveal">
-      <a href="#contact"><button class="btn-primary">
-        <span data-i18n="hero.cta1">Request Demo</span>
-        <span>→</span>
-      </button></a>
-      <a href="#features"><button class="btn-secondary" data-i18n="hero.cta2">Explore Features</button></a>
+<!-- ─── MENU SCREEN ─── -->
+<div id="menuScreen">
+  <div class="header">
+    <div class="restaurant-row">
+      <div class="restaurant-logo" id="restaurantLogo">
+        <div class="restaurant-logo-letter" id="restaurantLetter">T</div>
+      </div>
+      <div>
+        <div class="restaurant-name" id="restaurantName">Yuklanmoqda...</div>
+        <div class="restaurant-address" id="restaurantAddress"></div>
+        <div id="tableBadge" style="display:none;" class="table-badge">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M3 9h18M3 9v10M21 9v10M3 19h18M7 9V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v4"/></svg>
+          <span id="tableBadgeText"></span>
+        </div>
+      </div>
     </div>
+    <div class="welcome-line" id="welcomeLine" style="display:none;">
+      <div class="welcome-rule"></div>
+      <div class="welcome-text" id="welcomeText">Sevimli taomingizni tanlang</div>
+    </div>
+    <div id="featuredSection" style="display:none; margin-bottom:18px;">
+      <div class="category-title-wrap">
+        <div class="category-title">Bugungi tavsiya</div>
+      </div>
+      <div class="featured-scroll" id="featuredScroll"></div>
+    </div>
+    <div class="categories-scroll" id="categoriesNav"></div>
+  </div>
+  <div class="main" id="menuContent">
+    <div class="skeleton-wrap">
+      <div class="skeleton-card"><div class="skeleton-block skeleton-img"></div><div class="skeleton-lines"><div class="skeleton-block skeleton-line w60"></div><div class="skeleton-block skeleton-line w90"></div><div class="skeleton-block skeleton-line w40"></div></div></div>
+      <div class="skeleton-card"><div class="skeleton-block skeleton-img"></div><div class="skeleton-lines"><div class="skeleton-block skeleton-line w60"></div><div class="skeleton-block skeleton-line w90"></div><div class="skeleton-block skeleton-line w40"></div></div></div>
+      <div class="skeleton-card"><div class="skeleton-block skeleton-img"></div><div class="skeleton-lines"><div class="skeleton-block skeleton-line w60"></div><div class="skeleton-block skeleton-line w90"></div><div class="skeleton-block skeleton-line w40"></div></div></div>
+    </div>
+  </div>
+</div>
 
-    <!-- METRICS -->
-    <div class="metrics reveal">
-      <div class="metric">
-        <div class="metric-num"><span class="count" data-target="50">0</span>+</div>
-        <div class="metric-label" data-i18n="metrics.restaurants">Restaurants</div>
+<!-- ─── CART SCREEN ─── -->
+<div id="cartScreen" class="screen">
+  <div class="screen-header">
+    <button class="back-btn" onclick="closeCart()">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <span class="screen-title">Savat</span>
+  </div>
+  <div class="cart-items" id="cartItemsList"></div>
+
+  <div class="order-type-section" id="orderTypeSection">
+    <div class="section-label">Buyurtma turi</div>
+    <div class="order-type-btns">
+      <div class="type-btn active" id="typeDelivery" onclick="selectType('delivery')">
+        <div class="type-btn-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2"/><circle cx="17" cy="19" r="2"/><path d="M4 19h2l1.5-9H17l3 6h-2M7.5 10L6 5H3"/></svg></div>
+        <div class="type-btn-label">Yetkazib berish</div>
       </div>
-      <div class="metric">
-        <div class="metric-num"><span class="count" data-target="12400">0</span></div>
-        <div class="metric-label" data-i18n="metrics.orders">Orders Processed</div>
-      </div>
-      <div class="metric">
-        <div class="metric-num"><span class="count" data-target="99">0</span><span style="font-size:24px">%</span></div>
-        <div class="metric-label" data-i18n="metrics.uptime">Uptime</div>
-      </div>
-      <div class="metric">
-        <div class="metric-num"><span class="count" data-target="3">0</span><span style="font-size:24px">s</span></div>
-        <div class="metric-label" data-i18n="metrics.deploy">Deploy Time</div>
+      <div class="type-btn" id="typeTakeaway" onclick="selectType('takeaway')">
+        <div class="type-btn-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M4 9h16l-1.5 11a1 1 0 0 1-1 .9H6.5a1 1 0 0 1-1-.9L4 9zM8 9V6a4 4 0 0 1 8 0v3"/></svg></div>
+        <div class="type-btn-label">Olib ketish</div>
       </div>
     </div>
   </div>
-</section>
 
-<!-- FEATURES -->
-<section id="features">
-  <div class="container">
-    <div class="section-header reveal">
-      <div class="section-label" data-i18n="features.label">Platform</div>
-      <h2 data-i18n="features.h2">Everything your clients need.<br>Nothing they don't.</h2>
-      <p class="section-sub" data-i18n="features.sub">Built for agencies and integrators who want to deliver a complete restaurant solution under their own brand.</p>
+  <div class="table-info-banner" id="tableBanner" style="display:none;">
+    <div class="table-info-banner-icon">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M3 9h18M3 9v10M21 9v10M3 19h18M7 9V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v4"/></svg>
     </div>
-    <div class="features-grid reveal">
-      <div class="feature-card">
-        <div class="feature-icon">🤖</div>
-        <div class="feature-title" data-i18n="f1.t">Telegram Mini App</div>
-        <div class="feature-desc" data-i18n="f1.d">Native ordering experience inside Telegram. Each restaurant gets its own dedicated bot with full menu, cart, and order tracking.</div>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🏷️</div>
-        <div class="feature-title" data-i18n="f2.t">White Label Branding</div>
-        <div class="feature-desc" data-i18n="f2.d">Per-restaurant logos, colors, and domain. Dynamic PWA manifests generate unique branded apps for every client automatically.</div>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">📱</div>
-        <div class="feature-title" data-i18n="f3.t">Progressive Web App</div>
-        <div class="feature-desc" data-i18n="f3.d">Installable on iOS and Android with offline support, push-ready service workers and per-restaurant web app manifests.</div>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🏢</div>
-        <div class="feature-title" data-i18n="f4.t">Multi-Tenant Architecture</div>
-        <div class="feature-desc" data-i18n="f4.d">Agency → Restaurant → Customer three-tier model. Complete data isolation between tenants with JWT + Fernet encryption.</div>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">📦</div>
-        <div class="feature-title" data-i18n="f5.t">QR Menu & Table Orders</div>
-        <div class="feature-desc" data-i18n="f5.d">Unique QR codes per table, per restaurant. Guests scan and order instantly — no app install required. Built-in QR generator.</div>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🚀</div>
-        <div class="feature-title" data-i18n="f6.t">Delivery · Takeaway · Dine-in</div>
-        <div class="feature-desc" data-i18n="f6.d">All three order modes in one platform. Restaurants configure which modes are active. Full order lifecycle with real-time status updates.</div>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🔔</div>
-        <div class="feature-title" data-i18n="f7.t">Instant Notifications</div>
-        <div class="feature-desc" data-i18n="f7.d">Telegram notifications for every order event — placed, confirmed, preparing, ready, delivered. Dispatched via async background tasks.</div>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🛡️</div>
-        <div class="feature-title" data-i18n="f8.t">Enterprise Security</div>
-        <div class="feature-desc" data-i18n="f8.d">HMAC-SHA256 webhook verification, IDOR protection, rate limiting, JWT with role-based access. Full audit trail.</div>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🐳</div>
-        <div class="feature-title" data-i18n="f9.t">Docker Ready</div>
-        <div class="feature-desc" data-i18n="f9.d">Docker + docker-compose included. Deploy on any cloud — Render, Railway, DigitalOcean, AWS, GCP. CI/CD via GitHub Actions.</div>
+    <div>
+      <div class="table-info-banner-title" id="tableBannerTitle">Stol №1</div>
+      <div class="table-info-banner-sub">Buyurtma stolga yetkaziladi</div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <input class="form-input" type="text" id="clientName" placeholder="Ismingiz" />
+    <input class="form-input" type="tel" id="clientPhone" placeholder="+998 XX XXX XX XX" value="+998" />
+    <input class="form-input" type="text" id="clientAddress" placeholder="Manzil (yetkazib berish uchun)" />
+    <textarea class="form-input form-textarea" id="clientComment" placeholder="Izoh (ixtiyoriy)"></textarea>
+  </div>
+
+  <div class="summary-card">
+    <div class="summary-row">
+      <span id="summaryCount">0 ta taom</span>
+      <span id="summarySubtotal">0 so'm</span>
+    </div>
+    <div class="summary-row total">
+      <span>Jami</span>
+      <span id="summaryTotal">0 so'm</span>
+    </div>
+  </div>
+  <button class="checkout-btn" id="checkoutBtn" onclick="submitOrder()">Buyurtma berish →</button>
+</div>
+
+<!-- ─── SUCCESS SCREEN ─── -->
+<div id="successScreen" class="screen">
+  <div class="success-anim">
+    <svg class="icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+  </div>
+  <div class="success-title">Buyurtma qabul qilindi!</div>
+  <div class="success-subtitle" id="successSubtitle">Tez orada siz bilan bog'lanamiz.</div>
+  <div class="success-order-id">
+    Buyurtma raqami
+    <strong id="successOrderId">#0000</strong>
+  </div>
+  <button class="back-to-menu-btn" onclick="backToMenu()">Menyuga qaytish</button>
+</div>
+
+<!-- ─── PRODUCT MODAL ─── -->
+<div class="product-modal-overlay" id="productModalOverlay" onclick="if(event.target===this) closeProductModal()">
+  <div class="product-modal">
+    <div class="product-modal-grip"></div>
+    <button class="product-modal-close" onclick="closeProductModal()">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="product-modal-img" id="productModalImgWrap"></div>
+    <div class="product-modal-body">
+      <div class="product-modal-badge-row" id="productModalBadgeRow"></div>
+      <div class="product-modal-name" id="productModalName"></div>
+      <div class="product-modal-desc" id="productModalDesc"></div>
+      <div class="product-modal-footer">
+        <div class="product-modal-price" id="productModalPrice"></div>
+        <div id="productModalCtrl"></div>
       </div>
     </div>
   </div>
-</section>
+</div>
 
-<!-- WHITE LABEL -->
-<section id="whitelabel" style="background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
-  <div class="container">
-    <div class="wl-grid">
-      <div class="reveal">
-        <div class="section-label" data-i18n="wl.label">White Label</div>
-        <h2 data-i18n="wl.h2">Your brand.<br>Our engine.</h2>
-        <p class="section-sub" data-i18n="wl.sub">Sell the platform as your own product. Every restaurant gets a fully branded experience — from the Telegram bot name to the PWA icon.</p>
-        <ul class="wl-list">
-          <li data-i18n="wl.l1">Custom domain per restaurant (e.g. menu.yourrestaurant.com)</li>
-          <li data-i18n="wl.l2">Per-restaurant Telegram bot with unique name and avatar</li>
-          <li data-i18n="wl.l3">Dynamic brand colors applied across the entire UI</li>
-          <li data-i18n="wl.l4">Custom logo, welcome screen and restaurant slug</li>
-          <li data-i18n="wl.l5">Agency admin panel to manage all clients in one place</li>
-          <li data-i18n="wl.l6">Restaurants onboard and manage menus independently</li>
-        </ul>
+<!-- ─── CART BAR ─── -->
+<div class="cart-bar" id="cartBar">
+  <button class="cart-btn" onclick="openCart()">
+    <div class="cart-btn-left">
+      <div class="cart-btn-icon">
+        <svg class="icon" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>
       </div>
-      <div class="reveal">
-        <div class="wl-visual">
-          <div class="wl-browser-bar">
-            <div class="wl-dot" style="background:#FF5F56"></div>
-            <div class="wl-dot" style="background:#FFBD2E"></div>
-            <div class="wl-dot" style="background:#27C93F"></div>
-            <div class="wl-url">menu.chinar-restaurant.uz</div>
-          </div>
-          <div class="wl-preview">
-            <div class="wl-restaurant-name" style="color: #7C5C3E" id="wl-name">🌿 Chinar Restaurant</div>
-            <div class="wl-restaurant-sub" data-i18n="wl.demo.sub">Tashkent · Open now</div>
-            <div class="wl-menu-item">
-              <div>
-                <span data-i18n="wl.dish1">Plov (Uzbek Rice)</span>
-                <span class="wl-badge" style="background:rgba(79,110,247,0.15); color: #8BA4FA" data-i18n="wl.badge.popular">Popular</span>
-              </div>
-              <span class="wl-price">45,000</span>
-            </div>
-            <div class="wl-menu-item">
-              <div>
-                <span data-i18n="wl.dish2">Shashlik (Lamb)</span>
-                <span class="wl-badge" style="background:rgba(52,211,153,0.15); color: #34D399" data-i18n="wl.badge.new">New</span>
-              </div>
-              <span class="wl-price">38,000</span>
-            </div>
-            <div class="wl-menu-item">
-              <div><span data-i18n="wl.dish3">Samsa (3 pcs)</span></div>
-              <span class="wl-price">18,000</span>
-            </div>
-          </div>
-          <div style="margin-top:20px;display:flex;gap:10px">
-            <div style="flex:1;background:var(--accent);color:#fff;text-align:center;padding:10px;border-radius:8px;font-weight:600;font-size:14px" data-i18n="wl.btn.order">Order Now</div>
-            <div style="background:var(--elevated);color:var(--muted);text-align:center;padding:10px;border-radius:8px;font-size:14px;width:44px">📞</div>
-          </div>
-        </div>
-        <div style="margin-top:12px; text-align:center">
-          <button onclick="switchDemo()" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline" data-i18n="wl.switch">Switch restaurant →</button>
-        </div>
-      </div>
+      <span class="cart-count-badge" id="cartCountBadge">0</span>
     </div>
-  </div>
-</section>
-
-<!-- TECH STACK -->
-<section>
-  <div class="container">
-    <div class="section-header reveal" style="text-align:center; margin-bottom:0">
-      <div class="section-label" data-i18n="tech.label">Stack</div>
-      <h2 data-i18n="tech.h2">Built on proven,<br>modern technology.</h2>
-      <p class="section-sub" style="margin: 0 auto" data-i18n="tech.sub">Every component chosen for reliability and scalability. No experimental dependencies.</p>
-    </div>
-    <div class="tech-grid reveal" style="justify-content:center">
-      <div class="tech-badge"><div class="dot"></div>FastAPI</div>
-      <div class="tech-badge"><div class="dot"></div>PostgreSQL</div>
-      <div class="tech-badge"><div class="dot"></div>SQLAlchemy</div>
-      <div class="tech-badge"><div class="dot"></div>Telegram Mini App</div>
-      <div class="tech-badge"><div class="dot"></div>JWT + Fernet</div>
-      <div class="tech-badge"><div class="dot"></div>PWA / Service Worker</div>
-      <div class="tech-badge"><div class="dot"></div>Docker</div>
-      <div class="tech-badge"><div class="dot"></div>Alembic</div>
-      <div class="tech-badge"><div class="dot"></div>Sentry</div>
-      <div class="tech-badge"><div class="dot"></div>GitHub Actions CI/CD</div>
-      <div class="tech-badge"><div class="dot"></div>slowapi Rate Limiting</div>
-      <div class="tech-badge"><div class="dot"></div>HMAC-SHA256</div>
-    </div>
-  </div>
-</section>
-
-<!-- ANALYTICS -->
-<section id="analytics" style="background: var(--surface); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
-  <div class="container">
-    <div class="analytics-grid">
-      <div class="reveal">
-        <div class="section-label" data-i18n="analytics.label">Analytics</div>
-        <h2 data-i18n="analytics.h2">Data your clients<br>will actually use.</h2>
-        <p class="section-sub" data-i18n="analytics.sub">Built-in analytics dashboard with KPI cards, revenue charts, top dishes, peak hours and order type breakdown — all filterable by period.</p>
-        <ul class="wl-list" style="margin-top:24px">
-          <li data-i18n="an.l1">Revenue by day with trend indicators</li>
-          <li data-i18n="an.l2">Top-performing dishes ranked by orders</li>
-          <li data-i18n="an.l3">Peak hours heatmap for staffing decisions</li>
-          <li data-i18n="an.l4">Order type split: delivery / takeaway / dine-in</li>
-          <li data-i18n="an.l5">Period filters: today, 7d, 30d, 90d, this month</li>
-        </ul>
-      </div>
-      <div class="reveal">
-        <div class="analytics-visual">
-          <div class="analytics-header">
-            <div class="analytics-title" data-i18n="an.dash">Revenue Overview</div>
-            <div class="analytics-period">Last 30 days</div>
-          </div>
-          <div class="kpi-row">
-            <div class="kpi-card">
-              <div class="kpi-val">$4,820</div>
-              <div class="kpi-lbl" data-i18n="an.revenue">Revenue</div>
-              <div class="kpi-delta">↑ 18%</div>
-            </div>
-            <div class="kpi-card">
-              <div class="kpi-val">347</div>
-              <div class="kpi-lbl" data-i18n="an.orders">Orders</div>
-              <div class="kpi-delta">↑ 12%</div>
-            </div>
-            <div class="kpi-card">
-              <div class="kpi-val">$13.9</div>
-              <div class="kpi-lbl" data-i18n="an.avg">Avg Check</div>
-              <div class="kpi-delta">↑ 5%</div>
-            </div>
-          </div>
-          <div class="bar-chart" id="barChart">
-            <div class="bar" style="height:40%"></div>
-            <div class="bar" style="height:55%"></div>
-            <div class="bar" style="height:35%"></div>
-            <div class="bar" style="height:70%"></div>
-            <div class="bar" style="height:50%"></div>
-            <div class="bar" style="height:80%"></div>
-            <div class="bar active" style="height:95%"></div>
-            <div class="bar" style="height:65%"></div>
-            <div class="bar" style="height:75%"></div>
-            <div class="bar" style="height:60%"></div>
-            <div class="bar" style="height:85%"></div>
-            <div class="bar" style="height:100%"></div>
-          </div>
-          <div style="display:flex;justify-content:space-between;margin-top:8px">
-            <span style="font-size:11px;color:var(--muted)">Jun 9</span>
-            <span style="font-size:11px;color:var(--muted)">Jun 30</span>
-            <span style="font-size:11px;color:var(--muted)">Jul 9</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- BILLING -->
-<section id="pricing">
-  <div class="container">
-    <div class="section-header reveal" style="text-align:center">
-      <div class="section-label" data-i18n="billing.label">Pricing</div>
-      <h2 data-i18n="billing.h2">Simple, predictable pricing.<br>No commissions.</h2>
-      <p class="section-sub" style="margin:0 auto" data-i18n="billing.sub">Fixed monthly subscription replaces the 25–30% commission taken by food aggregators. Your clients keep their revenue.</p>
-    </div>
-    <div class="pricing-grid reveal">
-      <div class="pricing-card">
-        <div class="plan-name" data-i18n="plan.free">Free</div>
-        <div class="plan-price"><sup>$</sup>0</div>
-        <div class="plan-period" data-i18n="plan.free.period">forever</div>
-        <ul class="plan-features">
-          <li data-i18n="pf1.1">1 restaurant</li>
-          <li data-i18n="pf1.2">Up to 50 orders/month</li>
-          <li data-i18n="pf1.3">Basic menu management</li>
-          <li data-i18n="pf1.4">Telegram bot</li>
-          <li class="off" data-i18n="pf1.5">Analytics dashboard</li>
-          <li class="off" data-i18n="pf1.6">White label branding</li>
-          <li class="off" data-i18n="pf1.7">Priority support</li>
-        </ul>
-        <button class="btn-plan" data-i18n="plan.start">Get started</button>
-      </div>
-      <div class="pricing-card featured">
-        <div class="popular-badge" data-i18n="plan.popular">Most Popular</div>
-        <div class="plan-name" data-i18n="plan.basic">Basic</div>
-        <div class="plan-price"><sup>$</sup>29</div>
-        <div class="plan-period" data-i18n="plan.month">per month</div>
-        <ul class="plan-features">
-          <li data-i18n="pf2.1">Up to 5 restaurants</li>
-          <li data-i18n="pf2.2">Unlimited orders</li>
-          <li data-i18n="pf2.3">Full menu management</li>
-          <li data-i18n="pf2.4">Telegram bot per restaurant</li>
-          <li data-i18n="pf2.5">Analytics dashboard</li>
-          <li data-i18n="pf2.6">QR code management</li>
-          <li class="off" data-i18n="pf2.7">White label branding</li>
-        </ul>
-        <button class="btn-plan featured" data-i18n="plan.choose">Choose Basic</button>
-      </div>
-      <div class="pricing-card">
-        <div class="plan-name" data-i18n="plan.pro">Pro</div>
-        <div class="plan-price"><sup>$</sup>79</div>
-        <div class="plan-period" data-i18n="plan.month">per month</div>
-        <ul class="plan-features">
-          <li data-i18n="pf3.1">Unlimited restaurants</li>
-          <li data-i18n="pf3.2">Unlimited orders</li>
-          <li data-i18n="pf3.3">Full white label branding</li>
-          <li data-i18n="pf3.4">Custom domains</li>
-          <li data-i18n="pf3.5">Advanced analytics</li>
-          <li data-i18n="pf3.6">Priority support</li>
-          <li data-i18n="pf3.7">PDF invoices</li>
-        </ul>
-        <button class="btn-plan" data-i18n="plan.choose.pro">Choose Pro</button>
-      </div>
-    </div>
-    <div style="text-align:center;margin-top:32px">
-      <p style="font-size:14px;color:var(--muted)" data-i18n="billing.note">Acquiring the platform? <a href="#contact" style="color:var(--accent)">Contact us</a> for asset sale pricing and source code licensing.</p>
-    </div>
-  </div>
-</section>
-
-<!-- FAQ -->
-<section id="faq" style="background: var(--surface); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
-  <div class="container">
-    <div class="section-header reveal" style="text-align:center">
-      <div class="section-label">FAQ</div>
-      <h2 data-i18n="faq.h2">Common questions.</h2>
-    </div>
-    <div class="faq-list reveal">
-      <div class="faq-item">
-        <div class="faq-q" onclick="toggleFaq(this)">
-          <span class="faq-q-text" data-i18n="faq.q1">What does "white label" mean exactly?</span>
-          <div class="faq-icon">+</div>
-        </div>
-        <div class="faq-a" data-i18n="faq.a1">You (or your client) gets the platform running under a completely custom brand. The Telegram bot has a custom name, the web app shows the restaurant's logo and colors, and the URL is a custom domain. End customers never see "Taomly" — they see the restaurant's brand.</div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-q" onclick="toggleFaq(this)">
-          <span class="faq-q-text" data-i18n="faq.q2">How long does it take to deploy a new restaurant?</span>
-          <div class="faq-icon">+</div>
-        </div>
-        <div class="faq-a" data-i18n="faq.a2">Once the platform is deployed, adding a new restaurant takes 2–3 minutes in the agency admin panel: enter the restaurant name, slug, Telegram bot token, and brand colors. The system auto-generates webhooks, PWA manifest, and QR codes. No developer involvement needed.</div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-q" onclick="toggleFaq(this)">
-          <span class="faq-q-text" data-i18n="faq.q3">Does each restaurant need a separate Telegram bot?</span>
-          <div class="faq-icon">+</div>
-        </div>
-        <div class="faq-a" data-i18n="faq.a3">Yes — each restaurant gets its own dedicated Telegram bot (@YourRestaurant_bot). This is what enables full white labeling. Creating a bot via @BotFather takes 30 seconds, and the platform handles all webhook configuration automatically.</div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-q" onclick="toggleFaq(this)">
-          <span class="faq-q-text" data-i18n="faq.q4">Can I buy the source code and host it myself?</span>
-          <div class="faq-icon">+</div>
-        </div>
-        <div class="faq-a" data-i18n="faq.a4">Yes. The platform is available as an asset sale — full source code, documentation, deployment guides, test suite and architecture docs. Deploy on any cloud provider that supports Python/Docker. Contact us to discuss licensing terms.</div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-q" onclick="toggleFaq(this)">
-          <span class="faq-q-text" data-i18n="faq.q5">What database and infrastructure does it use?</span>
-          <div class="faq-icon">+</div>
-        </div>
-        <div class="faq-a" data-i18n="faq.a5">PostgreSQL (tested on Neon, works on any Postgres). Backend is FastAPI + SQLAlchemy. Deployable via Docker on Render, Railway, DigitalOcean, AWS, GCP. Includes docker-compose.yml, Dockerfile, Alembic migrations and GitHub Actions CI/CD pipeline.</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- CONTACT -->
-<section id="contact" class="contact-section">
-  <div class="container">
-    <div class="contact-box reveal">
-      <h2 data-i18n="contact.h2">Ready to launch?</h2>
-      <p data-i18n="contact.sub">Whether you're acquiring the platform or launching for your clients — get in touch and we'll respond within 24 hours.</p>
-      <div class="contact-form">
-        <div class="form-row">
-          <div class="form-group">
-            <label data-i18n="form.name">Full Name</label>
-            <input type="text" id="fname" placeholder="John Smith" />
-          </div>
-          <div class="form-group">
-            <label data-i18n="form.company">Company</label>
-            <input type="text" id="fcompany" placeholder="Acme Agency" />
-          </div>
-        </div>
-        <div class="form-group">
-          <label data-i18n="form.email">Email</label>
-          <input type="email" id="femail" placeholder="john@example.com" />
-        </div>
-        <div class="form-group">
-          <label data-i18n="form.interest">I'm interested in</label>
-          <select id="finterest">
-            <option data-i18n="form.opt1">Acquiring the platform (asset sale)</option>
-            <option data-i18n="form.opt2">White label for my agency</option>
-            <option data-i18n="form.opt3">SaaS subscription for my restaurant</option>
-            <option data-i18n="form.opt4">Custom development / integration</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label data-i18n="form.message">Message</label>
-          <textarea id="fmessage" placeholder="Tell us about your project..."></textarea>
-        </div>
-        <button class="btn-submit" onclick="submitForm()" data-i18n="form.submit">Send Message →</button>
-        <div class="form-success" id="formSuccess" data-i18n="form.success">✓ Message received. We'll get back to you within 24 hours.</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- FOOTER -->
-<footer>
-  <div class="container">
-    <div class="footer-inner">
-      <div class="footer-left">
-        <strong>Taomly</strong> — White Label Restaurant SaaS<br>
-        <span style="font-size:12px" data-i18n="footer.copy">© 2026 Taomly. Built with FastAPI & Telegram Mini App.</span>
-      </div>
-      <div class="footer-links">
-        <a href="https://taomly.onrender.com/docs" target="_blank">API Docs</a>
-        <a href="#contact" data-i18n="footer.contact">Contact</a>
-        <a href="#pricing" data-i18n="footer.pricing">Pricing</a>
-      </div>
-    </div>
-  </div>
-</footer>
+    <div class="cart-divider"></div>
+    <span class="cart-total-text" id="cartTotalBar">0 so'm</span>
+  </button>
+</div>
 
 <script>
-const LANG = {
-  en: {
-    'nav.features': 'Features', 'nav.whitelabel': 'White Label', 'nav.analytics': 'Analytics',
-    'nav.pricing': 'Pricing', 'nav.contact': 'Contact', 'nav.cta': 'Request Demo', 'nav.faq': 'FAQ',
-    'hero.badge': 'Multi-tenant · White Label · Production Ready',
-    'hero.h1a': 'Launch your branded', 'hero.h1b': 'restaurant platform', 'hero.h1c': 'in days, not months.',
-    'hero.sub': 'A complete white label SaaS for restaurant ordering — Telegram Mini App, PWA, multi-tenant architecture, analytics and billing. Ready to deploy under your brand.',
-    'hero.cta1': 'Request Demo', 'hero.cta2': 'Explore Features',
-    'metrics.restaurants': 'Restaurants', 'metrics.orders': 'Orders Processed', 'metrics.uptime': 'Uptime', 'metrics.deploy': 'Deploy Time',
-    'features.label': 'Platform', 'features.h2': 'Everything your clients need.<br>Nothing they don\'t.',
-    'features.sub': 'Built for agencies and integrators who want to deliver a complete restaurant solution under their own brand.',
-    'f1.t': 'Telegram Mini App', 'f1.d': 'Native ordering experience inside Telegram. Each restaurant gets its own dedicated bot with full menu, cart, and order tracking.',
-    'f2.t': 'White Label Branding', 'f2.d': 'Per-restaurant logos, colors, and domain. Dynamic PWA manifests generate unique branded apps for every client automatically.',
-    'f3.t': 'Progressive Web App', 'f3.d': 'Installable on iOS and Android with offline support, push-ready service workers and per-restaurant web app manifests.',
-    'f4.t': 'Multi-Tenant Architecture', 'f4.d': 'Agency → Restaurant → Customer three-tier model. Complete data isolation between tenants with JWT + Fernet encryption.',
-    'f5.t': 'QR Menu & Table Orders', 'f5.d': 'Unique QR codes per table, per restaurant. Guests scan and order instantly — no app install required. Built-in QR generator.',
-    'f6.t': 'Delivery · Takeaway · Dine-in', 'f6.d': 'All three order modes in one platform. Restaurants configure which modes are active. Full order lifecycle with real-time status updates.',
-    'f7.t': 'Instant Notifications', 'f7.d': 'Telegram notifications for every order event — placed, confirmed, preparing, ready, delivered. Dispatched via async background tasks.',
-    'f8.t': 'Enterprise Security', 'f8.d': 'HMAC-SHA256 webhook verification, IDOR protection, rate limiting, JWT with role-based access. Full audit trail.',
-    'f9.t': 'Docker Ready', 'f9.d': 'Docker + docker-compose included. Deploy on any cloud — Render, Railway, DigitalOcean, AWS, GCP. CI/CD via GitHub Actions.',
-    'wl.label': 'White Label', 'wl.h2': 'Your brand.<br>Our engine.', 'wl.sub': 'Sell the platform as your own product. Every restaurant gets a fully branded experience — from the Telegram bot name to the PWA icon.',
-    'wl.l1': 'Custom domain per restaurant (e.g. menu.yourrestaurant.com)', 'wl.l2': 'Per-restaurant Telegram bot with unique name and avatar',
-    'wl.l3': 'Dynamic brand colors applied across the entire UI', 'wl.l4': 'Custom logo, welcome screen and restaurant slug',
-    'wl.l5': 'Agency admin panel to manage all clients in one place', 'wl.l6': 'Restaurants onboard and manage menus independently',
-    'wl.demo.sub': 'Tashkent · Open now', 'wl.dish1': 'Plov (Uzbek Rice)', 'wl.dish2': 'Shashlik (Lamb)', 'wl.dish3': 'Samsa (3 pcs)',
-    'wl.badge.popular': 'Popular', 'wl.badge.new': 'New', 'wl.btn.order': 'Order Now', 'wl.switch': 'Switch restaurant →',
-    'tech.label': 'Stack', 'tech.h2': 'Built on proven,<br>modern technology.', 'tech.sub': 'Every component chosen for reliability and scalability. No experimental dependencies.',
-    'analytics.label': 'Analytics', 'analytics.h2': 'Data your clients<br>will actually use.', 'analytics.sub': 'Built-in analytics dashboard with KPI cards, revenue charts, top dishes, peak hours and order type breakdown — all filterable by period.',
-    'an.l1': 'Revenue by day with trend indicators', 'an.l2': 'Top-performing dishes ranked by orders', 'an.l3': 'Peak hours heatmap for staffing decisions',
-    'an.l4': 'Order type split: delivery / takeaway / dine-in', 'an.l5': 'Period filters: today, 7d, 30d, 90d, this month',
-    'an.dash': 'Revenue Overview', 'an.revenue': 'Revenue', 'an.orders': 'Orders', 'an.avg': 'Avg Check',
-    'billing.label': 'Pricing', 'billing.h2': 'Simple, predictable pricing.<br>No commissions.', 'billing.sub': 'Fixed monthly subscription replaces the 25–30% commission taken by food aggregators. Your clients keep their revenue.',
-    'billing.note': 'Acquiring the platform? <a href="#contact" style="color:var(--accent)">Contact us</a> for asset sale pricing and source code licensing.',
-    'plan.free': 'Free', 'plan.basic': 'Basic', 'plan.pro': 'Pro', 'plan.popular': 'Most Popular',
-    'plan.free.period': 'forever', 'plan.month': 'per month', 'plan.start': 'Get started', 'plan.choose': 'Choose Basic', 'plan.choose.pro': 'Choose Pro',
-    'pf1.1': '1 restaurant', 'pf1.2': 'Up to 50 orders/month', 'pf1.3': 'Basic menu management', 'pf1.4': 'Telegram bot', 'pf1.5': 'Analytics dashboard', 'pf1.6': 'White label branding', 'pf1.7': 'Priority support',
-    'pf2.1': 'Up to 5 restaurants', 'pf2.2': 'Unlimited orders', 'pf2.3': 'Full menu management', 'pf2.4': 'Telegram bot per restaurant', 'pf2.5': 'Analytics dashboard', 'pf2.6': 'QR code management', 'pf2.7': 'White label branding',
-    'pf3.1': 'Unlimited restaurants', 'pf3.2': 'Unlimited orders', 'pf3.3': 'Full white label branding', 'pf3.4': 'Custom domains', 'pf3.5': 'Advanced analytics', 'pf3.6': 'Priority support', 'pf3.7': 'PDF invoices',
-    'faq.h2': 'Common questions.',
-    'faq.q1': 'What does "white label" mean exactly?', 'faq.a1': 'You (or your client) gets the platform running under a completely custom brand. The Telegram bot has a custom name, the web app shows the restaurant\'s logo and colors, and the URL is a custom domain. End customers never see "Taomly" — they see the restaurant\'s brand.',
-    'faq.q2': 'How long does it take to deploy a new restaurant?', 'faq.a2': 'Once the platform is deployed, adding a new restaurant takes 2–3 minutes in the agency admin panel: enter the restaurant name, slug, Telegram bot token, and brand colors. The system auto-generates webhooks, PWA manifest, and QR codes. No developer involvement needed.',
-    'faq.q3': 'Does each restaurant need a separate Telegram bot?', 'faq.a3': 'Yes — each restaurant gets its own dedicated Telegram bot (@YourRestaurant_bot). This is what enables full white labeling. Creating a bot via @BotFather takes 30 seconds, and the platform handles all webhook configuration automatically.',
-    'faq.q4': 'Can I buy the source code and host it myself?', 'faq.a4': 'Yes. The platform is available as an asset sale — full source code, documentation, deployment guides, test suite and architecture docs. Deploy on any cloud provider that supports Python/Docker. Contact us to discuss licensing terms.',
-    'faq.q5': 'What database and infrastructure does it use?', 'faq.a5': 'PostgreSQL (tested on Neon, works on any Postgres). Backend is FastAPI + SQLAlchemy. Deployable via Docker on Render, Railway, DigitalOcean, AWS, GCP. Includes docker-compose.yml, Dockerfile, Alembic migrations and GitHub Actions CI/CD pipeline.',
-    'contact.h2': 'Ready to launch?', 'contact.sub': 'Whether you\'re acquiring the platform or launching for your clients — get in touch and we\'ll respond within 24 hours.',
-    'form.name': 'Full Name', 'form.company': 'Company', 'form.email': 'Email', 'form.interest': 'I\'m interested in',
-    'form.opt1': 'Acquiring the platform (asset sale)', 'form.opt2': 'White label for my agency', 'form.opt3': 'SaaS subscription for my restaurant', 'form.opt4': 'Custom development / integration',
-    'form.message': 'Message', 'form.submit': 'Send Message →', 'form.success': '✓ Message received. We\'ll get back to you within 24 hours.',
-    'footer.copy': '© 2026 Taomly. Built with FastAPI & Telegram Mini App.', 'footer.contact': 'Contact', 'footer.pricing': 'Pricing',
-  },
-  ru: {
-    'nav.features': 'Возможности', 'nav.whitelabel': 'White Label', 'nav.analytics': 'Аналитика',
-    'nav.pricing': 'Цены', 'nav.contact': 'Контакт', 'nav.cta': 'Запросить демо', 'nav.faq': 'FAQ',
-    'hero.badge': 'Мультиарендность · White Label · Готово к продакшену',
-    'hero.h1a': 'Запустите брендированную', 'hero.h1b': 'платформу заказов', 'hero.h1c': 'за дни, а не месяцы.',
-    'hero.sub': 'Полноценный white label SaaS для ресторанных заказов — Telegram Mini App, PWA, мультитенантная архитектура, аналитика и биллинг. Готов к деплою под вашим брендом.',
-    'hero.cta1': 'Запросить демо', 'hero.cta2': 'Изучить возможности',
-    'metrics.restaurants': 'Ресторанов', 'metrics.orders': 'Заказов обработано', 'metrics.uptime': 'Аптайм', 'metrics.deploy': 'Время деплоя',
-    'features.label': 'Платформа', 'features.h2': 'Всё, что нужно клиентам.<br>Ничего лишнего.',
-    'features.sub': 'Создано для агентств и интеграторов, которые хотят поставлять комплексное ресторанное решение под своим брендом.',
-    'f1.t': 'Telegram Mini App', 'f1.d': 'Нативный опыт заказов внутри Telegram. Каждый ресторан получает отдельного бота с меню, корзиной и отслеживанием заказов.',
-    'f2.t': 'White Label брендинг', 'f2.d': 'Логотипы, цвета и домен для каждого ресторана. Динамические PWA-манифесты автоматически создают уникальные приложения для каждого клиента.',
-    'f3.t': 'Progressive Web App', 'f3.d': 'Устанавливается на iOS и Android с офлайн-поддержкой, сервис-воркерами и отдельными манифестами для каждого ресторана.',
-    'f4.t': 'Мультитенантная архитектура', 'f4.d': 'Трёхуровневая модель: Агентство → Ресторан → Клиент. Полная изоляция данных между арендаторами через JWT + Fernet.',
-    'f5.t': 'QR-меню и заказы за столик', 'f5.d': 'Уникальные QR-коды для каждого стола и ресторана. Гости сканируют и заказывают мгновенно — без установки приложения.',
-    'f6.t': 'Доставка · Самовывоз · За столик', 'f6.d': 'Все три режима заказов в одной платформе. Рестораны настраивают доступные режимы. Полный жизненный цикл заказа.',
-    'f7.t': 'Мгновенные уведомления', 'f7.d': 'Telegram-уведомления для каждого события заказа — создан, подтверждён, готовится, готов, доставлен. Через async-фоновые задачи.',
-    'f8.t': 'Корпоративная безопасность', 'f8.d': 'HMAC-SHA256 верификация вебхуков, защита от IDOR, rate limiting, JWT с ролевым доступом. Полный аудит-трейл.',
-    'f9.t': 'Готово для Docker', 'f9.d': 'Docker + docker-compose включены. Деплой на любое облако — Render, Railway, DigitalOcean, AWS, GCP. CI/CD через GitHub Actions.',
-    'wl.label': 'White Label', 'wl.h2': 'Ваш бренд.<br>Наш движок.', 'wl.sub': 'Продавайте платформу как собственный продукт. Каждый ресторан получает полностью брендированный опыт — от имени Telegram-бота до иконки PWA.',
-    'wl.l1': 'Кастомный домен для каждого ресторана', 'wl.l2': 'Отдельный Telegram-бот с уникальным именем и аватаром',
-    'wl.l3': 'Динамические фирменные цвета во всём интерфейсе', 'wl.l4': 'Кастомный логотип, экран приветствия и slug ресторана',
-    'wl.l5': 'Агентская админка для управления всеми клиентами', 'wl.l6': 'Рестораны самостоятельно управляют меню без участия разработчика',
-    'wl.demo.sub': 'Ташкент · Открыто', 'wl.dish1': 'Плов (узбекский)', 'wl.dish2': 'Шашлык (баранина)', 'wl.dish3': 'Самса (3 шт)',
-    'wl.badge.popular': 'Популярное', 'wl.badge.new': 'Новинка', 'wl.btn.order': 'Заказать', 'wl.switch': 'Сменить ресторан →',
-    'tech.label': 'Стек', 'tech.h2': 'Построено на проверенных<br>современных технологиях.', 'tech.sub': 'Каждый компонент выбран за надёжность и масштабируемость. Никаких экспериментальных зависимостей.',
-    'analytics.label': 'Аналитика', 'analytics.h2': 'Данные, которыми<br>клиенты реально пользуются.', 'analytics.sub': 'Встроенная аналитика с KPI-карточками, графиками выручки, топ-блюдами, пиковыми часами и разбивкой по типам заказов — с фильтрами по периоду.',
-    'an.l1': 'Выручка по дням с трендами', 'an.l2': 'Топ блюд по количеству заказов', 'an.l3': 'Тепловая карта пиковых часов',
-    'an.l4': 'Разбивка: доставка / самовывоз / за столик', 'an.l5': 'Фильтры: сегодня, 7д, 30д, 90д, этот месяц',
-    'an.dash': 'Обзор выручки', 'an.revenue': 'Выручка', 'an.orders': 'Заказы', 'an.avg': 'Средний чек',
-    'billing.label': 'Тарифы', 'billing.h2': 'Простые, предсказуемые тарифы.<br>Без комиссий.', 'billing.sub': 'Фиксированная подписка заменяет 25–30% комиссию агрегаторов. Клиенты сохраняют свою выручку.',
-    'billing.note': 'Хотите приобрести платформу? <a href="#contact" style="color:var(--accent)">Напишите нам</a> для обсуждения условий.',
-    'plan.free': 'Бесплатно', 'plan.basic': 'Базовый', 'plan.pro': 'Про', 'plan.popular': 'Популярный',
-    'plan.free.period': 'навсегда', 'plan.month': 'в месяц', 'plan.start': 'Начать', 'plan.choose': 'Выбрать Базовый', 'plan.choose.pro': 'Выбрать Про',
-    'pf1.1': '1 ресторан', 'pf1.2': 'До 50 заказов/месяц', 'pf1.3': 'Базовое управление меню', 'pf1.4': 'Telegram-бот', 'pf1.5': 'Аналитика', 'pf1.6': 'White label брендинг', 'pf1.7': 'Приоритетная поддержка',
-    'pf2.1': 'До 5 ресторанов', 'pf2.2': 'Неограниченные заказы', 'pf2.3': 'Полное управление меню', 'pf2.4': 'Telegram-бот для каждого', 'pf2.5': 'Аналитика', 'pf2.6': 'Управление QR-кодами', 'pf2.7': 'White label брендинг',
-    'pf3.1': 'Неограниченные рестораны', 'pf3.2': 'Неограниченные заказы', 'pf3.3': 'Полный white label', 'pf3.4': 'Кастомные домены', 'pf3.5': 'Расширенная аналитика', 'pf3.6': 'Приоритетная поддержка', 'pf3.7': 'PDF-счета',
-    'faq.h2': 'Частые вопросы.',
-    'faq.q1': 'Что конкретно означает "white label"?', 'faq.a1': 'Вы получаете платформу под полностью кастомным брендом. Telegram-бот имеет своё имя, веб-приложение показывает логотип и цвета ресторана, URL — кастомный домен. Конечные клиенты не видят "Taomly".',
-    'faq.q2': 'Сколько времени занимает подключение нового ресторана?', 'faq.a2': 'После деплоя платформы добавление ресторана занимает 2–3 минуты в агентской админке: имя, slug, токен бота и цвета. Система автоматически настраивает вебхуки, PWA-манифест и QR-коды.',
-    'faq.q3': 'Нужен ли отдельный Telegram-бот для каждого ресторана?', 'faq.a3': 'Да — каждый ресторан получает своего бота. Создание через @BotFather занимает 30 секунд, платформа автоматически настраивает вебхуки.',
-    'faq.q4': 'Можно ли купить исходный код?', 'faq.a4': 'Да. Платформа доступна как asset sale — полный исходный код, документация, гайды по деплою и тест-сьют. Хостите на любом провайдере с поддержкой Python/Docker.',
-    'faq.q5': 'Какая база данных и инфраструктура?', 'faq.a5': 'PostgreSQL (проверено на Neon). Бэкенд: FastAPI + SQLAlchemy. Docker на Render, Railway, DigitalOcean, AWS, GCP. Включает docker-compose.yml, Dockerfile, Alembic и GitHub Actions.',
-    'contact.h2': 'Готовы к запуску?', 'contact.sub': 'Хотите приобрести платформу или запустить для клиентов — напишите, ответим в течение 24 часов.',
-    'form.name': 'Имя', 'form.company': 'Компания', 'form.email': 'Email', 'form.interest': 'Меня интересует',
-    'form.opt1': 'Приобрести платформу (asset sale)', 'form.opt2': 'White label для агентства', 'form.opt3': 'SaaS подписка для ресторана', 'form.opt4': 'Кастомная разработка / интеграция',
-    'form.message': 'Сообщение', 'form.submit': 'Отправить →', 'form.success': '✓ Сообщение получено. Ответим в течение 24 часов.',
-    'footer.copy': '© 2026 Taomly. Построено на FastAPI и Telegram Mini App.', 'footer.contact': 'Контакт', 'footer.pricing': 'Цены',
+const API_BASE = '';
+const DEFAULT_SLUG = 'chinar';
+
+let restaurant = null;
+let cart = {};
+let orderType = 'delivery';
+let tableNumber = null;
+let tableDbId = null;
+let restaurantSlug = DEFAULT_SLUG;
+
+
+function parseParams() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const slugParam = urlParams.get('slug');
+  const tableParam = urlParams.get('table');
+  if (slugParam) {
+    restaurantSlug = slugParam;
+    if (tableParam) { tableNumber = tableParam; orderType = 'dine_in'; }
+    return;
   }
+  const tg = window.Telegram?.WebApp;
+  const startParam = tg?.initDataUnsafe?.start_param || '';
+  if (startParam) {
+    const parts = startParam.split('_');
+    if (parts.length >= 2 && !isNaN(parts[parts.length - 1])) {
+      tableNumber = parts[parts.length - 1];
+      restaurantSlug = parts.slice(0, -1).join('_');
+      orderType = 'dine_in';
+    } else { restaurantSlug = startParam; }
+  }
+}
+
+function fmt(p) { return p.toLocaleString('uz-UZ') + ' so\'m'; }
+
+// Двухстрочная типографика цены: число крупно, валюта мелким капсом снизу.
+// Используется только в карточках блюд (.product-price), не в итогах/корзине,
+// где компактный однострочный формат читается лучше.
+function fmtTwoLine(p) {
+  return `${p.toLocaleString('uz-UZ')}<span class="price-currency">so'm</span>`;
+}
+
+// White Label брендинг: применяет цвета, manifest и title конкретного ресторана.
+// Вызывается один раз после загрузки данных ресторана из API.
+// Все элементы интерфейса используют CSS variables — изменение :root
+// автоматически перекрашивает весь интерфейс без перерисовки DOM.
+function applyBrandTheme(r) {
+  const root = document.documentElement;
+
+  // ── CSS Variables ──────────────────────────────────────────────
+  // primary_color → кнопки, активные элементы, cart badge
+  if (r.primary_color) {
+    root.style.setProperty('--ruby',      r.primary_color);
+    root.style.setProperty('--ruby-deep', _darken(r.primary_color, 15));
+    root.style.setProperty('--shadow-ruby',
+      `0 3px 10px ${_hexToRgba(r.primary_color, 0.22)}`);
+  }
+
+  // accent_color → золотые акценты, разделители, цена
+  if (r.accent_color) {
+    root.style.setProperty('--gold',      r.accent_color);
+    root.style.setProperty('--gold-soft', r.accent_color);
+  }
+
+  // secondary_color → фон страницы
+  if (r.secondary_color) {
+    root.style.setProperty('--bg',      r.secondary_color);
+    root.style.setProperty('--surface', _darken(r.secondary_color, 5));
+  }
+
+  // ── <meta name="theme-color"> ──────────────────────────────────
+  // Меняет цвет строки браузера/статус-бара на мобильных
+  if (r.primary_color) {
+    const tc = document.getElementById('pwaThemeColor');
+    if (tc) tc.setAttribute('content', r.primary_color);
+  }
+
+  // ── PWA: apple-mobile-web-app-title ───────────────────────────
+  if (r.name) {
+    const pt = document.getElementById('pwaTitle');
+    if (pt) pt.setAttribute('content', r.name);
+    document.title = r.name;
+  }
+
+  // ── Dynamic manifest ──────────────────────────────────────────
+  // Браузер читает manifest при первой загрузке — смена href
+  // влияет на установку PWA при следующем визите.
+  if (restaurantSlug) {
+    const ml = document.getElementById('pwaManifest');
+    if (ml) ml.setAttribute('href', `/manifest/${restaurantSlug}.json`);
+  }
+}
+
+// ── Утилиты для цветовых вычислений ───────────────────────────────
+// Конвертирует HEX в rgba строку для теней и оверлеев.
+function _hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// Затемняет HEX цвет на amount (0-255).
+// Используется для --ruby-deep и --surface.
+function _darken(hex, amount) {
+  if (!hex || hex.length < 7) return hex;
+  const r = Math.max(0, parseInt(hex.slice(1,3), 16) - amount);
+  const g = Math.max(0, parseInt(hex.slice(3,5), 16) - amount);
+  const b = Math.max(0, parseInt(hex.slice(5,7), 16) - amount);
+  return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+}
+
+async function loadMenu() {
+  try {
+    const res = await fetch(`${API_BASE}/api/restaurants/${restaurantSlug}`);
+    if (!res.ok) throw new Error('Server xatosi');
+    restaurant = await res.json();
+    applyBrandTheme(restaurant);
+
+    document.getElementById('splashName').textContent = restaurant.name;
+    document.getElementById('restaurantName').textContent = restaurant.name;
+    document.getElementById('restaurantAddress').textContent = restaurant.address || '';
+
+    // Логотип: настоящий logo_url ресторана, иначе монограмма из первой буквы
+    const logoWrap = document.getElementById('restaurantLogo');
+    if (restaurant.logo_url) {
+      logoWrap.innerHTML = `<img src="${restaurant.logo_url}" alt="${restaurant.name}">`;
+    } else {
+      const letter = restaurant.name ? restaurant.name[0].toUpperCase() : 'T';
+      logoWrap.innerHTML = `<div class="restaurant-logo-letter">${letter}</div>`;
+    }
+
+    // Приветствие — тонкая строка под именем ресторана, без цветного баннера.
+    // Интерфейс должен быть тихим: показываем текст, только если он задан.
+    const welcomeLine = document.getElementById('welcomeLine');
+    if (restaurant.welcome_text) {
+      document.getElementById('welcomeText').textContent = restaurant.welcome_text;
+      welcomeLine.style.display = 'block';
+    }
+
+    if (tableNumber) {
+      document.getElementById('tableBadgeText').textContent = 'Stol №' + tableNumber;
+      document.getElementById('tableBadge').style.display = 'inline-flex';
+      await resolveTableId();
+    }
+
+    renderFeatured();
+    renderCategories();
+    renderMenu();
+
+    setTimeout(() => {
+      document.getElementById('splash').classList.add('hidden');
+    }, 1400);
+
+  } catch (e) {
+    document.getElementById('menuContent').innerHTML =
+      `<div class="error-msg">Menyu yuklanmadi.<br>Qayta urinib ko'ring.</div>`;
+    document.getElementById('splash').classList.add('hidden');
+  }
+}
+
+// "Bugungi tavsiya" — собирается только из блюд, явно помеченных тегом
+// #chef в описании администратором. Никаких выдуманных рекомендаций.
+function renderFeatured() {
+  const section = document.getElementById('featuredSection');
+  const scroll = document.getElementById('featuredScroll');
+  const items = [];
+  (restaurant.categories || []).forEach(cat => {
+    (cat.products || []).forEach(p => {
+      const { badge } = extractBadge(p.description);
+      if (badge && badge.cls === 'chef') items.push(p);
+    });
+  });
+  if (items.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  scroll.innerHTML = '';
+  items.forEach(p => {
+    const { text } = extractBadge(p.description);
+    const card = document.createElement('div');
+    card.className = 'featured-card';
+    card.onclick = () => openProductModal(p.id);
+    const imgHtml = p.photo_url
+      ? `<img src="${p.photo_url}" alt="${p.name}">`
+      : `<svg class="icon" viewBox="0 0 24 24"><path d="M18 8a4 4 0 0 1 0 8M6 4v16M6 4c0 2.5 2.5 2.5 2.5 5S6 11.5 6 14"/></svg>`;
+    card.innerHTML = `
+      <div class="featured-img">${imgHtml}</div>
+      <div class="featured-body">
+        <div class="featured-name">${p.name}</div>
+        <div class="featured-price">${fmt(p.price)}</div>
+      </div>`;
+    scroll.appendChild(card);
+  });
+}
+
+async function resolveTableId() {
+  try {
+    const res = await fetch(`${API_BASE}/api/restaurants/${restaurantSlug}/table/${tableNumber}`);
+    if (res.ok) { const data = await res.json(); tableDbId = data.table_id; }
+  } catch (e) { tableDbId = null; }
+}
+
+function renderCategories() {
+  const nav = document.getElementById('categoriesNav');
+  nav.innerHTML = '';
+  restaurant.categories.forEach((cat, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = cat.name;
+    btn.onclick = () => {
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const el = document.getElementById('cat-' + cat.id);
+      if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+    };
+    nav.appendChild(btn);
+  });
+}
+
+function renderMenu() {
+  const content = document.getElementById('menuContent');
+  content.innerHTML = '';
+  cardAnimIndex = 0;
+  restaurant.categories.forEach((cat) => {
+    if (!cat.products || cat.products.length === 0) return;
+    const sec = document.createElement('div');
+    sec.className = 'category-section';
+    sec.id = 'cat-' + cat.id;
+    sec.innerHTML = `
+      <div class="category-title-wrap">
+        <div class="category-title">${cat.name}</div>
+        <div class="category-count">${cat.products.length} ta taom</div>
+      </div>
+      <div class="products-grid" id="grid-${cat.id}"></div>`;
+    content.appendChild(sec);
+    const grid = sec.querySelector('#grid-' + cat.id);
+    cat.products.forEach(p => grid.appendChild(makeCard(p)));
+  });
+}
+
+// Premium-бейджи: админ может пометить блюдо тегом прямо в описании,
+// например "Pikantniy ta'm #spicy" — тег парсится и красиво отображается,
+// а из текста описания убирается. Чисто фронтенд-логика, без изменений API.
+const BADGE_DEFS = {
+  bestseller: { label: 'Bestseller', cls: 'bestseller' },
+  chef:       { label: "Chef Choice", cls: 'chef' },
+  new:        { label: 'New', cls: 'new' },
+  spicy:      { label: 'Spicy', cls: 'spicy' },
 };
 
-let currentLang = 'en';
-function setLang(lang) {
-  currentLang = lang;
-  document.documentElement.lang = lang;
-  document.getElementById('langBtn').textContent = lang === 'en' ? 'RU' : 'EN';
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.getAttribute('data-i18n');
-    if (LANG[lang][key] !== undefined) el.innerHTML = LANG[lang][key];
+function extractBadge(description) {
+  if (!description) return { badge: null, text: '' };
+  const match = description.match(/#(bestseller|chef|new|spicy)\b/i);
+  if (!match) return { badge: null, text: description };
+  const key = match[1].toLowerCase();
+  const text = description.replace(match[0], '').trim();
+  return { badge: BADGE_DEFS[key], text };
+}
+
+let cardAnimIndex = 0;
+
+function makeCard(p) {
+  const div = document.createElement('div');
+  div.className = 'product-card';
+  div.id = 'card-' + p.id;
+  div.style.animationDelay = (cardAnimIndex++ % 8) * 0.04 + 's';
+  const qty = cart[p.id]?.qty || 0;
+  const { badge, text: descText } = extractBadge(p.description);
+  const badgeHtml = badge ? `<span class="badge-tag">${badge.label}</span>` : '';
+  // Если фото нет — карточка остаётся чистой текстовой, без иконки-заглушки.
+  // Дешёвая декоративная картинка "нет фото" дешевит карточку сильнее,
+  // чем её отсутствие.
+  const imgBlock = p.photo_url
+    ? `<div class="product-img" onclick="openProductModal(${p.id})"><img src="${p.photo_url}" alt="${p.name}"></div>`
+    : '';
+  div.innerHTML = `
+    ${imgBlock}
+    <div class="product-info">
+      <div class="product-name-row">
+        <div class="product-name" onclick="openProductModal(${p.id})">${p.name}</div>
+        ${badgeHtml}
+      </div>
+      ${descText ? `<div class="product-desc" onclick="openProductModal(${p.id})">${descText}</div>` : ''}
+      <div class="product-footer">
+        <div class="product-price">${fmtTwoLine(p.price)}</div>
+        <div id="ctrl-${p.id}">${ctrlHtml(p, qty)}</div>
+      </div>
+    </div>`;
+  return div;
+}
+
+function ctrlHtml(p, qty) {
+  if (qty === 0) return `<button class="add-btn" onclick="event.stopPropagation();addItem(${p.id})"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>`;
+  return `<div class="qty-control" onclick="event.stopPropagation();">
+    <button class="qty-btn" onclick="changeQty(${p.id},-1)"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+    <span class="qty-num">${qty}</span>
+    <button class="qty-btn" onclick="changeQty(${p.id},1)"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+  </div>`;
+}
+
+function findProduct(id) {
+  for (const cat of restaurant.categories) {
+    const p = cat.products.find(p => p.id === id);
+    if (p) return p;
+  }
+  return null;
+}
+
+function addItem(id) {
+  const p = findProduct(id);
+  if (!p) return;
+  cart[id] = { id, name:p.name, price:p.price, qty:1 };
+  refreshCtrl(id); updateBar();
+}
+
+function changeQty(id, delta) {
+  if (!cart[id]) return;
+  cart[id].qty += delta;
+  if (cart[id].qty <= 0) delete cart[id];
+  refreshCtrl(id); updateBar();
+  if (productModalCurrentId === id) refreshProductModalCtrl();
+}
+
+function refreshCtrl(id) {
+  const el = document.getElementById('ctrl-' + id);
+  if (!el) return;
+  const p = findProduct(id);
+  if (!p) return;
+  el.innerHTML = ctrlHtml(p, cart[id]?.qty || 0);
+}
+
+// ─── PRODUCT MODAL (fullscreen detail card) ───
+let productModalCurrentId = null;
+
+function openProductModal(id) {
+  const p = findProduct(id);
+  if (!p) return;
+  productModalCurrentId = id;
+
+  const { badge, text: descText } = extractBadge(p.description);
+  const imgWrap = document.getElementById('productModalImgWrap');
+  if (p.photo_url) {
+    imgWrap.style.display = 'flex';
+    imgWrap.innerHTML = `<img src="${p.photo_url}" alt="${p.name}">`;
+  } else {
+    imgWrap.style.display = 'none';
+    imgWrap.innerHTML = '';
+  }
+
+  document.getElementById('productModalBadgeRow').innerHTML =
+    badge ? `<span class="badge-tag">${badge.label}</span>` : '';
+  document.getElementById('productModalName').textContent = p.name;
+  document.getElementById('productModalDesc').textContent = descText || '';
+  document.getElementById('productModalPrice').innerHTML = fmtTwoLine(p.price);
+  refreshProductModalCtrl();
+
+  document.getElementById('productModalOverlay').classList.add('active');
+}
+
+function refreshProductModalCtrl() {
+  const id = productModalCurrentId;
+  const p = findProduct(id);
+  if (!p) return;
+  const qty = cart[id]?.qty || 0;
+  const ctrl = document.getElementById('productModalCtrl');
+  if (qty === 0) {
+    ctrl.innerHTML = `<button class="product-modal-add-btn" onclick="addItem(${id}); refreshProductModalCtrl();">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Savatga qo'shish
+    </button>`;
+  } else {
+    ctrl.innerHTML = `<div class="product-modal-qty">
+      <div class="qty-control">
+        <button class="qty-btn" onclick="changeQty(${id},-1)"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+        <span class="qty-num">${qty}</span>
+        <button class="qty-btn" onclick="changeQty(${id},1)"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+    </div>`;
+  }
+}
+
+function closeProductModal() {
+  document.getElementById('productModalOverlay').classList.remove('active');
+  productModalCurrentId = null;
+}
+
+function cartItems() { return Object.values(cart); }
+function cartTotal() { return cartItems().reduce((s,i) => s + i.price * i.qty, 0); }
+function cartCount() { return cartItems().reduce((s,i) => s + i.qty, 0); }
+
+function updateBar() {
+  const n = cartCount();
+  document.getElementById('cartCountBadge').textContent = n;
+  document.getElementById('cartTotalBar').textContent = fmt(cartTotal());
+  document.getElementById('cartBar').classList.toggle('visible', n > 0);
+}
+
+function openCart() { renderCart(); document.getElementById('cartScreen').classList.add('active'); }
+function closeCart() { document.getElementById('cartScreen').classList.remove('active'); }
+
+function selectType(type) {
+  orderType = type;
+  document.getElementById('typeDelivery').classList.toggle('active', type === 'delivery');
+  document.getElementById('typeTakeaway').classList.toggle('active', type === 'takeaway');
+  document.getElementById('clientAddress').style.display = type === 'delivery' ? 'block' : 'none';
+}
+
+function renderCart() {
+  const list = document.getElementById('cartItemsList');
+  list.innerHTML = '';
+  cartItems().forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'cart-item';
+    div.innerHTML = `
+      <div class="cart-item-gem"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a4 4 0 0 1 0 8M6 4v16M6 4c0 2.5 2.5 2.5 2.5 5S6 11.5 6 14"/></svg></div>
+      <div class="cart-item-info">
+        <div class="cart-item-name">${item.name}</div>
+        <div class="cart-item-price">${item.qty} × ${fmt(item.price)}</div>
+      </div>
+      <div class="qty-control">
+        <button class="qty-btn" onclick="cartChangeQty(${item.id},-1)"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+        <span class="qty-num">${item.qty}</span>
+        <button class="qty-btn" onclick="cartChangeQty(${item.id},1)"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>`;
+    list.appendChild(div);
+  });
+
+  document.getElementById('summaryCount').textContent = cartCount() + ' ta taom';
+  document.getElementById('summarySubtotal').textContent = fmt(cartTotal());
+  document.getElementById('summaryTotal').textContent = fmt(cartTotal());
+
+  if (orderType === 'dine_in') {
+    document.getElementById('orderTypeSection').style.display = 'none';
+    document.getElementById('clientAddress').style.display = 'none';
+    document.getElementById('clientName').style.display = 'none';
+    document.getElementById('clientPhone').style.display = 'none';
+    document.getElementById('tableBanner').style.display = 'flex';
+    document.getElementById('tableBannerTitle').textContent = 'Stol №' + tableNumber;
+  } else {
+    document.getElementById('orderTypeSection').style.display = 'block';
+    document.getElementById('tableBanner').style.display = 'none';
+    document.getElementById('clientName').style.display = 'block';
+    document.getElementById('clientPhone').style.display = 'block';
+    document.getElementById('clientAddress').style.display = orderType === 'delivery' ? 'block' : 'none';
+  }
+}
+
+function cartChangeQty(id, delta) {
+  changeQty(id, delta);
+  if (cartCount() === 0) { closeCart(); return; }
+  renderCart();
+}
+
+async function submitOrder() {
+  const btn = document.getElementById('checkoutBtn');
+  const name = document.getElementById('clientName').value.trim();
+  const phone = document.getElementById('clientPhone').value.trim();
+  const address = document.getElementById('clientAddress').value.trim();
+  const comment = document.getElementById('clientComment').value.trim();
+
+  if (orderType !== 'dine_in') {
+    if (!name) { alert('Ismingizni kiriting'); return; }
+    if (!phone || phone === '+998') { alert('Telefon raqamingizni kiriting'); return; }
+  }
+  if (orderType === 'delivery' && !address) { alert('Manzilni kiriting'); return; }
+
+  // initData обязателен — без него сервер отклонит запрос с 401
+  const tg = window.Telegram?.WebApp;
+  const initData = tg?.initData;
+  if (!initData) {
+    alert('Telegram Mini App dan foydalaning');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Yuborilmoqda...';
+
+  // restaurant_id и client_telegram_id убраны из payload —
+  // сервер берёт их из заголовков X-Restaurant-Id и X-Telegram-Init-Data
+  const payload = {
+    client_name: name || null,
+    client_phone: phone || null,
+    order_type: orderType,
+    address: orderType === 'delivery' ? address : null,
+    table_id: orderType === 'dine_in' ? tableDbId : null,
+    comment: comment || null,
+    items: cartItems().map(i => ({ product_id: i.id, quantity: i.qty }))
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // Сервер верифицирует подпись Telegram HMAC-SHA256
+        'X-Telegram-Init-Data': initData,
+        // Сервер загружает ресторан и его бот-токен для верификации
+        'X-Restaurant-Id': String(restaurant.id),
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Xato'); }
+    const order = await res.json();
+    showSuccess(order.id);
+  } catch (e) {
+    alert('Xato: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Buyurtma berish →';
+  }
+}
+
+function showSuccess(orderId) {
+  document.getElementById('successOrderId').textContent = '#' + String(orderId).padStart(4,'0');
+  if (orderType === 'dine_in') {
+    document.getElementById('successSubtitle').textContent = 'Buyurtmangiz qabul qilindi! Tez orada stolga yetkaziladi';
+  } else if (orderType === 'takeaway') {
+    document.getElementById('successSubtitle').textContent = "Tayyor bo'lganda xabar beramiz";
+  } else {
+    document.getElementById('successSubtitle').textContent = 'Tez orada yetkaziladi';
+  }
+  document.getElementById('cartScreen').classList.remove('active');
+  document.getElementById('successScreen').classList.add('active');
+  cart = {}; updateBar();
+}
+
+function backToMenu() {
+  document.getElementById('successScreen').classList.remove('active');
+  renderMenu();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const tg = window.Telegram?.WebApp;
+  if (tg) { tg.ready(); tg.expand(); }
+  parseParams();
+  loadMenu();
+});
+
+// ── PWA: Service Worker Registration ──────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/static/sw.js')
+      .then((reg) => {
+        console.log('[SW] Registered:', reg.scope);
+      })
+      .catch((err) => {
+        console.warn('[SW] Registration failed:', err);
+      });
   });
 }
-function toggleLang() { setLang(currentLang === 'en' ? 'ru' : 'en'); }
 
-const demos = [
-  { name: '🌿 Chinar Restaurant', color: '#7C5C3E', sub_en: 'Tashkent · Open now', sub_ru: 'Ташкент · Открыто', url: 'menu.chinar-restaurant.uz' },
-  { name: '🍕 Apex Pizza', color: '#D63031', sub_en: 'Bukhara · Open now', sub_ru: 'Бухара · Открыто', url: 'order.apexpizza.uz' },
-  { name: '☕ Nomad Coffee', color: '#2D3436', sub_en: 'Samarkand · Open now', sub_ru: 'Самарканд · Открыто', url: 'menu.nomadcoffee.uz' },
-];
-let demoIdx = 0;
-function switchDemo() {
-  demoIdx = (demoIdx + 1) % demos.length;
-  const d = demos[demoIdx];
-  document.getElementById('wl-name').style.color = d.color;
-  document.getElementById('wl-name').textContent = d.name;
-  document.querySelector('.wl-url').textContent = d.url;
-  document.querySelector('.wl-restaurant-sub').textContent = currentLang === 'en' ? d.sub_en : d.sub_ru;
-}
+// ── PWA: Install Prompt ────────────────────────────────────────────────
+// Сохраняем событие beforeinstallprompt для кастомной кнопки установки
+let _deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _deferredInstallPrompt = e;
+  // Показываем баннер "Добавить на рабочий стол" если он есть в DOM
+  const installBanner = document.getElementById('installBanner');
+  if (installBanner) installBanner.style.display = 'flex';
+});
 
-function toggleFaq(el) {
-  const item = el.parentElement;
-  const isOpen = item.classList.contains('open');
-  document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
-  if (!isOpen) item.classList.add('open');
-}
-
-function toggleMenu() { document.getElementById('mobileMenu').classList.toggle('open'); }
-
-function submitForm() {
-  const email = document.getElementById('femail').value;
-  if (!email || !email.includes('@')) { alert('Please enter a valid email.'); return; }
-  document.querySelector('.contact-form').style.display = 'none';
-  document.getElementById('formSuccess').style.display = 'block';
-}
-
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
-}, { threshold: 0.1 });
-document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-
-function animateCounters() {
-  document.querySelectorAll('.count').forEach(el => {
-    const target = parseInt(el.getAttribute('data-target'));
-    const step = target / (1800 / 16);
-    let current = 0;
-    const timer = setInterval(() => {
-      current += step;
-      if (current >= target) { el.textContent = target.toLocaleString(); clearInterval(timer); return; }
-      el.textContent = Math.floor(current).toLocaleString();
-    }, 16);
-  });
-}
-const metricObs = new IntersectionObserver((entries) => {
-  if (entries[0].isIntersecting) { animateCounters(); metricObs.disconnect(); }
-}, { threshold: 0.3 });
-const metricsEl = document.querySelector('.metrics');
-if (metricsEl) metricObs.observe(metricsEl);
-
-document.addEventListener('click', (e) => {
-  const menu = document.getElementById('mobileMenu');
-  const ham = document.getElementById('hamburger');
-  if (menu.classList.contains('open') && !menu.contains(e.target) && !ham.contains(e.target)) menu.classList.remove('open');
+window.addEventListener('appinstalled', () => {
+  _deferredInstallPrompt = null;
+  const installBanner = document.getElementById('installBanner');
+  if (installBanner) installBanner.style.display = 'none';
+  console.log('[PWA] App installed');
 });
 </script>
 </body>
