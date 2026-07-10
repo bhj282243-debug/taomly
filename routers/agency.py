@@ -5,6 +5,9 @@ routers/agency.py — Taomly Platform
   - Убрана дублированная логика WEBHOOK_SECRET/WEBHOOK_URL — теперь из config.py
   - Rate limiting на /login и /restaurant-login (10 req/min per IP)
   - Request передаётся в login endpoints для slowapi
+
+Изменения v4 (Stage 3 Sprint 3.1):
+  - Rate limiting на /register (5 req/hour per IP)
 """
 
 import logging
@@ -47,8 +50,12 @@ router = APIRouter(prefix="/api/agency", tags=["agency"])
 # AUTH
 # ──────────────────────────────────────────
 @router.post("/register", response_model=AgencyResponse, status_code=status.HTTP_201_CREATED)
-def register_agency(data: AgencyRegister, db: Session = Depends(get_db)):
-    """Регистрация нового агентства."""
+@limiter.limit("5/hour")
+def register_agency(request: Request, data: AgencyRegister, db: Session = Depends(get_db)):
+    """
+    Регистрация нового агентства.
+    Rate limited: 5 запросов в час с одного IP.
+    """
     existing = db.query(Agency).filter(Agency.owner_email == data.email).first()
     if existing:
         raise HTTPException(
@@ -90,7 +97,6 @@ def login_agency(request: Request, data: AgencyLogin, db: Session = Depends(get_
         Agency.is_active == True,
     ).first()
 
-    # Одно сообщение для обоих случаев — защита от user enumeration
     if not agency or not verify_password(data.password, agency.owner_password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -117,7 +123,6 @@ def login_restaurant_admin(
         Restaurant.is_active == True,
     ).first()
 
-    # Одно сообщение — защита от user enumeration
     if not restaurant or not restaurant.admin_password_hash:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -218,7 +223,6 @@ def create_restaurant(
         restaurant.id, slug, agency.id,
     )
 
-    # Автоматическая настройка Telegram-бота
     webhook_status = "skipped"
     webhook_detail = None
     if data.telegram_bot_token:
