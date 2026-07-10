@@ -13,6 +13,7 @@ schemas.py — Taomly Platform
   - RestaurantCreate/Update: logo_url — URL валидация (L-8)
   - ProductResponse: добавлены badge поля (is_bestseller, is_new, is_spicy, is_chef_choice) (M-2)
   - ProductCreate/Update: добавлены badge поля (M-2)
+  - Analytics и Billing схемы перенесены из routers/ (Sprint 3.2)
 """
 
 import re
@@ -46,10 +47,6 @@ def _validate_hex_color(value: Optional[str]) -> Optional[str]:
 
 
 def _validate_phone(value: Optional[str]) -> Optional[str]:
-    """
-    Принимает международные номера: +998901234567, +7 (999) 123-45-67.
-    Пустая строка → None. None → None.
-    """
     if not value:
         return None
     v = value.strip()
@@ -82,7 +79,6 @@ class ProductResponse(BaseModel):
     photo_url: Optional[str] = None
     is_available: bool
     sort_order: int
-    # Badges (M-2) — добавлены как отдельные поля, не парсятся из description
     is_bestseller: bool = False
     is_new: bool = False
     is_spicy: bool = False
@@ -108,7 +104,7 @@ class CategoryResponse(BaseModel):
 # ──────────────────────────────────────────
 class OrderItemCreate(BaseModel):
     product_id: int = Field(..., gt=0)
-    quantity: int = Field(..., ge=1, le=99)  # не больше 99 штук одного блюда
+    quantity: int = Field(..., ge=1, le=99)
 
 
 class OrderCreate(BaseModel):
@@ -129,11 +125,6 @@ class OrderCreate(BaseModel):
 
     @model_validator(mode="after")
     def validate_order_type_fields(self) -> "OrderCreate":
-        """
-        Кросс-полевая валидация:
-        - delivery требует address
-        - dine_in требует table_id
-        """
         if self.order_type == "delivery" and not self.address:
             raise ValueError("Для заказа с доставкой укажите адрес (address)")
         if self.order_type == "dine_in" and not self.table_id:
@@ -164,12 +155,11 @@ class OrderResponse(BaseModel):
     comment: Optional[str] = None
     items: List[OrderItemResponse] = Field(default_factory=list)
     created_at: datetime
-    updated_at: datetime  # M-3: добавлен для отслеживания смены статуса
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
 
 
-# ЗАКАЗЫ — обновление статуса
 class OrderStatusUpdate(BaseModel):
     status: Literal[
         "new",
@@ -203,12 +193,7 @@ class ReservationCreate(BaseModel):
     @field_validator("reservation_time", mode="after")
     @classmethod
     def validate_future_date(cls, v: datetime) -> datetime:
-        """
-        Бронь должна быть в будущем.
-        Если клиент передаёт naive datetime — считаем UTC.
-        """
         now = datetime.now(timezone.utc)
-        # Если dt naive — добавляем UTC timezone для сравнения
         if v.tzinfo is None:
             from datetime import timezone as _tz
             v = v.replace(tzinfo=_tz.utc)
@@ -263,9 +248,9 @@ class AgencyLogin(BaseModel):
 
 
 class AgencyRegister(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)   # L-3
+    name: str = Field(..., min_length=1, max_length=100)
     email: EmailStr
-    password: str = Field(..., min_length=8, max_length=128)  # L-3
+    password: str = Field(..., min_length=8, max_length=128)
 
 
 class AgencyResponse(BaseModel):
@@ -287,22 +272,20 @@ class TokenResponse(BaseModel):
 # RESTAURANT — создание (Agency Owner)
 # ──────────────────────────────────────────
 class RestaurantCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)  # L-4
+    name: str = Field(..., min_length=1, max_length=100)
     slug: str = Field(..., min_length=2, max_length=100)
     description: Optional[str] = Field(None, max_length=500)
     phone: Optional[str] = None
     address: Optional[str] = Field(None, max_length=300)
     admin_password: str = Field(..., min_length=6, max_length=128)
 
-    # White Label Branding
-    logo_url: Optional[str] = None       # L-8
+    logo_url: Optional[str] = None
     primary_color: Optional[str] = "#8B1A2E"
     secondary_color: Optional[str] = "#FAF6EE"
     accent_color: Optional[str] = "#D4A853"
     welcome_text: Optional[str] = Field(None, max_length=300)
     custom_domain: Optional[str] = None
 
-    # Telegram
     telegram_bot_token: Optional[str] = None
     telegram_dispatcher_id: Optional[int] = Field(None, gt=0)
 
@@ -338,7 +321,6 @@ class RestaurantUpdate(BaseModel):
     is_active: Optional[bool] = None
     admin_password: Optional[str] = Field(None, min_length=6, max_length=128)
 
-    # White Label Branding
     logo_url: Optional[str] = None
     primary_color: Optional[str] = None
     secondary_color: Optional[str] = None
@@ -346,7 +328,6 @@ class RestaurantUpdate(BaseModel):
     welcome_text: Optional[str] = Field(None, max_length=300)
     custom_domain: Optional[str] = None
 
-    # Telegram
     telegram_bot_token: Optional[str] = None
     telegram_dispatcher_id: Optional[int] = Field(None, gt=0)
 
@@ -387,15 +368,6 @@ class RestaurantAdminResponse(BaseModel):
 
 
 class RestaurantCreateResponse(RestaurantAdminResponse):
-    """
-    Ответ на создание ресторана — расширяет RestaurantAdminResponse
-    статусом автоматической настройки Telegram-бота.
-
-    webhook_status:
-      "ok"      — бот проверен, webhook зарегистрирован
-      "skipped" — telegram_bot_token не был передан
-      "failed"  — токен невалиден или Telegram API недоступен
-    """
     webhook_status: str = "skipped"
     webhook_detail: Optional[str] = None
 
@@ -416,10 +388,9 @@ class ProductCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     price: int = Field(..., gt=0)
     description: Optional[str] = Field(None, max_length=1000)
-    photo_url: Optional[str] = None   # L-8
+    photo_url: Optional[str] = None
     is_available: bool = True
     sort_order: int = Field(0, ge=0)
-    # Badges (M-2)
     is_bestseller: bool = False
     is_new: bool = False
     is_spicy: bool = False
@@ -439,7 +410,6 @@ class ProductUpdate(BaseModel):
     is_available: Optional[bool] = None
     sort_order: Optional[int] = Field(None, ge=0)
     category_id: Optional[int] = Field(None, gt=0)
-    # Badges (M-2)
     is_bestseller: Optional[bool] = None
     is_new: Optional[bool] = None
     is_spicy: Optional[bool] = None
@@ -459,3 +429,88 @@ class CategoryCreate(BaseModel):
 class CategoryUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     sort_order: Optional[int] = Field(None, ge=0)
+
+
+# ──────────────────────────────────────────
+# ANALYTICS SCHEMAS
+# ──────────────────────────────────────────
+
+class SummaryResponse(BaseModel):
+    period: str
+    revenue: int
+    orders_total: int
+    orders_completed: int
+    orders_cancelled: int
+    avg_check: int
+    returning_clients: int
+    new_clients: int
+
+
+class DayRevenueItem(BaseModel):
+    date: str
+    revenue: int
+    orders: int
+
+
+class DishItem(BaseModel):
+    rank: int
+    name: str
+    qty: int
+    revenue: int
+
+
+class HourItem(BaseModel):
+    hour: int
+    orders: int
+
+
+class OrderTypeItem(BaseModel):
+    order_type: str
+    orders: int
+    revenue: int
+
+
+# ──────────────────────────────────────────
+# BILLING SCHEMAS
+# ──────────────────────────────────────────
+
+class PlanResponse(BaseModel):
+    id: int
+    name: str
+    price: int
+    currency: str
+    orders_per_month: int
+    products_limit: int
+    users_limit: int
+    description: Optional[str]
+
+
+class SubscriptionResponse(BaseModel):
+    plan_id: int
+    plan_name: str
+    price: int
+    currency: str
+    orders_per_month: int
+    products_limit: int
+    started_at: str
+    expires_at: Optional[str]
+    is_active: bool
+
+
+class UsageResponse(BaseModel):
+    period: str
+    orders_used: int
+    orders_limit: int
+    orders_remaining: int
+    orders_pct: int
+    products_used: int
+    products_limit: int
+    products_remaining: int
+    products_pct: int
+
+
+class SubscribeResponse(BaseModel):
+    success: bool
+    plan_id: int
+    plan_name: str
+    message: str
