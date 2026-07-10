@@ -12,6 +12,7 @@ config.py — Taomly Platform
 import hashlib
 import os
 
+from cryptography.fernet import Fernet, InvalidToken
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -28,11 +29,23 @@ def _require(name: str) -> str:
     return value
 
 
+def _validate_fernet_key(key: str) -> str:
+    """Проверяет что FERNET_KEY валиден — при старте, не в рантайме."""
+    try:
+        Fernet(key.encode())
+    except Exception:
+        raise RuntimeError(
+            "FERNET_KEY невалиден. Сгенерируйте корректный ключ:\n"
+            "python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+        )
+    return key
+
+
 class _Settings:
     # ── Обязательные ──────────────────────────────────────────────────
     DATABASE_URL: str = _require("DATABASE_URL")
     SECRET_KEY: str = _require("SECRET_KEY")
-    FERNET_KEY: str = _require("FERNET_KEY")
+    FERNET_KEY: str = _validate_fernet_key(_require("FERNET_KEY"))
 
     # ── Опциональные с дефолтами ───────────────────────────────────────
     WEBHOOK_URL: str = os.getenv("WEBHOOK_URL", "")
