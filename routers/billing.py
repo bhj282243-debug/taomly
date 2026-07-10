@@ -16,68 +16,27 @@ from __future__ import annotations
 
 import io
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from auth import get_current_restaurant_admin
 from database import get_db
 from models import Restaurant, Subscription, SubscriptionPlan, UsageEvent
+from schemas import (
+    PlanResponse,
+    SubscriptionResponse,
+    UsageResponse,
+    SubscribeResponse,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/billing", tags=["billing"])
-
-
-# ──────────────────────────────────────────
-# SCHEMAS
-# ──────────────────────────────────────────
-
-class PlanResponse(BaseModel):
-    id: int
-    name: str
-    price: int
-    currency: str
-    orders_per_month: int   # -1 = безлимит
-    products_limit: int     # -1 = безлимит
-    users_limit: int        # -1 = безлимит
-    description: Optional[str]
-
-
-class SubscriptionResponse(BaseModel):
-    plan_id: int
-    plan_name: str
-    price: int
-    currency: str
-    orders_per_month: int
-    products_limit: int
-    started_at: str
-    expires_at: Optional[str]   # None = бессрочно
-    is_active: bool
-
-
-class UsageResponse(BaseModel):
-    period: str           # "2025-07"
-    orders_used: int
-    orders_limit: int     # -1 = безлимит
-    orders_remaining: int # -1 = безлимит
-    orders_pct: int       # 0-100, -1 если безлимит
-    products_used: int
-    products_limit: int
-    products_remaining: int
-    products_pct: int
-
-
-class SubscribeResponse(BaseModel):
-    success: bool
-    plan_id: int
-    plan_name: str
-    message: str
 
 
 # ──────────────────────────────────────────
@@ -101,7 +60,6 @@ def _get_free_plan(db: Session) -> SubscriptionPlan:
     """Возвращает Free план из БД (всегда должен существовать)."""
     plan = db.query(SubscriptionPlan).filter(SubscriptionPlan.name == "Free").first()
     if not plan:
-        # Fallback если миграция не выполнена
         raise HTTPException(
             status_code=503,
             detail="Тарифные планы не найдены. Выполните MIGRATION_billing.sql в Neon.",
@@ -133,14 +91,12 @@ def _count_products(db: Session, restaurant_id: int) -> int:
 
 
 def _pct(used: int, limit: int) -> int:
-    """Процент использования. -1 если безлимит."""
     if limit == -1:
         return -1
     return min(100, round((used / max(limit, 1)) * 100))
 
 
 def _remaining(used: int, limit: int) -> int:
-    """Остаток. -1 если безлимит."""
     if limit == -1:
         return -1
     return max(0, limit - used)
@@ -223,18 +179,16 @@ def subscribe(
 
     now = datetime.now(tz=timezone.utc)
 
-    # Деактивировать текущие подписки
     db.query(Subscription).filter(
         Subscription.restaurant_id == restaurant.id,
         Subscription.is_active == True,
     ).update({"is_active": False})
 
-    # Создать новую
     new_sub = Subscription(
         restaurant_id=restaurant.id,
         plan_id=plan.id,
         started_at=now,
-        expires_at=None,   # бессрочно до интеграции оплаты
+        expires_at=None,
         is_active=True,
     )
     db.add(new_sub)
@@ -309,7 +263,6 @@ def get_invoice(
     now   = datetime.now(tz=timezone.utc)
     year  = now.year
 
-    # Заказы за месяц
     month_start = datetime(year, month, 1, tzinfo=timezone.utc)
     month_end   = datetime(year if month < 12 else year + 1, month % 12 + 1, 1, tzinfo=timezone.utc)
 
@@ -330,7 +283,6 @@ def get_invoice(
     month_names = ["", "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
                    "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"]
 
-    # ── PDF ──────────────────────────────────────────────────
     buf    = io.BytesIO()
     doc    = SimpleDocTemplate(
         buf, pagesize=A4,
@@ -343,11 +295,10 @@ def get_invoice(
     C_GRAY = colors.HexColor("#666666")
     C_LINE = colors.HexColor("#DDDDDD")
 
-    h1 = ParagraphStyle("h1", fontName="Helvetica-Bold",   fontSize=22, textColor=C_DARK,  spaceAfter=4,  alignment=TA_CENTER)
-    h2 = ParagraphStyle("h2", fontName="Helvetica-Bold",   fontSize=13, textColor=C_DARK,  spaceAfter=10)
-    sm = ParagraphStyle("sm", fontName="Helvetica",        fontSize=10, textColor=C_GRAY,  spaceAfter=4)
-    bd = ParagraphStyle("bd", fontName="Helvetica-Bold",   fontSize=11, textColor=C_DARK,  spaceAfter=4)
-    ft = ParagraphStyle("ft", fontName="Helvetica",        fontSize=8,  textColor=C_GRAY,  alignment=TA_CENTER)
+    h1 = ParagraphStyle("h1", fontName="Helvetica-Bold", fontSize=22, textColor=C_DARK, spaceAfter=4,  alignment=TA_CENTER)
+    h2 = ParagraphStyle("h2", fontName="Helvetica-Bold", fontSize=13, textColor=C_DARK, spaceAfter=10)
+    sm = ParagraphStyle("sm", fontName="Helvetica",      fontSize=10, textColor=C_GRAY, spaceAfter=4)
+    ft = ParagraphStyle("ft", fontName="Helvetica",      fontSize=8,  textColor=C_GRAY, alignment=TA_CENTER)
 
     price_label = f"{plan.currency} {plan.price}" if plan.price > 0 else "Bepul"
     invoice_num = f"TML-{year}{month:02d}-{restaurant.id:04d}"
@@ -359,9 +310,7 @@ def get_invoice(
             spaceAfter=16, alignment=TA_CENTER,
         )),
         HRFlowable(width="100%", thickness=1, color=C_LINE, spaceAfter=16),
-
         Paragraph(f"Obuna tasdiqi  •  {invoice_num}", h2),
-
         Paragraph(f"<b>Restoran:</b> {restaurant.name}", sm),
         Paragraph(f"<b>Davr:</b> {month_names[month]} {year}", sm),
         Paragraph(f"<b>Tarif:</b> {plan.name}  —  {price_label}/oy", sm),
@@ -369,10 +318,8 @@ def get_invoice(
             f"<b>Amal qilish muddati:</b> {'Muddatsiz' if not (sub and sub.expires_at) else sub.expires_at.strftime('%d.%m.%Y')}",
             sm,
         ),
-
         Spacer(1, 0.6*cm),
         HRFlowable(width="100%", thickness=0.5, color=C_LINE, spaceAfter=12),
-
         Paragraph("Foydalanish ma'lumotlari", h2),
     ]
 
