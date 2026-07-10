@@ -7,32 +7,25 @@ database.py — Taomly Platform
   - pool_pre_ping=True — защита от stale connections (Neon закрывает idle)
   - pool_size=3, max_overflow=5 — оптимально для Render Free + Neon Free
   - pool_recycle=1800 — второй уровень защиты от закрытых соединений
-  - DATABASE_URL обязателен — RuntimeError на старте, не в рантайме
+  - DATABASE_URL читается из config.settings — единый источник конфигурации
 
 Примечание: переход на AsyncSession запланирован после закрытия
 всех дыр безопасности и получения первых клиентов.
 """
 
-import os
 import logging
 
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
-load_dotenv()
+from config import settings
 
 logger = logging.getLogger(__name__)
 
 # ──────────────────────────────────────────
 # КОНФИГ
 # ──────────────────────────────────────────
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError(
-        "DATABASE_URL is required. "
-        "Пример: postgresql://user:pass@host/dbname"
-    )
+DATABASE_URL = settings.DATABASE_URL
 
 # ──────────────────────────────────────────
 # ДВИЖОК
