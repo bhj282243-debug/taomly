@@ -15,17 +15,23 @@ Query param: ?period=today|7d|30d|90d|this_month  (default: 30d)
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone, timedelta, date
-from typing import List
+from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+from typing import List
 
 from auth import get_current_restaurant_admin
 from database import get_db
 from models import Restaurant
+from schemas import (
+    SummaryResponse,
+    DayRevenueItem,
+    DishItem,
+    HourItem,
+    OrderTypeItem,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,10 +43,6 @@ router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 # ──────────────────────────────────────────
 
 def _period_to_dates(period: str) -> tuple[datetime, datetime]:
-    """
-    Возвращает (start_dt, end_dt) в UTC для заданного периода.
-    end_dt = текущий момент.
-    """
     now = datetime.now(tz=timezone.utc)
 
     if period == "today":
@@ -60,45 +62,6 @@ def _period_to_dates(period: str) -> tuple[datetime, datetime]:
         )
 
     return start, now
-
-
-# ──────────────────────────────────────────
-# SCHEMAS
-# ──────────────────────────────────────────
-
-class SummaryResponse(BaseModel):
-    period: str
-    revenue: int                  # сумма total_amount у completed заказов
-    orders_total: int             # все заказы за период
-    orders_completed: int
-    orders_cancelled: int
-    avg_check: int                # средний чек (completed)
-    returning_clients: int        # клиентов с 2+ заказами за период
-    new_clients: int              # клиентов ровно с 1 заказом за период
-
-
-class DayRevenueItem(BaseModel):
-    date: str                     # "2025-06-15"
-    revenue: int
-    orders: int
-
-
-class DishItem(BaseModel):
-    rank: int
-    name: str
-    qty: int
-    revenue: int
-
-
-class HourItem(BaseModel):
-    hour: int                     # 0–23
-    orders: int
-
-
-class OrderTypeItem(BaseModel):
-    order_type: str
-    orders: int
-    revenue: int
 
 
 # ──────────────────────────────────────────
@@ -130,7 +93,6 @@ def get_summary(
     """)
     row = db.execute(sql, {"rid": restaurant.id, "start": start, "end": end}).fetchone()
 
-    # Повторные vs новые клиенты (по client_telegram_id, не NULL)
     sql_clients = text("""
         SELECT
             COUNT(*) FILTER (WHERE cnt >= 2) AS returning_clients,
@@ -247,7 +209,6 @@ def get_peak_hours(
     """)
     rows = db.execute(sql, {"rid": restaurant.id, "start": start, "end": end}).fetchall()
 
-    # Заполняем все 24 часа, даже нулевые
     hour_map = {r.hour: int(r.orders) for r in rows}
     return [HourItem(hour=h, orders=hour_map.get(h, 0)) for h in range(24)]
 
