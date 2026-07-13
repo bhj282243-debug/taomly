@@ -4,24 +4,24 @@ Super Admin Console: управление всей платформой.
 
 Слой 1:
   - Dashboard: агентства, рестораны, MRR, статистика
-  - Управление агентствами: CRUD, блокировка, просмотр ресторанов
+  - Управление агентствами: CRUD, блокировка, просмотр ресторанов, impersonate
   - Управление ресторанами: список всех, поиск, фильтр, заморозка, перенос
 """
 
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from fastapi.responses import JSONResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from jose import JWTError, jwt
 
-from auth import create_agency_token, hash_password, verify_password
+from auth import create_agency_token, hash_password
 from config import settings
 from database import get_db
-from models import Agency, Order, Restaurant, Subscription, SubscriptionPlan
-import jwt
+from models import Agency, Restaurant, Subscription, SubscriptionPlan
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ def get_current_superadmin(request: Request):
     token = auth.split(" ", 1)[1]
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
-    except Exception:
+    except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Недействительный токен")
     if payload.get("role") != SUPERADMIN_ROLE:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Нет доступа")
@@ -63,7 +63,6 @@ def superadmin_login(data: dict, request: Request):
     Вход суперадмина.
     Логин/пароль берётся из env: SUPERADMIN_EMAIL / SUPERADMIN_PASSWORD
     """
-    import os
     sa_email = os.getenv("SUPERADMIN_EMAIL", "superadmin@taomly.uz")
     sa_password = os.getenv("SUPERADMIN_PASSWORD", "")
 
@@ -89,7 +88,6 @@ def get_dashboard(
     """Главные метрики платформы."""
     now = datetime.now(timezone.utc)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    prev_month_start = (month_start - timedelta(days=1)).replace(day=1)
 
     total_agencies = db.query(func.count(Agency.id)).scalar()
     active_agencies = db.query(func.count(Agency.id)).filter(Agency.is_active == True).scalar()
@@ -97,17 +95,14 @@ def get_dashboard(
     total_restaurants = db.query(func.count(Restaurant.id)).scalar()
     active_restaurants = db.query(func.count(Restaurant.id)).filter(Restaurant.is_active == True).scalar()
 
-    # Новые агентства за этот месяц
     new_agencies_month = db.query(func.count(Agency.id)).filter(
         Agency.created_at >= month_start
     ).scalar()
 
-    # Новые рестораны за этот месяц
     new_restaurants_month = db.query(func.count(Restaurant.id)).filter(
         Restaurant.created_at >= month_start
     ).scalar()
 
-    # MRR: сумма цен активных подписок всех ресторанов
     mrr_result = (
         db.query(func.sum(SubscriptionPlan.price))
         .join(Subscription, Subscription.plan_id == SubscriptionPlan.id)
@@ -115,7 +110,6 @@ def get_dashboard(
         .scalar()
     ) or 0
 
-    # Последние 5 агентств
     recent_agencies = (
         db.query(Agency)
         .order_by(Agency.created_at.desc())
@@ -123,7 +117,6 @@ def get_dashboard(
         .all()
     )
 
-    # Последние 5 ресторанов
     recent_restaurants = (
         db.query(Restaurant)
         .order_by(Restaurant.created_at.desc())
@@ -153,7 +146,9 @@ def get_dashboard(
                 "email": a.owner_email,
                 "is_active": a.is_active,
                 "created_at": a.created_at.isoformat(),
-                "restaurant_count": len(a.restaurants),
+                "restaurant_count": db.query(func.count(Restaurant.id))
+                    .filter(Restaurant.agency_id == a.id)
+                    .scalar(),
             }
             for a in recent_agencies
         ],
@@ -184,7 +179,6 @@ def list_agencies(
     _=Depends(get_current_superadmin),
     db: Session = Depends(get_db),
 ):
-    """Список всех агентств с поиском и фильтром."""
     q = db.query(Agency)
     if search:
         q = q.filter(
@@ -221,7 +215,6 @@ def get_agency(
     _=Depends(get_current_superadmin),
     db: Session = Depends(get_db),
 ):
-    """Детали агентства + его рестораны."""
     agency = db.query(Agency).filter(Agency.id == agency_id).first()
     if not agency:
         raise HTTPException(status_code=404, detail="Агентство не найдено")
@@ -253,7 +246,6 @@ def create_agency(
     _=Depends(get_current_superadmin),
     db: Session = Depends(get_db),
 ):
-    """Создать агентство."""
     if not data.get("name") or not data.get("email") or not data.get("password"):
         raise HTTPException(status_code=400, detail="name, email и password обязательны")
 
@@ -279,7 +271,6 @@ def update_agency(
     _=Depends(get_current_superadmin),
     db: Session = Depends(get_db),
 ):
-    """Обновить агентство (имя, email, статус)."""
     agency = db.query(Agency).filter(Agency.id == agency_id).first()
     if not agency:
         raise HTTPException(status_code=404, detail="Агентство не найдено")
@@ -305,7 +296,6 @@ def impersonate_agency(
     _=Depends(get_current_superadmin),
     db: Session = Depends(get_db),
 ):
-    """Войти как агентство (без пароля) — для поддержки."""
     agency = db.query(Agency).filter(Agency.id == agency_id).first()
     if not agency:
         raise HTTPException(status_code=404, detail="Агентство не найдено")
@@ -329,7 +319,6 @@ def list_restaurants(
     _=Depends(get_current_superadmin),
     db: Session = Depends(get_db),
 ):
-    """Все рестораны платформы с поиском и фильтрами."""
     q = db.query(Restaurant)
     if search:
         q = q.filter(
@@ -368,7 +357,6 @@ def freeze_restaurant(
     _=Depends(get_current_superadmin),
     db: Session = Depends(get_db),
 ):
-    """Заморозить или разморозить ресторан."""
     restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
     if not restaurant:
         raise HTTPException(status_code=404, detail="Ресторан не найден")
@@ -387,7 +375,6 @@ def transfer_restaurant(
     _=Depends(get_current_superadmin),
     db: Session = Depends(get_db),
 ):
-    """Перенести ресторан в другое агентство."""
     restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
     if not restaurant:
         raise HTTPException(status_code=404, detail="Ресторан не найден")
