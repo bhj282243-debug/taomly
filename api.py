@@ -37,7 +37,7 @@ import models
 import telebot
 from config import settings
 from database import SessionLocal, engine
-from routers import agency, analytics, billing, menu, orders, reservations, restaurants, waiter_calls, ai
+from routers import agency, analytics, billing, menu, orders, reservations, restaurants, waiter_calls, ai, superadmin
 
 # ──────────────────────────────────────────
 # LOGGING
@@ -188,6 +188,7 @@ app.include_router(billing.router)
 app.include_router(restaurants.router)
 app.include_router(agency.router)
 app.include_router(ai.router)
+app.include_router(superadmin.router)
 
 # ──────────────────────────────────────────
 # STATIC
@@ -235,6 +236,11 @@ def serve_admin():
 @app.get("/agency-admin")
 def serve_agency_admin():
     return FileResponse("static/agency_admin.html")
+
+
+@app.get("/superadmin")
+def serve_superadmin():
+    return FileResponse("static/superadmin.html")
 
 
 @app.get("/robots.txt")
