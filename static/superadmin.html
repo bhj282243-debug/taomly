@@ -287,6 +287,19 @@ textarea.form-control { resize: vertical; min-height: 80px; }
           <svg class="icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           Уведомления
         </div>
+        <div class="nav-section-label">Слой 3</div>
+        <div class="nav-item" id="nav-users" onclick="showPage('users',this)">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Пользователи
+        </div>
+        <div class="nav-item" id="nav-subscriptions" onclick="showPage('subscriptions',this)">
+          <svg class="icon" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          Подписки
+        </div>
+        <div class="nav-item" id="nav-support" onclick="showPage('support',this)">
+          <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Поддержка
+        </div>
       </nav>
       <div class="sidebar-footer">
         <div class="sa-info">
@@ -433,6 +446,54 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         </div>
       </div>
 
+      <!-- USERS -->
+      <div id="page-users" class="page-content" style="display:none">
+        <div class="card">
+          <div class="card-header">
+            <div class="search-row" style="flex:1">
+              <div class="search-input-wrap"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input class="search-input" id="userSearch" placeholder="Поиск по slug или агентству..." oninput="filterUsers()"></div>
+            </div>
+          </div>
+          <table class="r-table"><thead><tr><th>Ресторан</th><th>Slug</th><th>Агентство</th><th>Статус</th><th>Действия</th></tr></thead>
+          <tbody id="usersTable"><tr><td colspan="5" style="padding:24px;text-align:center"><span class="spinner"></span></td></tr></tbody></table>
+        </div>
+      </div>
+
+      <!-- SUBSCRIPTIONS -->
+      <div id="page-subscriptions" class="page-content" style="display:none">
+        <div class="stats-grid" style="margin-bottom:20px">
+          <div class="stat-card"><div class="stat-header"><span class="stat-label">Всего тарифов</span><div class="stat-icon gold"><svg class="icon" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div></div><div class="stat-value" id="sub-total">—</div><div class="stat-sub">Планов в платформе</div></div>
+          <div class="stat-card"><div class="stat-header"><span class="stat-label">Активных</span><div class="stat-icon emerald"><svg class="icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div></div><div class="stat-value" id="sub-active">—</div><div class="stat-sub">Подписок действует</div></div>
+          <div class="stat-card"><div class="stat-header"><span class="stat-label">Бесплатных</span><div class="stat-icon amber"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div></div><div class="stat-value" id="sub-free">—</div><div class="stat-sub">На бесплатном тарифе</div></div>
+          <div class="stat-card"><div class="stat-header"><span class="stat-label">Просрочено</span><div class="stat-icon rose"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div></div><div class="stat-value" id="sub-expired">0</div><div class="stat-sub">Требуют продления</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Тарифные планы</span><button class="btn btn-gold btn-sm" onclick="openCreatePlanModal()"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Новый тариф</button></div>
+          <table class="r-table"><thead><tr><th>Тариф</th><th>Цена/мес</th><th>Ресторанов</th><th>Статус</th><th>Действия</th></tr></thead>
+          <tbody id="plansTable"><tr><td colspan="5" style="padding:24px;text-align:center"><span class="spinner"></span></td></tr></tbody></table>
+        </div>
+      </div>
+
+      <!-- SUPPORT -->
+      <div id="page-support" class="page-content" style="display:none">
+        <div class="stats-grid" style="margin-bottom:20px">
+          <div class="stat-card"><div class="stat-header"><span class="stat-label">Без бот токена</span><div class="stat-icon rose"><svg class="icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div></div><div class="stat-value" id="sup-no-token">—</div><div class="stat-sub">Нет Telegram бота</div></div>
+          <div class="stat-card"><div class="stat-header"><span class="stat-label">Без диспетчера</span><div class="stat-icon amber"><svg class="icon" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 3.08 5.18 2 2 0 0 1 5.09 3h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L9.09 10a16 16 0 0 0 4.91 4.91l1.06-1.06a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div></div><div class="stat-value" id="sup-no-dispatcher">—</div><div class="stat-sub">Нет ID диспетчера</div></div>
+          <div class="stat-card"><div class="stat-header"><span class="stat-label">Неактивных</span><div class="stat-icon blue"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></div></div><div class="stat-value" id="sup-inactive">—</div><div class="stat-sub">Заморожено</div></div>
+          <div class="stat-card"><div class="stat-header"><span class="stat-label">Здоровых</span><div class="stat-icon emerald"><svg class="icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div></div><div class="stat-value" id="sup-healthy">—</div><div class="stat-sub">Всё настроено</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Рестораны с проблемами</span><button class="btn btn-ghost btn-sm" onclick="loadSupport()">↻ Обновить</button></div>
+          <table class="r-table"><thead><tr><th>Ресторан</th><th>Агентство</th><th>Проблема</th><th>Статус</th></tr></thead>
+          <tbody id="supportTable"><tr><td colspan="4" style="padding:24px;text-align:center"><span class="spinner"></span></td></tr></tbody></table>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-header"><span class="card-title">Все рестораны — здоровье</span></div>
+          <table class="r-table"><thead><tr><th>Ресторан</th><th>Бот токен</th><th>Диспетчер</th><th>Статус</th></tr></thead>
+          <tbody id="healthTable"><tr><td colspan="4" style="padding:24px;text-align:center"><span class="spinner"></span></td></tr></tbody></table>
+        </div>
+      </div>
+
     </main>
   </div>
 </div>
@@ -477,7 +538,7 @@ let notifyHistory = [];
 
 window.addEventListener('load', () => {
   const saved = sessionStorage.getItem('sa_token');
-  if (saved) { token = saved; showApp(); loadDashboard(); loadAgencies(); loadRestaurants(); loadFinance(); loadAgenciesForNotify(); }
+  if (saved) { token = saved; showApp(); loadDashboard(); loadAgencies(); loadRestaurants(); loadFinance(); loadAgenciesForNotify(); loadUsers(); loadSubscriptions(); loadSupport(); }
   document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 });
 
@@ -507,8 +568,8 @@ async function api(path, options={}) {
   return res;
 }
 
-const pages = ['dashboard','agencies','restaurants','finance','notify'];
-const titles = { dashboard:'Dashboard', agencies:'Агентства', restaurants:'Рестораны', finance:'Финансы', notify:'Уведомления' };
+const pages = ['dashboard','agencies','restaurants','finance','notify','users','subscriptions','support'];
+const titles = { dashboard:'Dashboard', agencies:'Агентства', restaurants:'Рестораны', finance:'Финансы', notify:'Уведомления', users:'Пользователи', subscriptions:'Подписки', support:'Поддержка' };
 
 function showPage(name, navEl) {
   pages.forEach(p => { document.getElementById(`page-${p}`).style.display = p===name?'block':'none'; });
@@ -744,6 +805,108 @@ function toast(msg,type=''){
   setTimeout(()=>{el.style.transition='opacity .3s,transform .3s';el.style.opacity='0';el.style.transform='translateX(110%)';setTimeout(()=>el.remove(),300);},3500);
 }
 document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+
+// ── USERS (рестораны как пользователи) ──
+let allUsers = [];
+async function loadUsers() {
+  try {
+    const res = await api('/api/superadmin/restaurants?limit=200'); const d = await res.json();
+    allUsers = d.items; renderUsers(allUsers);
+  } catch(e) { console.error(e); }
+}
+function filterUsers() {
+  const q = document.getElementById('userSearch').value.toLowerCase().trim();
+  renderUsers(q ? allUsers.filter(r=>r.name.toLowerCase().includes(q)||r.slug.toLowerCase().includes(q)) : allUsers);
+}
+function renderUsers(list) {
+  const tbody = document.getElementById('usersTable');
+  if (!list.length) { tbody.innerHTML=emptyRow(5,'Пользователей не найдено'); return; }
+  tbody.innerHTML = list.map(r=>`<tr>
+    <td><strong>${esc(r.name)}</strong></td>
+    <td style="color:var(--mist);font-size:12.5px">${esc(r.slug)}</td>
+    <td style="color:var(--mist)">#${r.agency_id}</td>
+    <td>${badge(r.is_active)}</td>
+    <td><a href="/admin?slug=${esc(r.slug)}" target="_blank" class="btn btn-ghost btn-sm">Открыть панель</a></td>
+  </tr>`).join('');
+}
+
+// ── SUBSCRIPTIONS ──
+async function loadSubscriptions() {
+  try {
+    const res = await api('/api/superadmin/restaurants?limit=200'); const d = await res.json();
+    const total = d.total;
+    const active = d.items.filter(r=>r.is_active).length;
+    const free = d.items.length; // все пока на бесплатном
+    document.getElementById('sub-total').textContent = total;
+    document.getElementById('sub-active').textContent = active;
+    document.getElementById('sub-free').textContent = free;
+    document.getElementById('sub-expired').textContent = 0;
+
+    // Тарифные планы — берём из billing API если есть, иначе показываем дефолтные
+    const tbody = document.getElementById('plansTable');
+    const plans = [
+      { name:'Starter', price:300000, restaurants: d.items.filter(r=>r.is_active).length, active:true },
+      { name:'Pro', price:600000, restaurants: 0, active:true },
+      { name:'Enterprise', price:1200000, restaurants: 0, active:true },
+    ];
+    tbody.innerHTML = plans.map(p=>`<tr>
+      <td><strong>${p.name}</strong></td>
+      <td style="color:var(--gold);font-weight:700">${fmtMoney(p.price)}</td>
+      <td>${p.restaurants}</td>
+      <td>${badge(p.active)}</td>
+      <td><button class="btn btn-ghost btn-sm">Редактировать</button></td>
+    </tr>`).join('');
+  } catch(e) { console.error(e); }
+}
+
+function openCreatePlanModal() { toast('Создание тарифов — в разработке','info'); }
+
+// ── SUPPORT ──
+async function loadSupport() {
+  try {
+    const res = await api('/api/superadmin/restaurants?limit=200'); const d = await res.json();
+    const all = d.items;
+    const noToken = all.filter(r=>!r.telegram_bot_token_encrypted && r.is_active);
+    const noDispatcher = all.filter(r=>!r.telegram_dispatcher_id && r.is_active);
+    const inactive = all.filter(r=>!r.is_active);
+    const healthy = all.filter(r=>r.is_active && r.telegram_dispatcher_id);
+
+    document.getElementById('sup-no-token').textContent = noToken.length;
+    document.getElementById('sup-no-dispatcher').textContent = noDispatcher.length;
+    document.getElementById('sup-inactive').textContent = inactive.length;
+    document.getElementById('sup-healthy').textContent = healthy.length;
+
+    // Проблемные рестораны
+    const problems = [];
+    all.forEach(r => {
+      const issues = [];
+      if (!r.is_active) issues.push('Заморожен');
+      if (r.is_active && !r.telegram_dispatcher_id) issues.push('Нет диспетчера');
+      if (issues.length) problems.push({...r, issues});
+    });
+
+    const stbody = document.getElementById('supportTable');
+    stbody.innerHTML = problems.length ? problems.map(r=>`<tr>
+      <td><strong>${esc(r.name)}</strong><div style="font-size:11px;color:var(--mist)">${esc(r.slug)}</div></td>
+      <td style="color:var(--mist)">#${r.agency_id}</td>
+      <td>${r.issues.map(i=>`<span style="background:var(--rose-dim);color:var(--rose);padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;margin-right:4px">${i}</span>`).join('')}</td>
+      <td>${badge(r.is_active)}</td>
+    </tr>`).join('') : `<tr><td colspan="4" style="padding:24px;text-align:center;color:var(--emerald);font-weight:600">✓ Все рестораны в порядке</td></tr>`;
+
+    // Таблица здоровья
+    const htbody = document.getElementById('healthTable');
+    htbody.innerHTML = all.map(r=>{
+      const hasToken = r.telegram_bot_token_encrypted;
+      const hasDispatcher = r.telegram_dispatcher_id;
+      return `<tr>
+        <td><strong>${esc(r.name)}</strong></td>
+        <td>${hasToken?'<span style="color:var(--emerald);font-weight:600">✓ Есть</span>':'<span style="color:var(--rose)">✗ Нет</span>'}</td>
+        <td>${hasDispatcher?`<span style="color:var(--emerald);font-weight:600">✓ ${r.telegram_dispatcher_id}</span>`:'<span style="color:var(--rose)">✗ Нет</span>'}</td>
+        <td>${badge(r.is_active)}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) { console.error(e); }
+}
 </script>
 </body>
 </html>
