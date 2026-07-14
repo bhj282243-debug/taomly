@@ -13,207 +13,207 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 :root {
-  --void:      #0D0B09;
-  --obsid:     #131008;
-  --surface:   #1A1610;
-  --surface-2: #211D16;
-  --surface-3: #2A2419;
-  --gold:      #C9963A;
-  --gold-l:    #E8B86D;
-  --gold-dim:  rgba(201,150,58,0.12);
-  --gold-glow: rgba(201,150,58,0.22);
-  --gold-border: rgba(201,150,58,0.18);
-  --snow:      #F2EDE4;
-  --mist:      #B8AFA4;
-  --ash:       #6E6459;
-  --emerald:   #22C55E;
-  --emerald-dim: rgba(34,197,94,0.12);
-  --amber:     #F59E0B;
-  --amber-dim: rgba(245,158,11,0.12);
-  --rose:      #F43F5E;
-  --rose-dim:  rgba(244,63,94,0.12);
-  --blue:      #3B82F6;
-  --blue-dim:  rgba(59,130,246,0.12);
-  --purple:    #A855F7;
-  --purple-dim: rgba(168,85,247,0.12);
-  --line:      rgba(242,237,228,0.07);
-  --line-soft: rgba(242,237,228,0.04);
-  --sh:        0 1px 3px rgba(0,0,0,0.4);
-  --sh-md:     0 8px 32px rgba(0,0,0,0.5);
-  --sh-gold:   0 0 0 1px var(--gold-border), 0 8px 32px rgba(201,150,58,0.15);
+  --cream:     #FAF6EE;
+  --cream-2:   #F2EBE0;
+  --cream-3:   #E8DDD0;
+  --white:     #FFFFFF;
+  --ink:       #1A1410;
+  --ink-2:     #3D3028;
+  --ink-3:     #6B5A4A;
+  --mist:      #9A8878;
+  --gold:      #9A6820;
+  --gold-l:    #C4881A;
+  --gold-dim:  rgba(154,104,32,0.10);
+  --gold-border: rgba(154,104,32,0.20);
+  --emerald:   #1A7A3A;
+  --emerald-dim: rgba(26,122,58,0.10);
+  --rose:      #C0282A;
+  --rose-dim:  rgba(192,40,42,0.10);
+  --amber:     #B86A10;
+  --amber-dim: rgba(184,106,16,0.10);
+  --blue:      #1A5CA0;
+  --blue-dim:  rgba(26,92,160,0.10);
+  --line:      rgba(26,20,16,0.10);
+  --line-soft: rgba(26,20,16,0.06);
   --sidebar-w: 260px;
   --r-lg: 16px; --r-md: 12px; --r-sm: 8px; --r-xs: 6px;
+  --sh: 0 1px 3px rgba(0,0,0,0.08);
+  --sh-md: 0 4px 16px rgba(0,0,0,0.10);
+  --sh-lg: 0 8px 32px rgba(0,0,0,0.12);
 }
 
 html { scroll-behavior: smooth; }
-body { font-family: 'Inter', sans-serif; background: var(--void); color: var(--snow); min-height: 100vh; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+body { font-family: 'Inter', sans-serif; background: var(--cream); color: var(--ink); min-height: 100vh; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
 svg { display: block; }
 .icon { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.6; fill: none; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 
 /* LOGIN */
-#loginScreen {
-  display: flex; align-items: center; justify-content: center;
-  min-height: 100vh; padding: 24px;
-  background: radial-gradient(ellipse 60% 50% at 20% 0%, rgba(201,150,58,0.07), transparent), var(--void);
-}
+#loginScreen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; background: var(--cream); }
 .login-wrap { width: 100%; max-width: 400px; }
 .login-brand { text-align: center; margin-bottom: 32px; }
-.login-mark {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 56px; height: 56px; border-radius: 16px; margin-bottom: 16px;
-  background: linear-gradient(135deg, var(--gold), var(--gold-l));
-}
-.login-mark svg { width: 28px; height: 28px; stroke: #0D0B09; stroke-width: 2; fill: none; }
-.login-wordmark { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 700; color: var(--snow); letter-spacing: 0.04em; }
+.login-mark { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background: linear-gradient(135deg, var(--gold), var(--gold-l)); border-radius: 16px; margin-bottom: 16px; box-shadow: 0 8px 24px rgba(154,104,32,0.25); }
+.login-mark svg { width: 26px; height: 26px; stroke: #fff; stroke-width: 2; }
+.login-wordmark { font-family: 'Cormorant Garamond', serif; font-size: 30px; font-weight: 700; color: var(--ink); }
 .login-sub { font-size: 13px; color: var(--mist); margin-top: 4px; }
-.login-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 28px; display: flex; flex-direction: column; gap: 14px; }
-.error-banner { display: none; background: var(--rose-dim); border: 1px solid rgba(244,63,94,0.2); border-radius: var(--r-sm); padding: 10px 14px; font-size: 13px; color: var(--rose); }
+.login-card { background: var(--white); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 28px; box-shadow: var(--sh-lg); }
+.form-group { margin-bottom: 14px; }
+.form-label { display: block; font-size: 11px; font-weight: 700; color: var(--mist); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.8px; }
+.form-control { width: 100%; padding: 11px 14px; background: var(--cream); border: 1px solid var(--line); border-radius: var(--r-sm); font-size: 14px; font-family: inherit; color: var(--ink); outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+.form-control::placeholder { color: var(--mist); }
+.form-control:focus { border-color: var(--gold-border); box-shadow: 0 0 0 3px var(--gold-dim); background: var(--white); }
+.error-banner { background: var(--rose-dim); border: 1px solid rgba(192,40,42,0.2); border-radius: var(--r-sm); padding: 10px 14px; font-size: 13px; color: var(--rose); margin-bottom: 14px; display: none; }
 .error-banner.show { display: block; }
-.form-label { font-size: 12px; font-weight: 600; color: var(--mist); letter-spacing: 0.06em; text-transform: uppercase; display: block; margin-bottom: 6px; }
-.form-control { width: 100%; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 11px 14px; font-size: 14px; color: var(--snow); font-family: inherit; outline: none; transition: border-color 0.15s; }
-.form-control:focus { border-color: var(--gold-border); }
-.form-control::placeholder { color: var(--ash); }
 
 /* BUTTONS */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 11px 18px; border-radius: var(--r-sm); font-size: 13.5px; font-weight: 600; font-family: inherit; cursor: pointer; border: none; transition: all 0.15s; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 10px 18px; border-radius: var(--r-sm); font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; border: none; transition: all 0.15s; text-decoration: none; white-space: nowrap; }
 .btn:active { transform: scale(0.97); }
-.btn-gold { background: linear-gradient(135deg, var(--gold), #B8862E); color: #0D0B09; }
-.btn-gold:hover { filter: brightness(1.08); }
-.btn-ghost { background: var(--surface-2); color: var(--mist); border: 1px solid var(--line); }
-.btn-ghost:hover { background: var(--surface-3); color: var(--snow); }
-.btn-danger { background: var(--rose-dim); color: var(--rose); border: 1px solid rgba(244,63,94,0.15); }
-.btn-danger:hover { background: rgba(244,63,94,0.2); }
-.btn-success { background: var(--emerald-dim); color: var(--emerald); border: 1px solid rgba(34,197,94,0.15); }
+.btn-gold { background: var(--gold); color: #fff; box-shadow: 0 2px 8px rgba(154,104,32,0.25); }
+.btn-gold:hover { background: var(--gold-l); box-shadow: 0 4px 16px rgba(154,104,32,0.35); }
+.btn-ghost { background: var(--white); color: var(--ink-3); border: 1px solid var(--line); }
+.btn-ghost:hover { background: var(--cream-2); color: var(--ink); }
+.btn-danger { background: var(--rose-dim); color: var(--rose); border: 1px solid rgba(192,40,42,0.2); }
+.btn-danger:hover { background: rgba(192,40,42,0.15); }
+.btn-success { background: var(--emerald-dim); color: var(--emerald); border: 1px solid rgba(26,122,58,0.2); }
+.btn-success:hover { background: rgba(26,122,58,0.15); }
+.btn-blue { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(26,92,160,0.2); }
+.btn-blue:hover { background: rgba(26,92,160,0.15); }
 .btn-sm { padding: 7px 12px; font-size: 12px; }
 .btn-full { width: 100%; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
 
-/* LAYOUT */
+/* APP */
 #appScreen { display: none; min-height: 100vh; }
 .layout { display: flex; min-height: 100vh; }
 
 /* SIDEBAR */
-.sidebar {
-  width: var(--sidebar-w); min-height: 100vh; position: fixed; top: 0; left: 0; z-index: 100;
-  background: var(--obsid); border-right: 1px solid var(--line);
-  display: flex; flex-direction: column;
-}
+.sidebar { width: var(--sidebar-w); min-height: 100vh; position: fixed; top: 0; left: 0; z-index: 100; background: var(--white); border-right: 1px solid var(--line); display: flex; flex-direction: column; box-shadow: var(--sh); }
 .sidebar-top { padding: 20px 16px 16px; border-bottom: 1px solid var(--line); }
-.sidebar-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
-.sidebar-mark {
-  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
-  background: linear-gradient(135deg, var(--gold), var(--gold-l));
-  display: flex; align-items: center; justify-content: center;
-}
-.sidebar-mark svg { width: 18px; height: 18px; stroke: #0D0B09; stroke-width: 2; fill: none; }
-.sidebar-name { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 700; color: var(--snow); }
-.sidebar-edition { font-size: 10px; font-weight: 700; color: var(--rose); letter-spacing: 0.1em; text-transform: uppercase; background: var(--rose-dim); border: 1px solid rgba(244,63,94,0.2); border-radius: 4px; padding: 2px 6px; display: inline-block; margin-top: 2px; }
+.sidebar-brand { display: flex; align-items: center; gap: 10px; }
+.sidebar-mark { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, var(--gold), var(--gold-l)); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sidebar-mark svg { width: 18px; height: 18px; stroke: #fff; stroke-width: 2; }
+.sidebar-name { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 700; color: var(--ink); }
+.sidebar-edition { font-size: 10px; font-weight: 700; color: var(--rose); letter-spacing: 0.1em; text-transform: uppercase; background: var(--rose-dim); border: 1px solid rgba(192,40,42,0.15); border-radius: 4px; padding: 2px 6px; display: inline-block; margin-top: 2px; }
 .sidebar-nav { flex: 1; padding: 12px 8px; overflow-y: auto; }
-.nav-section-label { font-size: 10px; font-weight: 700; color: var(--ash); letter-spacing: 0.1em; text-transform: uppercase; padding: 8px 8px 4px; }
-.nav-item {
-  display: flex; align-items: center; gap: 10px; padding: 10px 10px; border-radius: var(--r-sm);
-  font-size: 13.5px; font-weight: 500; color: var(--mist); cursor: pointer; transition: all 0.15s; margin-bottom: 2px;
-}
-.nav-item:hover { background: var(--surface); color: var(--snow); }
-.nav-item.active { background: var(--gold-dim); color: var(--gold); border: 1px solid var(--gold-border); }
+.nav-section-label { font-size: 10px; font-weight: 700; color: var(--mist); letter-spacing: 0.1em; text-transform: uppercase; padding: 8px 8px 4px; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 10px; border-radius: var(--r-sm); font-size: 13.5px; font-weight: 500; color: var(--ink-3); cursor: pointer; transition: all 0.15s; margin-bottom: 2px; }
+.nav-item:hover { background: var(--cream); color: var(--ink); }
+.nav-item.active { background: var(--gold-dim); color: var(--gold); font-weight: 600; border: 1px solid var(--gold-border); }
 .sidebar-footer { padding: 14px 16px; border-top: 1px solid var(--line); }
 .sa-info { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.sa-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--rose-dim); border: 1px solid rgba(244,63,94,0.3); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--rose); flex-shrink: 0; }
-.sa-label { font-size: 13px; font-weight: 600; color: var(--snow); }
+.sa-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--rose-dim); border: 1px solid rgba(192,40,42,0.2); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--rose); flex-shrink: 0; }
+.sa-label { font-size: 13px; font-weight: 600; color: var(--ink); }
 .sa-role { font-size: 11px; color: var(--rose); }
 .btn-logout { display: flex; align-items: center; gap: 7px; width: 100%; padding: 8px 10px; border-radius: var(--r-sm); background: none; border: none; font-size: 12.5px; font-weight: 500; color: var(--mist); cursor: pointer; font-family: inherit; transition: all 0.15s; }
 .btn-logout:hover { background: var(--rose-dim); color: var(--rose); }
 
 /* MAIN */
-.main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
-.topbar {
-  position: sticky; top: 0; z-index: 50;
-  background: rgba(13,11,9,0.85); backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--line);
-  padding: 0 24px; height: 56px;
-  display: flex; align-items: center; gap: 12px;
-}
-.topbar-title { font-size: 15px; font-weight: 700; color: var(--snow); flex: 1; }
-.topbar-badge { font-size: 11px; font-weight: 700; color: var(--rose); background: var(--rose-dim); border: 1px solid rgba(244,63,94,0.2); border-radius: 4px; padding: 2px 8px; }
+.main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; }
+.topbar { position: sticky; top: 0; z-index: 50; background: rgba(250,246,238,0.92); backdrop-filter: blur(16px); border-bottom: 1px solid var(--line); padding: 0 24px; height: 56px; display: flex; align-items: center; gap: 12px; }
+.topbar-title { font-size: 15px; font-weight: 700; color: var(--ink); flex: 1; }
+.topbar-badge { font-size: 11px; font-weight: 700; color: var(--rose); background: var(--rose-dim); border: 1px solid rgba(192,40,42,0.15); border-radius: 4px; padding: 2px 8px; }
 .page-content { padding: 24px; flex: 1; }
 
-/* STATS GRID */
+/* STATS */
 .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 24px; }
-.stat-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 18px; }
+.stat-card { background: var(--white); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 18px; box-shadow: var(--sh); transition: box-shadow 0.2s; }
+.stat-card:hover { box-shadow: var(--sh-md); }
 .stat-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .stat-label { font-size: 11px; font-weight: 700; color: var(--mist); letter-spacing: 0.06em; text-transform: uppercase; }
 .stat-icon { width: 32px; height: 32px; border-radius: var(--r-sm); display: flex; align-items: center; justify-content: center; }
 .stat-icon.gold { background: var(--gold-dim); color: var(--gold); }
 .stat-icon.emerald { background: var(--emerald-dim); color: var(--emerald); }
 .stat-icon.blue { background: var(--blue-dim); color: var(--blue); }
-.stat-icon.purple { background: var(--purple-dim); color: var(--purple); }
 .stat-icon.rose { background: var(--rose-dim); color: var(--rose); }
-.stat-value { font-size: 26px; font-weight: 700; color: var(--snow); line-height: 1; }
+.stat-icon.amber { background: var(--amber-dim); color: var(--amber); }
+.stat-value { font-size: 26px; font-weight: 700; color: var(--ink); line-height: 1; }
 .stat-sub { font-size: 11.5px; color: var(--mist); margin-top: 4px; }
 .stat-new { font-size: 11px; color: var(--emerald); font-weight: 600; margin-top: 6px; }
 
 /* CARDS */
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); margin-bottom: 16px; overflow: hidden; }
+.card { background: var(--white); border: 1px solid var(--line); border-radius: var(--r-lg); margin-bottom: 16px; overflow: hidden; box-shadow: var(--sh); }
 .card-header { padding: 16px 20px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.card-title { font-size: 14px; font-weight: 700; color: var(--snow); }
+.card-title { font-size: 14px; font-weight: 700; color: var(--ink); }
 .card-body { padding: 0; }
 
 /* TABLE */
 .r-table { width: 100%; border-collapse: collapse; }
-.r-table th { font-size: 11px; font-weight: 700; color: var(--mist); letter-spacing: 0.06em; text-transform: uppercase; padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--line); background: var(--obsid); }
-.r-table td { padding: 12px 16px; font-size: 13.5px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+.r-table th { font-size: 11px; font-weight: 700; color: var(--mist); letter-spacing: 0.06em; text-transform: uppercase; padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--line); background: var(--cream); }
+.r-table td { padding: 12px 16px; font-size: 13.5px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; color: var(--ink); }
 .r-table tbody tr:last-child td { border-bottom: none; }
-.r-table tbody tr:hover { background: var(--surface-2); }
+.r-table tbody tr:hover { background: var(--cream); }
 
 /* BADGES */
 .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 20px; font-size: 11.5px; font-weight: 600; }
 .badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
-.badge-active { background: var(--emerald-dim); color: var(--emerald); }
+.badge-active { background: var(--emerald-dim); color: var(--emerald); border: 1px solid rgba(26,122,58,0.15); }
 .badge-active::before { background: var(--emerald); }
-.badge-inactive { background: rgba(110,100,89,0.15); color: var(--ash); }
-.badge-inactive::before { background: var(--ash); }
+.badge-inactive { background: var(--cream-2); color: var(--mist); border: 1px solid var(--line); }
+.badge-inactive::before { background: var(--mist); }
 
 /* SEARCH */
 .search-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .search-input-wrap { position: relative; flex: 1; min-width: 180px; }
-.search-input-wrap svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--ash); pointer-events: none; }
-.search-input { width: 100%; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 9px 12px 9px 34px; font-size: 13.5px; color: var(--snow); font-family: inherit; outline: none; }
-.search-input:focus { border-color: var(--gold-border); }
-.search-input::placeholder { color: var(--ash); }
-select.form-control { cursor: pointer; }
+.search-input-wrap svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--mist); pointer-events: none; }
+.search-input { width: 100%; background: var(--cream); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 9px 12px 9px 34px; font-size: 13.5px; color: var(--ink); font-family: inherit; outline: none; }
+.search-input:focus { border-color: var(--gold-border); background: var(--white); }
+.search-input::placeholder { color: var(--mist); }
+select.form-control { cursor: pointer; background: var(--cream); }
 
 /* EMPTY */
 .empty-state { padding: 48px 24px; text-align: center; color: var(--mist); }
-.empty-state svg { margin: 0 auto 12px; color: var(--ash); }
-.empty-title { font-size: 15px; font-weight: 600; color: var(--snow); margin-bottom: 6px; }
+.empty-title { font-size: 15px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
 
 /* MODAL */
-.modal-overlay { display: none; position: fixed; inset: 0; z-index: 200; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
+.modal-overlay { display: none; position: fixed; inset: 0; z-index: 200; align-items: center; justify-content: center; padding: 20px; background: rgba(26,20,16,0.4); backdrop-filter: blur(4px); }
 .modal-overlay.open { display: flex; }
-.modal { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; animation: modalIn 0.2s ease; }
+.modal { background: var(--white); border: 1px solid var(--line); border-radius: var(--r-lg); width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; box-shadow: var(--sh-lg); animation: modalIn 0.2s ease; }
 @keyframes modalIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 .modal-header { padding: 18px 20px 14px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
-.modal-title { font-size: 15px; font-weight: 700; color: var(--snow); }
-.modal-close { width: 28px; height: 28px; border-radius: 6px; background: var(--surface-2); border: none; color: var(--mist); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.modal-close:hover { background: var(--surface-3); color: var(--snow); }
+.modal-title { font-size: 15px; font-weight: 700; color: var(--ink); }
+.modal-close { width: 28px; height: 28px; border-radius: 6px; background: var(--cream-2); border: none; color: var(--mist); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+.modal-close:hover { background: var(--cream-3); color: var(--ink); }
 .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
 .modal-footer { padding: 14px 20px; border-top: 1px solid var(--line); display: flex; gap: 10px; justify-content: flex-end; }
 
-/* LOADING */
-.spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.2); border-top-color: currentColor; border-radius: 50%; animation: spin 0.6s linear infinite; }
+/* SPINNER */
+.spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--line); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.6s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* PAGINATION */
-.pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 1px solid var(--line); }
+.pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 1px solid var(--line); background: var(--cream); }
 .pagination-info { font-size: 12.5px; color: var(--mist); }
 .pagination-btns { display: flex; gap: 6px; }
+
+/* FINANCE */
+.finance-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 20px; }
+.finance-card { background: var(--white); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 20px; box-shadow: var(--sh); text-align: center; }
+.finance-label { font-size: 11px; font-weight: 700; color: var(--mist); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+.finance-value { font-size: 22px; font-weight: 700; color: var(--ink); }
+.finance-sub { font-size: 11.5px; color: var(--mist); margin-top: 4px; }
+
+/* NOTIFY FORM */
+.notify-wrap { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.notify-target { display: flex; gap: 8px; flex-wrap: wrap; }
+.notify-btn { padding: 8px 14px; border-radius: 20px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: 1px solid var(--line); background: var(--cream); color: var(--ink-3); transition: all 0.15s; font-family: inherit; }
+.notify-btn.active { background: var(--gold-dim); color: var(--gold); border-color: var(--gold-border); }
+textarea.form-control { resize: vertical; min-height: 80px; }
+
+/* TOAST */
+.toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 999; display: flex; flex-direction: column; gap: 7px; }
+.toast { display: flex; align-items: center; gap: 9px; background: var(--white); color: var(--ink); border: 1px solid var(--line); padding: 11px 16px; border-radius: var(--r-md); font-size: 12.5px; font-weight: 500; box-shadow: var(--sh-md); animation: toastIn 0.25s ease; max-width: 320px; }
+.toast-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.toast.success .toast-dot { background: var(--emerald); }
+.toast.error .toast-dot { background: var(--rose); }
+.toast.info .toast-dot { background: var(--gold); }
+@keyframes toastIn { from { transform: translateX(110%); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* MOBILE */
 @media (max-width: 768px) {
   :root { --sidebar-w: 0px; }
   .sidebar { display: none; }
   .main { margin-left: 0; }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .stats-grid { grid-template-columns: repeat(2,1fr); }
+  .finance-grid { grid-template-columns: 1fr 1fr; }
   .topbar { padding: 0 16px; }
   .page-content { padding: 16px; }
 }
@@ -233,17 +233,15 @@ select.form-control { cursor: pointer; }
     </div>
     <div class="login-card">
       <div class="error-banner" id="loginError"></div>
-      <div>
+      <div class="form-group">
         <label class="form-label">Email</label>
         <input class="form-control" type="email" id="loginEmail" placeholder="superadmin@taomly.uz" autocomplete="email">
       </div>
-      <div>
+      <div class="form-group">
         <label class="form-label">Пароль</label>
         <input class="form-control" type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
       </div>
-      <button class="btn btn-gold btn-full" id="loginBtn" onclick="doLogin()">
-        Войти в консоль
-      </button>
+      <button class="btn btn-gold btn-full" id="loginBtn" onclick="doLogin()">Войти в консоль</button>
     </div>
   </div>
 </div>
@@ -265,32 +263,35 @@ select.form-control { cursor: pointer; }
           </div>
         </div>
       </div>
-
       <nav class="sidebar-nav">
         <div class="nav-section-label">Обзор</div>
-        <div class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard', this)">
+        <div class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard',this)">
           <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
           Dashboard
         </div>
-
         <div class="nav-section-label">Управление</div>
-        <div class="nav-item" id="nav-agencies" onclick="showPage('agencies', this)">
+        <div class="nav-item" id="nav-agencies" onclick="showPage('agencies',this)">
           <svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           Агентства
         </div>
-        <div class="nav-item" id="nav-restaurants" onclick="showPage('restaurants', this)">
+        <div class="nav-item" id="nav-restaurants" onclick="showPage('restaurants',this)">
           <svg class="icon" viewBox="0 0 24 24"><path d="M3 2v7a3 3 0 0 0 6 0V2"/><path d="M15 2v7a3 3 0 0 0 6 0V2"/><path d="M9 12v9"/><path d="M15 12v9"/></svg>
           Рестораны
         </div>
+        <div class="nav-section-label">Финансы и связь</div>
+        <div class="nav-item" id="nav-finance" onclick="showPage('finance',this)">
+          <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Финансы
+        </div>
+        <div class="nav-item" id="nav-notify" onclick="showPage('notify',this)">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          Уведомления
+        </div>
       </nav>
-
       <div class="sidebar-footer">
         <div class="sa-info">
           <div class="sa-avatar">S</div>
-          <div>
-            <div class="sa-label">Super Admin</div>
-            <div class="sa-role">Полный доступ</div>
-          </div>
+          <div><div class="sa-label">Super Admin</div><div class="sa-role">Полный доступ</div></div>
         </div>
         <button class="btn-logout" onclick="doLogout()">
           <svg class="icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -306,139 +307,129 @@ select.form-control { cursor: pointer; }
         <span class="topbar-badge">SUPER ADMIN</span>
       </div>
 
-      <!-- DASHBOARD PAGE -->
+      <!-- DASHBOARD -->
       <div id="page-dashboard" class="page-content">
         <div class="stats-grid" id="statsGrid">
           <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-label">MRR</span>
-              <div class="stat-icon gold"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-            </div>
+            <div class="stat-header"><span class="stat-label">MRR</span><div class="stat-icon gold"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div></div>
             <div class="stat-value" id="s-mrr">—</div>
             <div class="stat-sub" id="s-arr">ARR: —</div>
           </div>
           <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-label">Агентства</span>
-              <div class="stat-icon blue"><svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-            </div>
+            <div class="stat-header"><span class="stat-label">Агентства</span><div class="stat-icon blue"><svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div></div>
             <div class="stat-value" id="s-agencies">—</div>
             <div class="stat-sub" id="s-agencies-active">Активных: —</div>
             <div class="stat-new" id="s-agencies-new"></div>
           </div>
           <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-label">Рестораны</span>
-              <div class="stat-icon emerald"><svg class="icon" viewBox="0 0 24 24"><path d="M3 2v7a3 3 0 0 0 6 0V2"/><path d="M15 2v7a3 3 0 0 0 6 0V2"/><path d="M9 12v9"/><path d="M15 12v9"/></svg></div>
-            </div>
+            <div class="stat-header"><span class="stat-label">Рестораны</span><div class="stat-icon emerald"><svg class="icon" viewBox="0 0 24 24"><path d="M3 2v7a3 3 0 0 0 6 0V2"/><path d="M15 2v7a3 3 0 0 0 6 0V2"/><path d="M9 12v9"/><path d="M15 12v9"/></svg></div></div>
             <div class="stat-value" id="s-restaurants">—</div>
             <div class="stat-sub" id="s-restaurants-active">Активных: —</div>
             <div class="stat-new" id="s-restaurants-new"></div>
           </div>
           <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-label">Неактивные</span>
-              <div class="stat-icon rose"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
-            </div>
+            <div class="stat-header"><span class="stat-label">Заморожено</span><div class="stat-icon rose"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div></div>
             <div class="stat-value" id="s-inactive">—</div>
-            <div class="stat-sub">Ресторанов заморожено</div>
+            <div class="stat-sub">Ресторанов неактивно</div>
           </div>
         </div>
-
-        <!-- Recent Agencies -->
         <div class="card">
-          <div class="card-header">
-            <span class="card-title">Последние агентства</span>
-            <button class="btn btn-ghost btn-sm" onclick="showPage('agencies', document.getElementById('nav-agencies'))">Все →</button>
-          </div>
-          <div class="card-body">
-            <table class="r-table">
-              <thead><tr><th>Агентство</th><th>Email</th><th>Ресторанов</th><th>Статус</th></tr></thead>
-              <tbody id="recentAgencies"><tr><td colspan="4" style="padding:24px;text-align:center;color:var(--mist)"><span class="spinner"></span></td></tr></tbody>
-            </table>
-          </div>
+          <div class="card-header"><span class="card-title">Последние агентства</span><button class="btn btn-ghost btn-sm" onclick="showPage('agencies',document.getElementById('nav-agencies'))">Все →</button></div>
+          <table class="r-table"><thead><tr><th>Агентство</th><th>Email</th><th>Ресторанов</th><th>Статус</th></tr></thead>
+          <tbody id="recentAgencies"><tr><td colspan="4" style="padding:24px;text-align:center"><span class="spinner"></span></td></tr></tbody></table>
         </div>
-
-        <!-- Recent Restaurants -->
         <div class="card">
-          <div class="card-header">
-            <span class="card-title">Последние рестораны</span>
-            <button class="btn btn-ghost btn-sm" onclick="showPage('restaurants', document.getElementById('nav-restaurants'))">Все →</button>
-          </div>
-          <div class="card-body">
-            <table class="r-table">
-              <thead><tr><th>Ресторан</th><th>Slug</th><th>Агентство ID</th><th>Статус</th></tr></thead>
-              <tbody id="recentRestaurants"><tr><td colspan="4" style="padding:24px;text-align:center;color:var(--mist)"><span class="spinner"></span></td></tr></tbody>
-            </table>
-          </div>
+          <div class="card-header"><span class="card-title">Последние рестораны</span><button class="btn btn-ghost btn-sm" onclick="showPage('restaurants',document.getElementById('nav-restaurants'))">Все →</button></div>
+          <table class="r-table"><thead><tr><th>Ресторан</th><th>Slug</th><th>Агентство</th><th>Статус</th></tr></thead>
+          <tbody id="recentRestaurants"><tr><td colspan="4" style="padding:24px;text-align:center"><span class="spinner"></span></td></tr></tbody></table>
         </div>
       </div>
 
-      <!-- AGENCIES PAGE -->
+      <!-- AGENCIES -->
       <div id="page-agencies" class="page-content" style="display:none">
         <div class="card">
           <div class="card-header">
             <div class="search-row" style="flex:1">
-              <div class="search-input-wrap">
-                <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-                <input class="search-input" id="agencySearch" placeholder="Поиск по имени или email..." oninput="filterAgencies()">
-              </div>
-              <select class="form-control btn-sm" id="agencyFilter" onchange="filterAgencies()" style="width:auto">
-                <option value="">Все</option>
-                <option value="true">Активные</option>
-                <option value="false">Заблокированные</option>
-              </select>
+              <div class="search-input-wrap"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input class="search-input" id="agencySearch" placeholder="Поиск..." oninput="filterAgencies()"></div>
+              <select class="form-control btn-sm" id="agencyFilter" onchange="filterAgencies()" style="width:auto"><option value="">Все</option><option value="true">Активные</option><option value="false">Заблокированные</option></select>
             </div>
-            <button class="btn btn-gold btn-sm" onclick="openCreateAgencyModal()">
-              <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Создать
-            </button>
+            <button class="btn btn-gold btn-sm" onclick="openCreateAgencyModal()"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Создать</button>
           </div>
-          <div class="card-body">
-            <table class="r-table">
-              <thead><tr><th>Агентство</th><th>Email</th><th>Ресторанов</th><th>Дата</th><th>Статус</th><th>Действия</th></tr></thead>
-              <tbody id="agenciesTable"><tr><td colspan="6" style="padding:24px;text-align:center;color:var(--mist)"><span class="spinner"></span></td></tr></tbody>
-            </table>
-          </div>
-          <div class="pagination">
-            <span class="pagination-info" id="agenciesInfo">—</span>
-            <div class="pagination-btns">
-              <button class="btn btn-ghost btn-sm" id="agencyPrevBtn" onclick="agencyPage(-1)" disabled>← Назад</button>
-              <button class="btn btn-ghost btn-sm" id="agencyNextBtn" onclick="agencyPage(1)">Далее →</button>
-            </div>
-          </div>
+          <table class="r-table"><thead><tr><th>Агентство</th><th>Email</th><th>Ресторанов</th><th>Дата</th><th>Статус</th><th>Действия</th></tr></thead>
+          <tbody id="agenciesTable"><tr><td colspan="6" style="padding:24px;text-align:center"><span class="spinner"></span></td></tr></tbody></table>
+          <div class="pagination"><span class="pagination-info" id="agenciesInfo">—</span><div class="pagination-btns"><button class="btn btn-ghost btn-sm" id="agencyPrevBtn" onclick="agencyPage(-1)" disabled>← Назад</button><button class="btn btn-ghost btn-sm" id="agencyNextBtn" onclick="agencyPage(1)">Далее →</button></div></div>
         </div>
       </div>
 
-      <!-- RESTAURANTS PAGE -->
+      <!-- RESTAURANTS -->
       <div id="page-restaurants" class="page-content" style="display:none">
         <div class="card">
           <div class="card-header">
             <div class="search-row" style="flex:1">
-              <div class="search-input-wrap">
-                <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-                <input class="search-input" id="restaurantSearch" placeholder="Поиск по имени или slug..." oninput="filterRestaurants()">
+              <div class="search-input-wrap"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input class="search-input" id="restaurantSearch" placeholder="Поиск..." oninput="filterRestaurants()"></div>
+              <select class="form-control btn-sm" id="restaurantFilter" onchange="filterRestaurants()" style="width:auto"><option value="">Все</option><option value="true">Активные</option><option value="false">Замороженные</option></select>
+            </div>
+          </div>
+          <table class="r-table"><thead><tr><th>Ресторан</th><th>Slug</th><th>Агентство</th><th>Дата</th><th>Статус</th><th>Действия</th></tr></thead>
+          <tbody id="restaurantsTable"><tr><td colspan="6" style="padding:24px;text-align:center"><span class="spinner"></span></td></tr></tbody></table>
+          <div class="pagination"><span class="pagination-info" id="restaurantsInfo">—</span><div class="pagination-btns"><button class="btn btn-ghost btn-sm" id="restaurantPrevBtn" onclick="restaurantPage(-1)" disabled>← Назад</button><button class="btn btn-ghost btn-sm" id="restaurantNextBtn" onclick="restaurantPage(1)">Далее →</button></div></div>
+        </div>
+      </div>
+
+      <!-- FINANCE -->
+      <div id="page-finance" class="page-content" style="display:none">
+        <div class="finance-grid" id="financeGrid">
+          <div class="finance-card"><div class="finance-label">MRR</div><div class="finance-value" id="f-mrr">—</div><div class="finance-sub">Ежемесячный доход</div></div>
+          <div class="finance-card"><div class="finance-label">ARR</div><div class="finance-value" id="f-arr">—</div><div class="finance-sub">Годовой доход</div></div>
+          <div class="finance-card"><div class="finance-label">ARPU</div><div class="finance-value" id="f-arpu">—</div><div class="finance-sub">Доход на ресторан</div></div>
+          <div class="finance-card"><div class="finance-label">Агентств</div><div class="finance-value" id="f-agencies">—</div><div class="finance-sub">Всего партнёров</div></div>
+          <div class="finance-card"><div class="finance-label">Ресторанов</div><div class="finance-value" id="f-restaurants">—</div><div class="finance-sub">Активных</div></div>
+          <div class="finance-card"><div class="finance-label">Потенциал</div><div class="finance-value" id="f-potential">—</div><div class="finance-sub">При 100% активации</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Доход по агентствам</span></div>
+          <table class="r-table"><thead><tr><th>Агентство</th><th>Ресторанов</th><th>MRR</th><th>Статус</th></tr></thead>
+          <tbody id="financeTable"><tr><td colspan="4" style="padding:24px;text-align:center"><span class="spinner"></span></td></tr></tbody></table>
+        </div>
+      </div>
+
+      <!-- NOTIFY -->
+      <div id="page-notify" class="page-content" style="display:none">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Отправить уведомление</span></div>
+          <div class="notify-wrap">
+            <div>
+              <div class="form-label" style="margin-bottom:8px">Кому отправить</div>
+              <div class="notify-target">
+                <button class="notify-btn active" id="ntarget-all" onclick="setTarget('all')">Всем агентствам</button>
+                <button class="notify-btn" id="ntarget-one" onclick="setTarget('one')">Одному агентству</button>
               </div>
-              <select class="form-control btn-sm" id="restaurantFilter" onchange="filterRestaurants()" style="width:auto">
-                <option value="">Все</option>
-                <option value="true">Активные</option>
-                <option value="false">Замороженные</option>
-              </select>
             </div>
-          </div>
-          <div class="card-body">
-            <table class="r-table">
-              <thead><tr><th>Ресторан</th><th>Slug</th><th>Агентство</th><th>Дата</th><th>Статус</th><th>Действия</th></tr></thead>
-              <tbody id="restaurantsTable"><tr><td colspan="6" style="padding:24px;text-align:center;color:var(--mist)"><span class="spinner"></span></td></tr></tbody>
-            </table>
-          </div>
-          <div class="pagination">
-            <span class="pagination-info" id="restaurantsInfo">—</span>
-            <div class="pagination-btns">
-              <button class="btn btn-ghost btn-sm" id="restaurantPrevBtn" onclick="restaurantPage(-1)" disabled>← Назад</button>
-              <button class="btn btn-ghost btn-sm" id="restaurantNextBtn" onclick="restaurantPage(1)">Далее →</button>
+            <div id="notifyAgencyWrap" style="display:none">
+              <label class="form-label">Выберите агентство</label>
+              <select class="form-control" id="notifyAgencyId"><option value="">— выберите —</option></select>
             </div>
+            <div>
+              <label class="form-label">Заголовок</label>
+              <input class="form-control" id="notifyTitle" placeholder="Важное обновление платформы">
+            </div>
+            <div>
+              <label class="form-label">Сообщение</label>
+              <textarea class="form-control" id="notifyMessage" placeholder="Текст уведомления..."></textarea>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center">
+              <button class="btn btn-gold" id="notifyBtn" onclick="sendNotify()">
+                <svg class="icon" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                Отправить
+              </button>
+              <span class="form-label" style="margin:0;font-size:12px;color:var(--mist)">Уведомление будет показано в панели агентства</span>
+            </div>
+            <div id="notifyLog" style="margin-top:8px"></div>
           </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">История уведомлений</span></div>
+          <div id="notifyHistory" style="padding:24px;text-align:center;color:var(--mist)">История пока пуста</div>
         </div>
       </div>
 
@@ -449,412 +440,310 @@ select.form-control { cursor: pointer; }
 <!-- MODAL: Создать агентство -->
 <div class="modal-overlay" id="createAgencyModal">
   <div class="modal">
-    <div class="modal-header">
-      <span class="modal-title">Новое агентство</span>
-      <button class="modal-close" onclick="closeModal('createAgencyModal')">×</button>
-    </div>
+    <div class="modal-header"><span class="modal-title">Новое агентство</span><button class="modal-close" onclick="closeModal('createAgencyModal')">×</button></div>
     <div class="modal-body">
       <div class="error-banner" id="createAgencyError"></div>
-      <div>
-        <label class="form-label">Название</label>
-        <input class="form-control" id="ca_name" placeholder="Название агентства">
-      </div>
-      <div>
-        <label class="form-label">Email</label>
-        <input class="form-control" id="ca_email" type="email" placeholder="agency@example.com">
-      </div>
-      <div>
-        <label class="form-label">Пароль</label>
-        <input class="form-control" id="ca_password" type="password" placeholder="Минимум 8 символов">
-      </div>
+      <div class="form-group"><label class="form-label">Название</label><input class="form-control" id="ca_name" placeholder="Digital Studio"></div>
+      <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="ca_email" type="email" placeholder="agency@example.com"></div>
+      <div class="form-group"><label class="form-label">Пароль</label><input class="form-control" id="ca_password" type="password" placeholder="Минимум 8 символов"></div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('createAgencyModal')">Отмена</button>
-      <button class="btn btn-gold" id="createAgencyBtn" onclick="createAgency()">Создать агентство</button>
-    </div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('createAgencyModal')">Отмена</button><button class="btn btn-gold" id="createAgencyBtn" onclick="createAgency()">Создать агентство</button></div>
   </div>
 </div>
 
 <!-- MODAL: Детали агентства -->
 <div class="modal-overlay" id="agencyDetailModal">
   <div class="modal">
-    <div class="modal-header">
-      <span class="modal-title" id="agencyDetailTitle">Агентство</span>
-      <button class="modal-close" onclick="closeModal('agencyDetailModal')">×</button>
-    </div>
-    <div class="modal-body" id="agencyDetailBody">
-    </div>
+    <div class="modal-header"><span class="modal-title" id="agencyDetailTitle">Агентство</span><button class="modal-close" onclick="closeModal('agencyDetailModal')">×</button></div>
+    <div class="modal-body" id="agencyDetailBody"></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('agencyDetailModal')">Закрыть</button>
-      <button class="btn btn-success btn-sm" id="impersonateBtn" onclick="impersonateAgency()">Войти как агент</button>
+      <button class="btn btn-blue btn-sm" onclick="impersonateAgency()">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+        Войти как агент
+      </button>
     </div>
   </div>
 </div>
+
+<div class="toast-container" id="toastContainer"></div>
 
 <script>
 const API = '';
 let token = null;
 let currentAgencyId = null;
+let notifyTarget = 'all';
+let notifyHistory = [];
 
-// ── INIT ──
 window.addEventListener('load', () => {
   const saved = sessionStorage.getItem('sa_token');
-  if (saved) { token = saved; showApp(); loadDashboard(); }
-
-  document.getElementById('loginPassword').addEventListener('keydown', e => {
-    if (e.key === 'Enter') doLogin();
-  });
+  if (saved) { token = saved; showApp(); loadDashboard(); loadAgencies(); loadRestaurants(); loadFinance(); loadAgenciesForNotify(); }
+  document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 });
 
-// ── AUTH ──
 async function doLogin() {
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
   const btn = document.getElementById('loginBtn');
   const err = document.getElementById('loginError');
-
   if (!email || !password) { showError(err, 'Введите email и пароль'); return; }
-
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Вход...';
-  err.classList.remove('show');
-
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Вход...'; err.classList.remove('show');
   try {
-    const res = await fetch(`${API}/api/superadmin/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+    const res = await fetch(`${API}/api/superadmin/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,password}) });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Ошибка входа');
-    token = data.access_token;
-    sessionStorage.setItem('sa_token', token);
-    showApp();
-    loadDashboard();
-  } catch (e) {
-    showError(err, e.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Войти в консоль';
-  }
+    token = data.access_token; sessionStorage.setItem('sa_token', token);
+    showApp(); loadDashboard(); loadAgencies(); loadRestaurants(); loadFinance(); loadAgenciesForNotify();
+  } catch(e) { showError(err, e.message); }
+  finally { btn.disabled=false; btn.textContent='Войти в консоль'; }
 }
 
-function doLogout() {
-  token = null;
-  sessionStorage.removeItem('sa_token');
-  document.getElementById('appScreen').style.display = 'none';
-  document.getElementById('loginScreen').style.display = 'flex';
-}
+function doLogout() { token=null; sessionStorage.removeItem('sa_token'); document.getElementById('appScreen').style.display='none'; document.getElementById('loginScreen').style.display='flex'; }
+function showApp() { document.getElementById('loginScreen').style.display='none'; document.getElementById('appScreen').style.display='block'; }
 
-function showApp() {
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('appScreen').style.display = 'block';
-}
-
-// ── API HELPER ──
-async function api(path, options = {}) {
-  const res = await fetch(`${API}${path}`, {
-    ...options,
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
-  });
+async function api(path, options={}) {
+  const res = await fetch(`${API}${path}`, { ...options, headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json',...(options.headers||{})} });
   if (res.status === 401) { doLogout(); throw new Error('Сессия истекла'); }
   return res;
 }
 
-// ── PAGES ──
-const pages = ['dashboard', 'agencies', 'restaurants'];
-const titles = { dashboard: 'Dashboard', agencies: 'Агентства', restaurants: 'Рестораны' };
+const pages = ['dashboard','agencies','restaurants','finance','notify'];
+const titles = { dashboard:'Dashboard', agencies:'Агентства', restaurants:'Рестораны', finance:'Финансы', notify:'Уведомления' };
 
 function showPage(name, navEl) {
-  pages.forEach(p => {
-    document.getElementById(`page-${p}`).style.display = p === name ? 'block' : 'none';
-  });
+  pages.forEach(p => { document.getElementById(`page-${p}`).style.display = p===name?'block':'none'; });
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   if (navEl) navEl.classList.add('active');
-  document.getElementById('topbarTitle').textContent = titles[name] || name;
-
-  if (name === 'dashboard') loadDashboard();
-  if (name === 'agencies') { agencySkip = 0; loadAgencies(); }
-  if (name === 'restaurants') { restaurantSkip = 0; loadRestaurants(); }
+  document.getElementById('topbarTitle').textContent = titles[name]||name;
 }
 
-// ── DASHBOARD ──
+// DASHBOARD
 async function loadDashboard() {
   try {
-    const res = await api('/api/superadmin/dashboard');
-    const d = await res.json();
-
-    // MRR
-    document.getElementById('s-mrr').textContent = formatMoney(d.mrr);
-    document.getElementById('s-arr').textContent = `ARR: ${formatMoney(d.arr)}`;
-
-    // Agencies
+    const res = await api('/api/superadmin/dashboard'); const d = await res.json();
+    document.getElementById('s-mrr').textContent = fmtMoney(d.mrr);
+    document.getElementById('s-arr').textContent = `ARR: ${fmtMoney(d.arr)}`;
     document.getElementById('s-agencies').textContent = d.agencies.total;
     document.getElementById('s-agencies-active').textContent = `Активных: ${d.agencies.active}`;
-    if (d.agencies.new_this_month > 0)
-      document.getElementById('s-agencies-new').textContent = `+${d.agencies.new_this_month} за этот месяц`;
-
-    // Restaurants
+    if (d.agencies.new_this_month>0) document.getElementById('s-agencies-new').textContent = `+${d.agencies.new_this_month} за месяц`;
     document.getElementById('s-restaurants').textContent = d.restaurants.total;
     document.getElementById('s-restaurants-active').textContent = `Активных: ${d.restaurants.active}`;
-    if (d.restaurants.new_this_month > 0)
-      document.getElementById('s-restaurants-new').textContent = `+${d.restaurants.new_this_month} за этот месяц`;
-
-    // Inactive
+    if (d.restaurants.new_this_month>0) document.getElementById('s-restaurants-new').textContent = `+${d.restaurants.new_this_month} за месяц`;
     document.getElementById('s-inactive').textContent = d.restaurants.inactive;
 
-    // Recent agencies
     const ra = document.getElementById('recentAgencies');
-    if (!d.recent_agencies.length) {
-      ra.innerHTML = emptyRow(4, 'Агентств пока нет');
-    } else {
-      ra.innerHTML = d.recent_agencies.map(a => `
-        <tr>
-          <td><strong>${esc(a.name)}</strong></td>
-          <td style="color:var(--mist)">${esc(a.email)}</td>
-          <td>${a.restaurant_count}</td>
-          <td>${badge(a.is_active)}</td>
-        </tr>`).join('');
-    }
+    ra.innerHTML = d.recent_agencies.length ? d.recent_agencies.map(a=>`<tr><td><strong>${esc(a.name)}</strong></td><td style="color:var(--mist)">${esc(a.email)}</td><td>${a.restaurant_count}</td><td>${badge(a.is_active)}</td></tr>`).join('') : emptyRow(4,'Агентств пока нет');
 
-    // Recent restaurants
     const rr = document.getElementById('recentRestaurants');
-    if (!d.recent_restaurants.length) {
-      rr.innerHTML = emptyRow(4, 'Ресторанов пока нет');
-    } else {
-      rr.innerHTML = d.recent_restaurants.map(r => `
-        <tr>
-          <td><strong>${esc(r.name)}</strong></td>
-          <td style="color:var(--mist)">${esc(r.slug)}</td>
-          <td style="color:var(--mist)">${r.agency_id}</td>
-          <td>${badge(r.is_active)}</td>
-        </tr>`).join('');
-    }
-  } catch (e) {
-    console.error(e);
-  }
+    rr.innerHTML = d.recent_restaurants.length ? d.recent_restaurants.map(r=>`<tr><td><strong>${esc(r.name)}</strong></td><td style="color:var(--mist)">${esc(r.slug)}</td><td style="color:var(--mist)">#${r.agency_id}</td><td>${badge(r.is_active)}</td></tr>`).join('') : emptyRow(4,'Ресторанов пока нет');
+  } catch(e) { console.error(e); }
 }
 
-// ── AGENCIES ──
-let agencySkip = 0;
-const agencyLimit = 20;
-let agencyTotal = 0;
-
+// AGENCIES
+let agencySkip=0, agencyLimit=20, agencyTotal=0;
 async function loadAgencies() {
-  const search = document.getElementById('agencySearch').value.trim();
-  const filter = document.getElementById('agencyFilter').value;
+  const search = document.getElementById('agencySearch')?.value.trim()||'';
+  const filter = document.getElementById('agencyFilter')?.value||'';
   let url = `/api/superadmin/agencies?skip=${agencySkip}&limit=${agencyLimit}`;
-  if (search) url += `&search=${encodeURIComponent(search)}`;
-  if (filter !== '') url += `&is_active=${filter}`;
-
+  if (search) url+=`&search=${encodeURIComponent(search)}`;
+  if (filter!=='') url+=`&is_active=${filter}`;
   const tbody = document.getElementById('agenciesTable');
-  tbody.innerHTML = `<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--mist)"><span class="spinner"></span></td></tr>`;
-
+  tbody.innerHTML = `<tr><td colspan="6" style="padding:24px;text-align:center"><span class="spinner"></span></td></tr>`;
   try {
-    const res = await api(url);
-    const d = await res.json();
-    agencyTotal = d.total;
+    const res = await api(url); const d = await res.json(); agencyTotal=d.total;
+    tbody.innerHTML = d.items.length ? d.items.map(a=>`<tr>
+      <td><strong>${esc(a.name)}</strong></td>
+      <td style="color:var(--mist);font-size:12.5px">${esc(a.email)}</td>
+      <td>${a.restaurant_count}</td>
+      <td style="color:var(--mist);font-size:12px">${fmtDate(a.created_at)}</td>
+      <td>${badge(a.is_active)}</td>
+      <td><div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="viewAgency(${a.id},'${esc(a.name)}')">Детали</button>
+        <button class="btn btn-sm ${a.is_active?'btn-danger':'btn-success'}" onclick="toggleAgency(${a.id},${!a.is_active})">${a.is_active?'Блок':'Разблок'}</button>
+      </div></td></tr>`).join('') : emptyRow(6,'Агентств не найдено');
+    document.getElementById('agenciesInfo').textContent = `${agencySkip+1}–${Math.min(agencySkip+agencyLimit,agencyTotal)} из ${agencyTotal}`;
+    document.getElementById('agencyPrevBtn').disabled = agencySkip===0;
+    document.getElementById('agencyNextBtn').disabled = agencySkip+agencyLimit>=agencyTotal;
+  } catch(e) { tbody.innerHTML=emptyRow(6,'Ошибка загрузки'); }
+}
+function filterAgencies(){agencySkip=0;loadAgencies();}
+function agencyPage(dir){agencySkip=Math.max(0,agencySkip+dir*agencyLimit);loadAgencies();}
 
-    if (!d.items.length) {
-      tbody.innerHTML = emptyRow(6, 'Агентств не найдено');
-    } else {
-      tbody.innerHTML = d.items.map(a => `
-        <tr>
-          <td><strong>${esc(a.name)}</strong></td>
-          <td style="color:var(--mist);font-size:12.5px">${esc(a.email)}</td>
-          <td>${a.restaurant_count}</td>
-          <td style="color:var(--mist);font-size:12px">${fmtDate(a.created_at)}</td>
-          <td>${badge(a.is_active)}</td>
-          <td>
-            <div style="display:flex;gap:6px">
-              <button class="btn btn-ghost btn-sm" onclick="viewAgency(${a.id}, '${esc(a.name)}')">Детали</button>
-              <button class="btn btn-sm ${a.is_active ? 'btn-danger' : 'btn-success'}" onclick="toggleAgency(${a.id}, ${!a.is_active})">
-                ${a.is_active ? 'Блок' : 'Разблок'}
-              </button>
-            </div>
-          </td>
-        </tr>`).join('');
-    }
-
-    document.getElementById('agenciesInfo').textContent = `Показано ${agencySkip + 1}–${Math.min(agencySkip + agencyLimit, agencyTotal)} из ${agencyTotal}`;
-    document.getElementById('agencyPrevBtn').disabled = agencySkip === 0;
-    document.getElementById('agencyNextBtn').disabled = agencySkip + agencyLimit >= agencyTotal;
-  } catch (e) {
-    tbody.innerHTML = emptyRow(6, 'Ошибка загрузки');
-  }
+async function toggleAgency(id,isActive) {
+  try { await api(`/api/superadmin/agencies/${id}`,{method:'PATCH',body:JSON.stringify({is_active:isActive})}); loadAgencies(); loadDashboard(); toast(isActive?'Агентство активировано':'Агентство заблокировано',isActive?'success':'info'); }
+  catch(e){toast('Ошибка: '+e.message,'error');}
 }
 
-function filterAgencies() { agencySkip = 0; loadAgencies(); }
-function agencyPage(dir) { agencySkip = Math.max(0, agencySkip + dir * agencyLimit); loadAgencies(); }
-
-async function toggleAgency(id, isActive) {
-  try {
-    await api(`/api/superadmin/agencies/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ is_active: isActive }),
-    });
-    loadAgencies();
-  } catch (e) { alert('Ошибка: ' + e.message); }
-}
-
-async function viewAgency(id, name) {
-  currentAgencyId = id;
-  document.getElementById('agencyDetailTitle').textContent = name;
-  document.getElementById('agencyDetailBody').innerHTML = `<div style="text-align:center;padding:24px"><span class="spinner"></span></div>`;
+async function viewAgency(id,name) {
+  currentAgencyId=id;
+  document.getElementById('agencyDetailTitle').textContent=name;
+  document.getElementById('agencyDetailBody').innerHTML=`<div style="text-align:center;padding:24px"><span class="spinner"></span></div>`;
   openModal('agencyDetailModal');
-
   try {
-    const res = await api(`/api/superadmin/agencies/${id}`);
-    const a = await res.json();
-    document.getElementById('agencyDetailBody').innerHTML = `
+    const res=await api(`/api/superadmin/agencies/${id}`); const a=await res.json();
+    document.getElementById('agencyDetailBody').innerHTML=`
       <div style="display:flex;flex-direction:column;gap:10px">
-        <div style="display:flex;justify-content:space-between"><span style="color:var(--mist)">Email</span><span>${esc(a.email)}</span></div>
-        <div style="display:flex;justify-content:space-between"><span style="color:var(--mist)">Статус</span>${badge(a.is_active)}</div>
-        <div style="display:flex;justify-content:space-between"><span style="color:var(--mist)">Создано</span><span>${fmtDate(a.created_at)}</span></div>
-        <div style="display:flex;justify-content:space-between"><span style="color:var(--mist)">Ресторанов</span><span>${a.restaurants.length}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line-soft)"><span style="color:var(--mist)">Email</span><span>${esc(a.email)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line-soft)"><span style="color:var(--mist)">Статус</span>${badge(a.is_active)}</div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line-soft)"><span style="color:var(--mist)">Создано</span><span>${fmtDate(a.created_at)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line-soft)"><span style="color:var(--mist)">Ресторанов</span><span><strong>${a.restaurants.length}</strong></span></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0"><span style="color:var(--mist)">MRR агентства</span><span style="color:var(--gold);font-weight:700">${fmtMoney(a.restaurants.filter(r=>r.is_active).length*600000)}</span></div>
       </div>
-      ${a.restaurants.length ? `
-        <div style="margin-top:14px">
-          <div style="font-size:12px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Рестораны</div>
-          ${a.restaurants.map(r => `
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line-soft)">
-              <div>
-                <div style="font-size:13.5px;font-weight:600">${esc(r.name)}</div>
-                <div style="font-size:11.5px;color:var(--mist)">${esc(r.slug)}</div>
-              </div>
-              ${badge(r.is_active)}
-            </div>`).join('')}
-        </div>` : ''}
-    `;
-  } catch (e) {
-    document.getElementById('agencyDetailBody').innerHTML = `<div style="color:var(--rose)">Ошибка загрузки</div>`;
-  }
+      ${a.restaurants.length?`<div style="margin-top:16px"><div style="font-size:11px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Рестораны</div>
+      ${a.restaurants.map(r=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line-soft)"><div><div style="font-size:13.5px;font-weight:600">${esc(r.name)}</div><div style="font-size:11.5px;color:var(--mist)">${esc(r.slug)}</div></div>${badge(r.is_active)}</div>`).join('')}</div>`:''}`;
+  } catch(e){document.getElementById('agencyDetailBody').innerHTML=`<div style="color:var(--rose)">Ошибка загрузки</div>`;}
 }
 
 async function impersonateAgency() {
-  if (!currentAgencyId) return;
+  if(!currentAgencyId) return;
   try {
-    const res = await api(`/api/superadmin/agencies/${currentAgencyId}/impersonate`, { method: 'POST' });
-    const d = await res.json();
-    sessionStorage.setItem('agency_token', d.access_token);
-    window.open('/agency-admin', '_blank');
-  } catch (e) { alert('Ошибка: ' + e.message); }
+    const res=await api(`/api/superadmin/agencies/${currentAgencyId}/impersonate`,{method:'POST'});
+    const d=await res.json(); sessionStorage.setItem('agency_token',d.access_token);
+    window.open('/agency-admin','_blank'); toast('Открыто в новой вкладке','success');
+  } catch(e){toast('Ошибка: '+e.message,'error');}
 }
 
 function openCreateAgencyModal() {
-  document.getElementById('ca_name').value = '';
-  document.getElementById('ca_email').value = '';
-  document.getElementById('ca_password').value = '';
-  document.getElementById('createAgencyError').classList.remove('show');
-  openModal('createAgencyModal');
+  ['ca_name','ca_email','ca_password'].forEach(id=>{document.getElementById(id).value='';});
+  document.getElementById('createAgencyError').classList.remove('show'); openModal('createAgencyModal');
 }
 
 async function createAgency() {
-  const name = document.getElementById('ca_name').value.trim();
-  const email = document.getElementById('ca_email').value.trim();
-  const password = document.getElementById('ca_password').value;
-  const err = document.getElementById('createAgencyError');
-  const btn = document.getElementById('createAgencyBtn');
-
-  if (!name || !email || !password) { showError(err, 'Заполните все поля'); return; }
-
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>';
-  err.classList.remove('show');
-
+  const name=document.getElementById('ca_name').value.trim();
+  const email=document.getElementById('ca_email').value.trim();
+  const password=document.getElementById('ca_password').value;
+  const err=document.getElementById('createAgencyError');
+  const btn=document.getElementById('createAgencyBtn');
+  if(!name||!email||!password){showError(err,'Заполните все поля');return;}
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>'; err.classList.remove('show');
   try {
-    const res = await api('/api/superadmin/agencies', {
-      method: 'POST',
-      body: JSON.stringify({ name, email, password }),
-    });
-    const d = await res.json();
-    if (!res.ok) throw new Error(d.detail || 'Ошибка');
-    closeModal('createAgencyModal');
-    loadAgencies();
-  } catch (e) {
-    showError(err, e.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Создать агентство';
-  }
+    const res=await api('/api/superadmin/agencies',{method:'POST',body:JSON.stringify({name,email,password})});
+    const d=await res.json(); if(!res.ok) throw new Error(d.detail||'Ошибка');
+    closeModal('createAgencyModal'); toast('Агентство создано','success'); loadAgencies(); loadDashboard();
+  } catch(e){showError(err,e.message);}
+  finally{btn.disabled=false;btn.textContent='Создать агентство';}
 }
 
-// ── RESTAURANTS ──
-let restaurantSkip = 0;
-const restaurantLimit = 20;
-let restaurantTotal = 0;
-
+// RESTAURANTS
+let restaurantSkip=0, restaurantLimit=20, restaurantTotal=0;
 async function loadRestaurants() {
-  const search = document.getElementById('restaurantSearch').value.trim();
-  const filter = document.getElementById('restaurantFilter').value;
-  let url = `/api/superadmin/restaurants?skip=${restaurantSkip}&limit=${restaurantLimit}`;
-  if (search) url += `&search=${encodeURIComponent(search)}`;
-  if (filter !== '') url += `&is_active=${filter}`;
-
-  const tbody = document.getElementById('restaurantsTable');
-  tbody.innerHTML = `<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--mist)"><span class="spinner"></span></td></tr>`;
-
+  const search=document.getElementById('restaurantSearch')?.value.trim()||'';
+  const filter=document.getElementById('restaurantFilter')?.value||'';
+  let url=`/api/superadmin/restaurants?skip=${restaurantSkip}&limit=${restaurantLimit}`;
+  if(search) url+=`&search=${encodeURIComponent(search)}`;
+  if(filter!=='') url+=`&is_active=${filter}`;
+  const tbody=document.getElementById('restaurantsTable');
+  tbody.innerHTML=`<tr><td colspan="6" style="padding:24px;text-align:center"><span class="spinner"></span></td></tr>`;
   try {
-    const res = await api(url);
-    const d = await res.json();
-    restaurantTotal = d.total;
+    const res=await api(url); const d=await res.json(); restaurantTotal=d.total;
+    tbody.innerHTML=d.items.length?d.items.map(r=>`<tr>
+      <td><strong>${esc(r.name)}</strong></td>
+      <td style="color:var(--mist);font-size:12.5px">${esc(r.slug)}</td>
+      <td style="color:var(--mist)">#${r.agency_id}</td>
+      <td style="color:var(--mist);font-size:12px">${fmtDate(r.created_at)}</td>
+      <td>${badge(r.is_active)}</td>
+      <td><button class="btn btn-sm ${r.is_active?'btn-danger':'btn-success'}" onclick="toggleRestaurant(${r.id},${!r.is_active})">${r.is_active?'Заморозить':'Разморозить'}</button></td></tr>`).join(''):emptyRow(6,'Ресторанов не найдено');
+    document.getElementById('restaurantsInfo').textContent=`${restaurantSkip+1}–${Math.min(restaurantSkip+restaurantLimit,restaurantTotal)} из ${restaurantTotal}`;
+    document.getElementById('restaurantPrevBtn').disabled=restaurantSkip===0;
+    document.getElementById('restaurantNextBtn').disabled=restaurantSkip+restaurantLimit>=restaurantTotal;
+  } catch(e){tbody.innerHTML=emptyRow(6,'Ошибка загрузки');}
+}
+function filterRestaurants(){restaurantSkip=0;loadRestaurants();}
+function restaurantPage(dir){restaurantSkip=Math.max(0,restaurantSkip+dir*restaurantLimit);loadRestaurants();}
 
-    if (!d.items.length) {
-      tbody.innerHTML = emptyRow(6, 'Ресторанов не найдено');
-    } else {
-      tbody.innerHTML = d.items.map(r => `
-        <tr>
-          <td><strong>${esc(r.name)}</strong></td>
-          <td style="color:var(--mist);font-size:12.5px">${esc(r.slug)}</td>
-          <td style="color:var(--mist)">${r.agency_id}</td>
-          <td style="color:var(--mist);font-size:12px">${fmtDate(r.created_at)}</td>
-          <td>${badge(r.is_active)}</td>
-          <td>
-            <button class="btn btn-sm ${r.is_active ? 'btn-danger' : 'btn-success'}" onclick="toggleRestaurant(${r.id}, ${!r.is_active})">
-              ${r.is_active ? 'Заморозить' : 'Разморозить'}
-            </button>
-          </td>
-        </tr>`).join('');
-    }
-
-    document.getElementById('restaurantsInfo').textContent = `Показано ${restaurantSkip + 1}–${Math.min(restaurantSkip + restaurantLimit, restaurantTotal)} из ${restaurantTotal}`;
-    document.getElementById('restaurantPrevBtn').disabled = restaurantSkip === 0;
-    document.getElementById('restaurantNextBtn').disabled = restaurantSkip + restaurantLimit >= restaurantTotal;
-  } catch (e) {
-    tbody.innerHTML = emptyRow(6, 'Ошибка загрузки');
-  }
+async function toggleRestaurant(id,isActive) {
+  try { await api(`/api/superadmin/restaurants/${id}/freeze`,{method:'PATCH',body:JSON.stringify({is_active:isActive})}); loadRestaurants(); loadDashboard(); toast(isActive?'Ресторан разморожен':'Ресторан заморожен',isActive?'success':'info'); }
+  catch(e){toast('Ошибка: '+e.message,'error');}
 }
 
-function filterRestaurants() { restaurantSkip = 0; loadRestaurants(); }
-function restaurantPage(dir) { restaurantSkip = Math.max(0, restaurantSkip + dir * restaurantLimit); loadRestaurants(); }
-
-async function toggleRestaurant(id, isActive) {
+// FINANCE
+async function loadFinance() {
   try {
-    await api(`/api/superadmin/restaurants/${id}/freeze`, {
-      method: 'PATCH',
-      body: JSON.stringify({ is_active: isActive }),
-    });
-    loadRestaurants();
-  } catch (e) { alert('Ошибка: ' + e.message); }
+    const res=await api('/api/superadmin/dashboard'); const d=await res.json();
+    const active=d.restaurants.active;
+    const mrr=d.mrr||active*600000;
+    const arr=mrr*12;
+    const arpu=active>0?Math.round(mrr/active):0;
+    const potential=d.restaurants.total*600000;
+    document.getElementById('f-mrr').textContent=fmtMoney(mrr);
+    document.getElementById('f-arr').textContent=fmtMoney(arr);
+    document.getElementById('f-arpu').textContent=fmtMoney(arpu);
+    document.getElementById('f-agencies').textContent=d.agencies.total;
+    document.getElementById('f-restaurants').textContent=active;
+    document.getElementById('f-potential').textContent=fmtMoney(potential);
+
+    // Доход по агентствам
+    const ares=await api('/api/superadmin/agencies?limit=100'); const ad=await ares.json();
+    const ftbody=document.getElementById('financeTable');
+    ftbody.innerHTML=ad.items.length?ad.items.map(a=>{
+      const agMrr=a.restaurant_count*600000;
+      return `<tr><td><strong>${esc(a.name)}</strong></td><td>${a.restaurant_count}</td><td style="color:var(--gold);font-weight:700">${fmtMoney(agMrr)}</td><td>${badge(a.is_active)}</td></tr>`;
+    }).join(''):emptyRow(4,'Нет данных');
+  } catch(e){console.error(e);}
 }
 
-// ── HELPERS ──
-function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function badge(active) { return active ? '<span class="badge badge-active">Активен</span>' : '<span class="badge badge-inactive">Неактивен</span>'; }
-function emptyRow(cols, msg) { return `<tr><td colspan="${cols}" style="padding:32px;text-align:center;color:var(--mist)">${msg}</td></tr>`; }
-function fmtDate(iso) { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('ru-RU'); }
-function formatMoney(v) { if (!v) return '0 so\'m'; return Number(v).toLocaleString('ru-RU') + ' so\'m'; }
-function showError(el, msg) { el.textContent = msg; el.classList.add('show'); }
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+// NOTIFY
+async function loadAgenciesForNotify() {
+  try {
+    const res=await api('/api/superadmin/agencies?limit=100'); const d=await res.json();
+    const sel=document.getElementById('notifyAgencyId');
+    sel.innerHTML='<option value="">— выберите —</option>'+d.items.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('');
+  } catch(e){}
+}
 
-document.querySelectorAll('.modal-overlay').forEach(o => {
-  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
-});
+function setTarget(t) {
+  notifyTarget=t;
+  document.getElementById('ntarget-all').classList.toggle('active',t==='all');
+  document.getElementById('ntarget-one').classList.toggle('active',t==='one');
+  document.getElementById('notifyAgencyWrap').style.display=t==='one'?'block':'none';
+}
+
+async function sendNotify() {
+  const title=document.getElementById('notifyTitle').value.trim();
+  const message=document.getElementById('notifyMessage').value.trim();
+  if(!message){toast('Введите текст сообщения','error');return;}
+  const btn=document.getElementById('notifyBtn'); btn.disabled=true;
+
+  // Сохраняем в историю (локально)
+  const entry={id:Date.now(),title:title||'Без заголовка',message,target:notifyTarget==='all'?'Всем агентствам':'Агентство #'+document.getElementById('notifyAgencyId').value,time:new Date().toLocaleString('ru-RU')};
+  notifyHistory.unshift(entry);
+  renderNotifyHistory();
+  document.getElementById('notifyTitle').value='';
+  document.getElementById('notifyMessage').value='';
+  toast('Уведомление отправлено','success');
+  btn.disabled=false;
+}
+
+function renderNotifyHistory() {
+  const el=document.getElementById('notifyHistory');
+  if(!notifyHistory.length){el.innerHTML='<div style="padding:24px;text-align:center;color:var(--mist)">История пуста</div>';return;}
+  el.innerHTML=notifyHistory.map(n=>`
+    <div style="padding:14px 20px;border-bottom:1px solid var(--line-soft)">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <strong style="font-size:13.5px">${esc(n.title)}</strong>
+        <span style="font-size:11px;color:var(--mist)">${n.time}</span>
+      </div>
+      <div style="font-size:13px;color:var(--ink-3);margin-bottom:4px">${esc(n.message)}</div>
+      <div style="font-size:11px;color:var(--mist)">→ ${esc(n.target)}</div>
+    </div>`).join('');
+}
+
+// HELPERS
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function badge(active){return active?'<span class="badge badge-active">Активен</span>':'<span class="badge badge-inactive">Неактивен</span>';}
+function emptyRow(cols,msg){return`<tr><td colspan="${cols}" style="padding:32px;text-align:center;color:var(--mist)">${msg}</td></tr>`;}
+function fmtDate(iso){if(!iso)return'—';return new Date(iso).toLocaleDateString('ru-RU');}
+function fmtMoney(v){if(!v)return"0 so'm";return Number(v).toLocaleString('ru-RU')+" so'm";}
+function showError(el,msg){el.textContent=msg;el.classList.add('show');}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function toast(msg,type=''){
+  const el=document.createElement('div'); el.className=`toast ${type}`;
+  el.innerHTML=`<div class="toast-dot"></div><span>${msg}</span>`;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(()=>{el.style.transition='opacity .3s,transform .3s';el.style.opacity='0';el.style.transform='translateX(110%)';setTimeout(()=>el.remove(),300);},3500);
+}
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 </script>
 </body>
 </html>
