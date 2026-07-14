@@ -316,6 +316,9 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     <!-- MAIN -->
     <main class="main">
       <div class="topbar">
+        <button id="btnBack" onclick="goBack()" style="display:none;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:var(--cream-2);border:1px solid var(--line);cursor:pointer;color:var(--ink-3);flex-shrink:0;transition:all 0.15s;margin-right:8px">
+          <svg style="width:16px;height:16px;stroke:currentColor;stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        </button>
         <div class="topbar-title" id="topbarTitle">Dashboard</div>
         <span class="topbar-badge">SUPER ADMIN</span>
       </div>
@@ -571,11 +574,22 @@ async function api(path, options={}) {
 const pages = ['dashboard','agencies','restaurants','finance','notify','users','subscriptions','support'];
 const titles = { dashboard:'Dashboard', agencies:'Агентства', restaurants:'Рестораны', finance:'Финансы', notify:'Уведомления', users:'Пользователи', subscriptions:'Подписки', support:'Поддержка' };
 
+let prevPage = null;
+
 function showPage(name, navEl) {
+  const current = pages.find(p => document.getElementById(`page-${p}`)?.style.display !== 'none');
+  if (current && current !== name) prevPage = current;
   pages.forEach(p => { document.getElementById(`page-${p}`).style.display = p===name?'block':'none'; });
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   if (navEl) navEl.classList.add('active');
   document.getElementById('topbarTitle').textContent = titles[name]||name;
+  const btnBack = document.getElementById('btnBack');
+  if (name !== 'dashboard' && prevPage) { btnBack.style.display='flex'; } else { btnBack.style.display='none'; prevPage=null; }
+}
+
+function goBack() {
+  const target = prevPage || 'dashboard';
+  showPage(target, document.getElementById('nav-'+target));
 }
 
 // DASHBOARD
