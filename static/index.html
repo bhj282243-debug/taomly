@@ -141,46 +141,63 @@ svg { display:block; }
 
 /* ─── HERO BANNER ─── */
 .hero-banner {
-  margin:14px 16px 0;
-  background:linear-gradient(135deg,var(--ink) 0%,#3D2E26 100%);
-  border-radius:18px; padding:22px 18px;
-  display:flex; align-items:center; justify-content:space-between;
-  gap:12px; overflow:hidden; position:relative;
+  background:var(--surface);
+  border-bottom:1px solid var(--line);
+  padding:26px 20px 24px;
+  display:flex; align-items:center;
+  justify-content:space-between;
+  gap:12px; min-height:200px;
+  position:relative; overflow:hidden;
 }
 .hero-banner::after {
-  content:''; position:absolute; top:-30px; right:-30px;
-  width:140px; height:140px; border-radius:50%;
-  background:rgba(212,175,80,.08); pointer-events:none;
+  content:''; position:absolute;
+  top:-40px; right:-40px;
+  width:200px; height:200px; border-radius:50%;
+  background:radial-gradient(ellipse,rgba(212,175,80,.06) 0%,transparent 70%);
+  pointer-events:none;
 }
 .hero-banner-text { flex:1; position:relative; z-index:1; }
 .hero-banner-eyebrow {
-  font-size:10px; font-weight:600; letter-spacing:2px;
-  text-transform:uppercase; color:var(--gold); margin-bottom:8px;
+  font-size:10px; font-weight:600;
+  letter-spacing:2px; text-transform:uppercase;
+  color:var(--gold); margin-bottom:10px;
 }
 .hero-banner-title {
   font-family:'Cormorant Garamond',serif;
-  font-size:26px; font-weight:700; line-height:1.1;
-  color:#FAF7F1; letter-spacing:-0.4px; margin-bottom:8px;
+  font-size:34px; font-weight:700;
+  line-height:1.08; color:var(--ink);
+  letter-spacing:-0.8px; margin-bottom:10px;
 }
 .hero-banner-title em { font-style:italic; color:var(--gold); }
 .hero-banner-sub {
-  font-size:11.5px; color:rgba(250,247,241,.6);
-  line-height:1.5; margin-bottom:14px;
+  font-size:12.5px; color:var(--ink-soft);
+  line-height:1.6; margin-bottom:14px;
+}
+.hero-banner-pills { display:flex; flex-direction:column; gap:5px; margin-bottom:16px; }
+.hero-banner-pill {
+  display:flex; align-items:center; gap:7px;
+  font-size:11px; font-weight:500; color:var(--ink-soft);
+}
+.hero-banner-pill-dot {
+  width:5px; height:5px; border-radius:50%;
+  background:var(--gold); flex-shrink:0;
 }
 .hero-banner-btn {
-  display:inline-flex; align-items:center; gap:6px;
-  height:34px; padding:0 14px;
-  background:var(--gold); color:var(--ink);
-  border:none; border-radius:10px;
-  font-size:12px; font-weight:700;
+  display:inline-flex; align-items:center; gap:8px;
+  height:42px; padding:0 20px;
+  background:var(--ink); color:#FAF7F1;
+  border:none; border-radius:12px;
+  font-size:13px; font-weight:600;
   font-family:inherit; cursor:pointer;
   transition:all 0.2s;
 }
-.hero-banner-btn:hover { background:#C9A84C; }
+.hero-banner-btn:hover { background:#3D2E26; transform:translateY(-1px); }
+.hero-banner-btn:active { transform:translateY(1px); }
 .hero-banner-img {
-  width:90px; height:90px; border-radius:14px;
+  width:120px; height:120px; border-radius:20px;
   overflow:hidden; flex-shrink:0;
-  border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 8px 28px rgba(26,21,18,.14);
+  border:1px solid var(--line);
   position:relative; z-index:1;
 }
 .hero-banner-img img { width:100%; height:100%; object-fit:cover; }
@@ -827,14 +844,19 @@ svg { display:block; }
     <div class="hero-banner" id="heroBanner">
       <div class="hero-banner-text">
         <div class="hero-banner-eyebrow" id="heroBannerEyebrow">Tez va mazali</div>
-        <div class="hero-banner-title" id="heroBannerTitle">Sevimli<br><em>taomingiz</em></div>
-        <div class="hero-banner-sub" id="heroBannerSub">Har kuni yangi taomlar.<br>Tez yetkazib berish.</div>
+        <div class="hero-banner-title">Sevimli<br>taomlar<br><em>tez yetkazish</em></div>
+        <div class="hero-banner-sub" id="heroBannerSub">Har kuni yangi taomlar.<br>Sifatli ingredientlar.</div>
+        <div class="hero-banner-pills">
+          <div class="hero-banner-pill"><div class="hero-banner-pill-dot"></div>Yetkazib berish 40 daqiqa</div>
+          <div class="hero-banner-pill"><div class="hero-banner-pill-dot"></div>Olishda to'lash</div>
+        </div>
         <button class="hero-banner-btn" onclick="document.getElementById('menuContent').scrollIntoView({behavior:'smooth'})">
-          Menuni ko'rish ↓
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+          Menuni ko'rish
         </button>
       </div>
       <div class="hero-banner-img" id="heroBannerImg">
-        <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200&q=80" alt="Taom" onerror="this.parentNode.style.display='none'">
+        <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300&q=85" alt="Taom" onerror="this.parentNode.style.display='none'">
       </div>
     </div>
 
