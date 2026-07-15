@@ -131,6 +131,143 @@ svg { display:block; }
   font-size:15px; color:var(--ink-soft); line-height:1.4;
 }
 
+/* ─── WELCOME LINE (replaces hero banner) ─── */
+.welcome-line { margin:2px 0 24px; }
+.welcome-rule { width:26px; height:1px; background:var(--gold); margin-bottom:11px; }
+.welcome-text {
+  font-family:'Cormorant Garamond',serif; font-style:italic;
+  font-size:15px; color:var(--ink-soft); line-height:1.4;
+}
+
+/* ─── HERO BANNER ─── */
+.hero-banner {
+  margin:14px 16px 0;
+  background:linear-gradient(135deg,var(--ink) 0%,#3D2E26 100%);
+  border-radius:18px; padding:22px 18px;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; overflow:hidden; position:relative;
+}
+.hero-banner::after {
+  content:''; position:absolute; top:-30px; right:-30px;
+  width:140px; height:140px; border-radius:50%;
+  background:rgba(212,175,80,.08); pointer-events:none;
+}
+.hero-banner-text { flex:1; position:relative; z-index:1; }
+.hero-banner-eyebrow {
+  font-size:10px; font-weight:600; letter-spacing:2px;
+  text-transform:uppercase; color:var(--gold); margin-bottom:8px;
+}
+.hero-banner-title {
+  font-family:'Cormorant Garamond',serif;
+  font-size:26px; font-weight:700; line-height:1.1;
+  color:#FAF7F1; letter-spacing:-0.4px; margin-bottom:8px;
+}
+.hero-banner-title em { font-style:italic; color:var(--gold); }
+.hero-banner-sub {
+  font-size:11.5px; color:rgba(250,247,241,.6);
+  line-height:1.5; margin-bottom:14px;
+}
+.hero-banner-btn {
+  display:inline-flex; align-items:center; gap:6px;
+  height:34px; padding:0 14px;
+  background:var(--gold); color:var(--ink);
+  border:none; border-radius:10px;
+  font-size:12px; font-weight:700;
+  font-family:inherit; cursor:pointer;
+  transition:all 0.2s;
+}
+.hero-banner-btn:hover { background:#C9A84C; }
+.hero-banner-img {
+  width:90px; height:90px; border-radius:14px;
+  overflow:hidden; flex-shrink:0;
+  border:1px solid rgba(255,255,255,.1);
+  position:relative; z-index:1;
+}
+.hero-banner-img img { width:100%; height:100%; object-fit:cover; }
+
+/* ─── POPULAR SECTION ─── */
+.popular-section { padding:18px 0 0; }
+.popular-label {
+  font-size:10px; font-weight:700; letter-spacing:1.8px;
+  text-transform:uppercase; color:var(--ink-soft);
+  padding:0 16px; margin-bottom:10px;
+}
+.popular-strip {
+  display:flex; gap:10px; padding:0 16px;
+  overflow-x:auto; scrollbar-width:none;
+}
+.popular-strip::-webkit-scrollbar { display:none; }
+.popular-card {
+  flex-shrink:0; width:120px;
+  background:var(--card); border:1px solid var(--line);
+  border-radius:14px; overflow:hidden; cursor:pointer;
+  transition:all 0.2s;
+}
+.popular-card:active { transform:scale(.96); }
+.popular-card-img {
+  width:100%; height:80px;
+  background:var(--gold-pale);
+  display:flex; align-items:center; justify-content:center;
+  overflow:hidden;
+}
+.popular-card-img img { width:100%; height:100%; object-fit:cover; }
+.popular-card-info { padding:8px 10px 10px; }
+.popular-card-name {
+  font-size:11px; font-weight:600; color:var(--ink);
+  line-height:1.3; margin-bottom:3px;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+.popular-card-price {
+  font-size:12px; font-weight:700; color:var(--gold);
+}
+
+/* ─── OFFLINE BANNER ─── */
+#offlineBanner {
+  display:none; position:fixed;
+  top:0; left:0; right:0;
+  background:#B84032; color:#fff;
+  font-size:12px; font-weight:600;
+  text-align:center; padding:9px 16px;
+  z-index:998; letter-spacing:0.2px;
+}
+#offlineBanner.show { display:block; }
+
+/* ─── PWA INSTALL BANNER ─── */
+#installBanner {
+  display:none; position:fixed;
+  bottom:16px; left:14px; right:14px;
+  background:#FFFDF9; border:1px solid var(--gold);
+  border-radius:16px; padding:16px 18px;
+  box-shadow:0 8px 28px rgba(44,33,27,.18);
+  z-index:500; flex-direction:column; gap:10px;
+}
+.install-top { display:flex; align-items:center; gap:10px; }
+.install-title { font-size:14px; font-weight:700; color:var(--ink); }
+.install-sub { font-size:12px; color:var(--ink-soft); line-height:1.4; }
+.install-actions { display:flex; gap:8px; }
+.install-btn {
+  flex:1; height:40px; border:none; border-radius:11px;
+  font-size:13px; font-weight:600; cursor:pointer;
+  font-family:inherit; transition:all 0.15s;
+}
+.install-btn-primary { background:var(--ink); color:#FAF7F1; }
+.install-btn-primary:hover { background:#3D2E26; }
+.install-btn-secondary { background:transparent; color:var(--ink-soft); border:1.5px solid var(--line); }
+
+/* ─── TOAST ─── */
+#toastEl {
+  position:fixed; bottom:90px; left:50%;
+  transform:translateX(-50%) translateY(8px);
+  background:var(--ink); color:#FAF7F1;
+  padding:9px 18px; border-radius:24px;
+  font-size:12.5px; font-weight:500;
+  opacity:0; transition:all 0.25s;
+  z-index:600; white-space:nowrap;
+  pointer-events:none;
+  box-shadow:0 4px 16px rgba(26,21,18,.25);
+}
+#toastEl.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
 /* ─── FEATURED SECTION (Bugungi tavsiya) ─── */
 .featured-scroll {
   display:flex; gap:12px; overflow-x:auto;
@@ -652,6 +789,12 @@ svg { display:block; }
 </head>
 <body>
 
+<!-- ─── OFFLINE BANNER ─── -->
+<div id="offlineBanner">📡 Internet aloqasi yo'q</div>
+
+<!-- ─── TOAST ─── -->
+<div id="toastEl"></div>
+
 <!-- ─── SPLASH ─── -->
 <div id="splash">
   <div class="splash-name" id="splashName">Taomly</div>
@@ -678,6 +821,27 @@ svg { display:block; }
     <div class="welcome-line" id="welcomeLine" style="display:none;">
       <div class="welcome-rule"></div>
       <div class="welcome-text" id="welcomeText">Sevimli taomingizni tanlang</div>
+    </div>
+
+    <!-- HERO BANNER -->
+    <div class="hero-banner" id="heroBanner">
+      <div class="hero-banner-text">
+        <div class="hero-banner-eyebrow" id="heroBannerEyebrow">Tez va mazali</div>
+        <div class="hero-banner-title" id="heroBannerTitle">Sevimli<br><em>taomingiz</em></div>
+        <div class="hero-banner-sub" id="heroBannerSub">Har kuni yangi taomlar.<br>Tez yetkazib berish.</div>
+        <button class="hero-banner-btn" onclick="document.getElementById('menuContent').scrollIntoView({behavior:'smooth'})">
+          Menuni ko'rish ↓
+        </button>
+      </div>
+      <div class="hero-banner-img" id="heroBannerImg">
+        <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200&q=80" alt="Taom" onerror="this.parentNode.style.display='none'">
+      </div>
+    </div>
+
+    <!-- POPULAR SECTION -->
+    <div class="popular-section" id="popularSection" style="display:none;">
+      <div class="popular-label">⭐ Mashhur taomlar</div>
+      <div class="popular-strip" id="popularStrip"></div>
     </div>
     <div id="featuredSection" style="display:none; margin-bottom:18px;">
       <div class="category-title-wrap">
@@ -945,8 +1109,17 @@ async function loadMenu() {
     }
 
     renderFeatured();
+    renderPopular();
     renderCategories();
     renderMenu();
+
+    // Обновляем Hero баннер данными ресторана
+    const eyebrow = document.getElementById('heroBannerEyebrow');
+    const heroImg = document.getElementById('heroBannerImg');
+    if (eyebrow) eyebrow.textContent = restaurant.address || 'Tez va mazali';
+    if (heroImg && restaurant.logo_url) {
+      heroImg.innerHTML = `<img src="${restaurant.logo_url}" alt="${restaurant.name}" onerror="this.parentNode.style.display='none'">`;
+    }
 
     setTimeout(() => {
       document.getElementById('splash').classList.add('hidden');
@@ -1110,6 +1283,7 @@ function addItem(id) {
   if (!p) return;
   cart[id] = { id, name:p.name, price:p.price, qty:1 };
   refreshCtrl(id); updateBar();
+  showToast(`${p.name} savatga qo'shildi ✓`);
 }
 
 function changeQty(id, delta) {
@@ -1349,20 +1523,103 @@ if ('serviceWorker' in navigator) {
 // ── PWA: Install Prompt ────────────────────────────────────────────────
 // Сохраняем событие beforeinstallprompt для кастомной кнопки установки
 let _deferredInstallPrompt = null;
+const PWA_DISMISS_KEY = 'pwa_dismiss_ts';
+const PWA_DISMISS_DAYS = 7;
+
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   _deferredInstallPrompt = e;
-  // Показываем баннер "Добавить на рабочий стол" если он есть в DOM
-  const installBanner = document.getElementById('installBanner');
-  if (installBanner) installBanner.style.display = 'flex';
+  // Не показывать если уже установлено или отложено недавно
+  if (window.matchMedia('(display-mode: standalone)').matches) return;
+  const dismissed = localStorage.getItem(PWA_DISMISS_KEY);
+  if (dismissed && Date.now() - parseInt(dismissed) < PWA_DISMISS_DAYS * 86400000) return;
+  setTimeout(() => {
+    const installBanner = document.getElementById('installBanner');
+    if (installBanner) installBanner.style.display = 'flex';
+  }, 4000);
 });
 
 window.addEventListener('appinstalled', () => {
   _deferredInstallPrompt = null;
   const installBanner = document.getElementById('installBanner');
   if (installBanner) installBanner.style.display = 'none';
-  console.log('[PWA] App installed');
 });
+
+async function installApp() {
+  if (!_deferredInstallPrompt) return;
+  _deferredInstallPrompt.prompt();
+  const { outcome } = await _deferredInstallPrompt.userChoice;
+  if (outcome === 'accepted') {
+    document.getElementById('installBanner').style.display = 'none';
+  }
+  _deferredInstallPrompt = null;
+}
+
+function dismissInstall() {
+  document.getElementById('installBanner').style.display = 'none';
+  localStorage.setItem(PWA_DISMISS_KEY, Date.now().toString());
+}
+
+// ── TOAST ──────────────────────────────────────────────────────────────
+let _toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toastEl');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ── OFFLINE BANNER ─────────────────────────────────────────────────────
+function updateOnlineStatus() {
+  const banner = document.getElementById('offlineBanner');
+  if (!banner) return;
+  banner.classList.toggle('show', !navigator.onLine);
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+
+// ── POPULAR SECTION ────────────────────────────────────────────────────
+function renderPopular() {
+  const section = document.getElementById('popularSection');
+  const strip = document.getElementById('popularStrip');
+  if (!section || !strip) return;
+  const items = [];
+  (restaurant.categories || []).forEach(cat => {
+    (cat.products || []).forEach(p => {
+      if (p.is_popular && p.is_available !== false) items.push(p);
+    });
+  });
+  if (items.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  strip.innerHTML = items.map(p => {
+    const imgHtml = p.photo_url
+      ? `<img src="${p.photo_url}" alt="${p.name}" onerror="this.parentNode.innerHTML='🍽️'">`
+      : `<span style="font-size:28px">🍽️</span>`;
+    return `<div class="popular-card" onclick="openProductModal(${p.id})">
+      <div class="popular-card-img">${imgHtml}</div>
+      <div class="popular-card-info">
+        <div class="popular-card-name">${p.name}</div>
+        <div class="popular-card-price">${fmt(p.price)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
 </script>
+<!-- ─── PWA INSTALL BANNER ─── -->
+<div id="installBanner">
+  <div class="install-top">
+    <span style="font-size:20px">📲</span>
+    <span class="install-title" id="installBannerTitle">Ilovani o'rnating</span>
+  </div>
+  <div class="install-sub">Telefoningiz ekranidan tezroq oching</div>
+  <div class="install-actions">
+    <button class="install-btn install-btn-primary" onclick="installApp()">O'rnatish</button>
+    <button class="install-btn install-btn-secondary" onclick="dismissInstall()">Keyinroq</button>
+  </div>
+</div>
+
 </body>
 </html>
