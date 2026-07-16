@@ -874,7 +874,7 @@ svg { display:block; }
 </div>
 
 <!-- ─── MENU SCREEN ─── -->
-<div id="menuScreen">
+<div id="menuScreen" style="display:none;">
   <div class="header">
     <div class="restaurant-row">
       <div class="restaurant-logo" id="restaurantLogo">
@@ -892,26 +892,6 @@ svg { display:block; }
     <div class="welcome-line" id="welcomeLine" style="display:none;">
       <div class="welcome-rule"></div>
       <div class="welcome-text" id="welcomeText">Sevimli taomingizni tanlang</div>
-    </div>
-
-    <!-- HERO BANNER -->
-    <div class="hero-banner" id="heroBanner">
-      <div class="hero-banner-text">
-        <div class="hero-banner-eyebrow" id="heroBannerEyebrow">Tez va mazali</div>
-        <div class="hero-banner-title">Issiq taomlar<br><em>20 daqiqada</em></div>
-        <div class="hero-banner-sub" id="heroBannerSub">Har kuni yangi taomlar.</div>
-        <div class="hero-banner-pills">
-          <div class="hero-banner-pill"><div class="hero-banner-pill-dot"></div>Yetkazib berish 40 daqiqa</div>
-          <div class="hero-banner-pill"><div class="hero-banner-pill-dot"></div>Olishda to'lash</div>
-        </div>
-        <button class="hero-banner-btn" onclick="document.getElementById('menuContent').scrollIntoView({behavior:'smooth'})">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
-          Menuni ko'rish
-        </button>
-      </div>
-      <div class="hero-banner-img" id="heroBannerImg">
-        <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300&q=85" alt="Taom" onerror="this.parentNode.style.display='none'">
-      </div>
     </div>
 
     <!-- POPULAR SECTION -->
@@ -1276,6 +1256,9 @@ function getCatPhoto(name) {
 
 function goToMenu() {
   document.getElementById('splash').classList.add('hidden');
+  const ms = document.getElementById('menuScreen');
+  ms.style.display = 'block';
+  ms.style.animation = 'slideUp 0.35s cubic-bezier(0.22,1,0.36,1)';
 }
 
 function renderCategories() {
@@ -1347,15 +1330,64 @@ function makeCard(p) {
   div.className = 'product-card';
   div.id = 'card-' + p.id;
   div.style.animationDelay = (cardAnimIndex++ % 8) * 0.04 + 's';
+// Словарь фото по названиям блюд (Unsplash)
+const FOOD_PHOTOS = {
+  // Супы
+  'шурпа':    'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=300&q=80',
+  'мастава':  'https://images.unsplash.com/photo-1547592180-85f173990554?w=300&q=80',
+  'лагман':   'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=300&q=80',
+  'гелак':    'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=300&q=80',
+  'суп':      'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=300&q=80',
+  'бульон':   'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=300&q=80',
+  // Горячее
+  'плов':     'https://images.unsplash.com/photo-1574484284002-952d92456975?w=300&q=80',
+  'димлама':  'https://images.unsplash.com/photo-1574484284002-952d92456975?w=300&q=80',
+  'балик':    'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=300&q=80',
+  'рыба':     'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=300&q=80',
+  'курица':   'https://images.unsplash.com/photo-1532550907401-a500c9a57435?w=300&q=80',
+  'товук':    'https://images.unsplash.com/photo-1532550907401-a500c9a57435?w=300&q=80',
+  'котлет':   'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300&q=80',
+  // Мангал
+  'шашлык':   'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=300&q=80',
+  'кабоб':    'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=300&q=80',
+  'қабоб':    'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=300&q=80',
+  'мангал':   'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=300&q=80',
+  'говядин':  'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=300&q=80',
+  'баранин':  'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=300&q=80',
+  // Салаты
+  'салат':    'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=300&q=80',
+  'ачичук':   'https://images.unsplash.com/photo-1592417817098-8fd3d9eb14a5?w=300&q=80',
+  'овощ':     'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=300&q=80',
+  // Напитки
+  'чай':      'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=300&q=80',
+  'кофе':     'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=300&q=80',
+  'сок':      'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=300&q=80',
+  'айран':    'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=300&q=80',
+  'вода':     'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=300&q=80',
+  'напит':    'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=300&q=80',
+  // Десерты
+  'десерт':   'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=300&q=80',
+  'торт':     'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300&q=80',
+  'мороженое':'https://images.unsplash.com/photo-1497034825429-c343d7c6a68f?w=300&q=80',
+  // Хлеб
+  'нон':      'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=300&q=80',
+  'хлеб':     'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=300&q=80',
+  'самса':    'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=300&q=80',
+};
+
+function getFoodPhoto(name) {
+  const lower = (name || '').toLowerCase();
+  for (const key of Object.keys(FOOD_PHOTOS)) {
+    if (lower.includes(key)) return FOOD_PHOTOS[key];
+  }
+  return 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=300&q=80';
+}
+
   const qty = cart[p.id]?.qty || 0;
   const { badge, text: descText } = extractBadge(p.description);
   const badgeHtml = badge ? `<span class="badge-tag">${badge.label}</span>` : '';
-  // Если фото нет — карточка остаётся чистой текстовой, без иконки-заглушки.
-  // Дешёвая декоративная картинка "нет фото" дешевит карточку сильнее,
-  // чем её отсутствие.
-  const imgBlock = p.photo_url
-    ? `<div class="product-img" onclick="openProductModal(${p.id})"><img src="${p.photo_url}" alt="${p.name}"></div>`
-    : '';
+  const photoSrc = p.photo_url || getFoodPhoto(p.name);
+  const imgBlock = `<div class="product-img" onclick="openProductModal(${p.id})"><img src="${photoSrc}" alt="${p.name}" onerror="this.src='https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=300&q=80'"></div>`;
   div.innerHTML = `
     ${imgBlock}
     <div class="product-info">
