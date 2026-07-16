@@ -1457,13 +1457,8 @@ async function loadMenu() {
     }, 1800);
 
   } catch(e) {
-    document.getElementById('menuContent').innerHTML = `
-      <div class="error-state">
-        <svg class="error-icon" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-        Menyu yuklanmadi.<br>Qayta urinib ko'ring.
-      </div>`;
-    const s = document.getElementById('splash');
-    if (s) { s.classList.add('out'); setTimeout(()=>s.style.display='none',1000); }
+    document.body.innerHTML =
+      `<pre style="color:red;padding:20px;white-space:pre-wrap;font-size:13px">${e.message}\n\n${e.stack}</pre>`;
   }
 }
 
