@@ -6,7 +6,7 @@
 <title>Taomly</title>
 
 <link rel="manifest" href="/static/manifest.json" id="pwaManifest">
-<meta name="theme-color" content="#0A0A0B" id="pwaThemeColor">
+<meta name="theme-color" content="#080807" id="pwaThemeColor">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -18,7 +18,7 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500;600&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 
 <style>
 *, *::before, *::after {
@@ -27,45 +27,60 @@
 }
 
 :root {
-  /* ── Тёмная основа Taomly — неизменна ── */
-  --void:        #0A0A0B;
-  --depth:       #111114;
-  --surface:     #16161A;
-  --card:        #1C1C21;
-  --card-hover:  #202026;
-  --rim:         rgba(255,255,255,0.06);
-  --rim-strong:  rgba(255,255,255,0.10);
-  --glass:       rgba(22,22,26,0.82);
+  /* ── Базовая палитра Taomly — постоянная ── */
+  --obsidian:     #080807;
+  --onyx:         #0E0E0C;
+  --graphite:     #141412;
+  --stone:        #1A1A17;
+  --stone-light:  #222220;
+  --pewter:       #2C2C29;
 
   /* ── Текст ── */
-  --ink:         #F0EEE8;
-  --ink-mid:     #9A9898;
-  --ink-soft:    #5C5B5B;
-  --ink-ghost:   rgba(240,238,232,0.08);
+  --ivory:        #F2EFE6;
+  --ivory-dim:    #B8B4A8;
+  --ivory-ghost:  #6B6860;
+  --ivory-trace:  rgba(242,239,230,0.06);
 
-  /* ── Акцент ресторана (переопределяется applyBrandTheme) ── */
-  --accent:      #C9A96E;
-  --accent-dim:  rgba(201,169,110,0.12);
-  --accent-glow: rgba(201,169,110,0.20);
+  /* ── Золото (акцент по умолчанию, переопределяется брендингом) ── */
+  --gold:         #C4A96A;
+  --gold-soft:    #A8904F;
+  --gold-glow:    rgba(196,169,106,0.15);
+  --gold-trace:   rgba(196,169,106,0.07);
+
+  /* ── Поверхности ── */
+  --glass-bg:     rgba(14,14,12,0.88);
+  --glass-border: rgba(196,169,106,0.12);
+  --card-border:  rgba(242,239,230,0.06);
+
+  /* ── Типографика ── */
+  --font-serif:   'Cormorant Garamond', 'EB Garamond', Georgia, serif;
+  --font-sans:    'Inter', -apple-system, sans-serif;
 
   /* ── Геометрия ── */
-  --r-xl:  20px;
-  --r-lg:  16px;
-  --r-md:  12px;
-  --r-sm:   8px;
+  --r-pill: 100px;
+  --r-lg:   18px;
+  --r-md:   12px;
+  --r-sm:    8px;
 
   /* ── Тени ── */
-  --shadow-card: 0 1px 0 var(--rim), 0 8px 32px rgba(0,0,0,0.32);
-  --shadow-float: 0 24px 64px rgba(0,0,0,0.6), 0 1px 0 var(--rim-strong);
-  --shadow-accent: 0 8px 32px var(--accent-glow);
+  --shadow-deep:  0 32px 80px rgba(0,0,0,0.7), 0 8px 24px rgba(0,0,0,0.4);
+  --shadow-card:  0 2px 0 var(--card-border), 0 16px 48px rgba(0,0,0,0.5);
+  --shadow-gold:  0 8px 40px rgba(196,169,106,0.18);
+
+  /* ── Переходы ── */
+  --ease-luxury:  cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-spring:  cubic-bezier(0.22, 1, 0.36, 1);
+  --t-slow:       0.6s;
+  --t-med:        0.4s;
+  --t-fast:       0.22s;
 }
 
-html { background: var(--void); }
+html { background: var(--obsidian); }
 
 body {
-  font-family: 'Inter', sans-serif;
-  background: var(--void);
-  color: var(--ink);
+  font-family: var(--font-sans);
+  background: var(--obsidian);
+  color: var(--ivory);
   min-height: 100vh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
@@ -75,816 +90,1048 @@ body {
 svg { display: block; }
 .icon {
   width: 18px; height: 18px;
-  stroke: currentColor; stroke-width: 1.5;
+  stroke: currentColor; stroke-width: 1.3;
   fill: none; stroke-linecap: round; stroke-linejoin: round;
 }
 
-/* ══════════════════════════════════════════
-   SPLASH — первые секунды впечатления
-══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════
+   SPLASH — кинематографическое открытие
+═══════════════════════════════════════════════════ */
 #splash {
   position: fixed; inset: 0; z-index: 9999;
-  background: var(--void);
+  background: var(--obsidian);
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  transition: opacity 0.7s cubic-bezier(0.4,0,0.2,1);
+  overflow: hidden;
 }
-#splash.hidden { opacity: 0; pointer-events: none; }
+#splash.out {
+  animation: splashOut 1s var(--ease-luxury) forwards;
+}
+@keyframes splashOut {
+  0%   { opacity: 1; }
+  100% { opacity: 0; pointer-events: none; }
+}
 
-.splash-inner { text-align: center; }
+/* Атмосферное свечение — как свет через штору */
+.splash-ambient {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 30%, rgba(196,169,106,0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 80% 60% at 50% 80%, rgba(196,169,106,0.04) 0%, transparent 60%);
+  animation: ambientBreath 4s ease-in-out infinite;
+}
+@keyframes ambientBreath {
+  0%,100% { opacity: 0.6; }
+  50%      { opacity: 1; }
+}
 
-.splash-logo-ring {
-  width: 72px; height: 72px;
-  border-radius: 22px;
-  background: var(--card);
-  border: 1px solid var(--rim-strong);
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 28px;
+/* Горизонтальный луч — подпись стиля */
+.splash-ray {
+  position: absolute; top: 50%; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(196,169,106,0.0) 20%,
+    rgba(196,169,106,0.35) 50%,
+    rgba(196,169,106,0.0) 80%,
+    transparent 100%);
+  transform: translateY(-68px);
+  opacity: 0;
+  animation: raySlide 1.8s var(--ease-luxury) 0.3s both;
+}
+@keyframes raySlide {
+  0%   { opacity: 0; transform: translateY(-68px) scaleX(0); }
+  40%  { opacity: 1; }
+  100% { opacity: 1; transform: translateY(-68px) scaleX(1); }
+}
+
+.splash-content {
+  text-align: center; position: relative;
+  display: flex; flex-direction: column; align-items: center;
+}
+
+/* Монограмма — эмблема */
+.splash-emblem {
+  width: 64px; height: 64px;
+  margin-bottom: 32px;
+  opacity: 0;
+  animation: emblemIn 1s var(--ease-spring) 0.1s both;
   position: relative;
-  animation: splashRingIn 0.8s cubic-bezier(0.22,1,0.36,1) both;
 }
-.splash-logo-ring::before {
-  content: '';
-  position: absolute; inset: -1px;
-  border-radius: 23px;
-  background: linear-gradient(135deg, var(--accent), transparent 60%);
-  opacity: 0.5;
-  z-index: -1;
+.splash-emblem-ring {
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  animation: emblemRingPulse 3s ease infinite 1.5s;
 }
-.splash-logo-ring .icon { width: 28px; height: 28px; stroke: var(--accent); stroke-width: 1.3; }
+@keyframes emblemRingPulse {
+  0%,100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.06); opacity: 0.5; }
+}
+.splash-emblem-inner {
+  width: 100%; height: 100%; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, var(--stone-light), var(--graphite));
+  border: 1px solid rgba(196,169,106,0.2);
+  display: flex; align-items: center; justify-content: center;
+}
+.splash-emblem-letter {
+  font-family: var(--font-serif);
+  font-size: 26px; font-weight: 300;
+  color: var(--gold); letter-spacing: 2px;
+  font-style: italic;
+}
+@keyframes emblemIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to   { opacity: 1; transform: scale(1); }
+}
 
-@keyframes splashRingIn {
-  from { transform: scale(0.85) translateY(8px); opacity: 0; }
-  to   { transform: scale(1) translateY(0); opacity: 1; }
-}
-
-.splash-wordmark {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 42px;
-  font-weight: 300;
-  letter-spacing: 8px;
+.splash-name {
+  font-family: var(--font-serif);
+  font-size: 11px; font-weight: 400;
+  letter-spacing: 7px;
   text-transform: uppercase;
-  color: var(--ink);
+  color: var(--ivory);
   opacity: 0;
-  animation: splashWordIn 0.6s cubic-bezier(0.22,1,0.36,1) 0.2s both;
+  animation: nameReveal 1s var(--ease-luxury) 0.6s both;
 }
-@keyframes splashWordIn {
-  from { opacity: 0; letter-spacing: 14px; }
-  to   { opacity: 1; letter-spacing: 8px; }
-}
-
-.splash-beam {
-  width: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  margin: 18px auto 16px;
-  animation: splashBeam 0.8s ease 0.5s both;
-}
-@keyframes splashBeam {
-  from { width: 0; opacity: 0; }
-  to   { width: 80px; opacity: 1; }
+@keyframes nameReveal {
+  from { opacity: 0; letter-spacing: 12px; }
+  to   { opacity: 1; letter-spacing: 7px; }
 }
 
-.splash-sub {
-  font-size: 10px;
-  letter-spacing: 3px;
+.splash-rule {
+  width: 1px; height: 0;
+  background: linear-gradient(180deg, var(--gold), transparent);
+  margin: 20px auto 0;
+  animation: ruleGrow 0.8s var(--ease-luxury) 1s both;
+}
+@keyframes ruleGrow {
+  from { height: 0; opacity: 0; }
+  to   { height: 32px; opacity: 0.6; }
+}
+
+.splash-tagline {
+  font-size: 10px; letter-spacing: 3px;
   text-transform: uppercase;
-  color: var(--ink-soft);
-  font-weight: 500;
+  color: var(--ivory-ghost);
+  font-weight: 400;
+  margin-top: 20px;
   opacity: 0;
-  animation: fadeSlideUp 0.5s ease 0.7s both;
+  animation: fadeUp 0.6s var(--ease-luxury) 1.3s both;
 }
 
-.splash-dots {
-  display: flex; gap: 6px; justify-content: center;
-  margin-top: 52px;
-}
-.splash-dot {
-  width: 4px; height: 4px; border-radius: 50%;
-  background: var(--ink-soft);
-  animation: dotPulse 1.4s ease infinite;
-}
-.splash-dot:nth-child(2) { animation-delay: 0.2s; }
-.splash-dot:nth-child(3) { animation-delay: 0.4s; }
-@keyframes dotPulse {
-  0%, 100% { opacity: 0.3; transform: scale(1); }
-  50%       { opacity: 1;   transform: scale(1.3); background: var(--accent); }
-}
-
-/* ══════════════════════════════════════════
-   HEADER — sticky, glass
-══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════
+   HEADER — интерьер дорогого отеля
+═══════════════════════════════════════════════════ */
 .header {
   position: sticky; top: 0; z-index: 100;
-  background: var(--glass);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-bottom: 1px solid var(--rim);
-  padding: 0 20px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(32px) saturate(140%);
+  -webkit-backdrop-filter: blur(32px) saturate(140%);
+  border-bottom: 1px solid var(--glass-border);
 }
 
-/* Ресторан-строка */
-.restaurant-row {
-  display: flex; align-items: center; gap: 14px;
-  padding: 18px 0 16px;
+.header-top {
+  padding: 20px 24px 18px;
+  display: flex; align-items: center; gap: 16px;
 }
 
-.restaurant-logo {
-  width: 48px; height: 48px; border-radius: 14px;
-  background: var(--card);
-  border: 1px solid var(--rim-strong);
+/* Эмблема ресторана */
+.restaurant-emblem {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: var(--stone);
+  border: 1px solid var(--glass-border);
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; overflow: hidden;
   position: relative;
 }
-.restaurant-logo::after {
+.restaurant-emblem::after {
   content: '';
-  position: absolute; inset: 0; border-radius: 14px;
-  background: linear-gradient(135deg, var(--accent-dim), transparent);
-  pointer-events: none;
+  position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(196,169,106,0.08), transparent 70%);
 }
-.restaurant-logo img { width: 100%; height: 100%; object-fit: cover; }
-.restaurant-logo-letter {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 22px; font-weight: 400;
-  color: var(--accent);
-  letter-spacing: 1px;
+.restaurant-emblem img { width: 100%; height: 100%; object-fit: cover; }
+.restaurant-emblem-letter {
+  font-family: var(--font-serif);
+  font-size: 19px; font-weight: 300;
+  color: var(--gold); font-style: italic;
 }
 
-.restaurant-meta { flex: 1; min-width: 0; }
+.restaurant-info { flex: 1; min-width: 0; }
+
 .restaurant-name {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 22px; font-weight: 500;
-  color: var(--ink); letter-spacing: 0.3px;
-  line-height: 1.15;
+  font-family: var(--font-serif);
+  font-size: 24px; font-weight: 400;
+  color: var(--ivory); letter-spacing: 0.5px;
+  line-height: 1.1;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+
 .restaurant-address {
-  font-size: 12px; color: var(--ink-soft);
-  margin-top: 2px;
-  display: flex; align-items: center; gap: 4px;
+  display: flex; align-items: center; gap: 5px;
+  margin-top: 3px;
+  font-size: 11px; color: var(--ivory-ghost);
+  font-weight: 400; letter-spacing: 0.3px;
 }
-.restaurant-address .icon { width: 11px; height: 11px; flex-shrink: 0; }
+.restaurant-address .icon { width: 10px; height: 10px; flex-shrink: 0; }
 
 .table-badge {
   display: inline-flex; align-items: center; gap: 5px;
-  margin-top: 6px; padding: 3px 10px;
-  border-radius: 100px;
-  background: var(--accent-dim);
-  border: 1px solid rgba(201,169,110,0.2);
-  font-size: 11px; font-weight: 600;
-  color: var(--accent); letter-spacing: 0.3px;
+  margin-top: 6px; padding: 3px 10px 3px 8px;
+  border-radius: var(--r-pill);
+  background: var(--gold-trace);
+  border: 1px solid var(--glass-border);
+  font-size: 10.5px; font-weight: 500;
+  color: var(--gold); letter-spacing: 0.5px;
 }
-.table-badge .icon { width: 11px; height: 11px; }
+.table-badge .icon { width: 10px; height: 10px; }
+
+/* Золотая тонкая линия */
+.header-gold-rule {
+  height: 1px; margin: 0 24px;
+  background: linear-gradient(90deg,
+    transparent,
+    var(--gold-soft) 30%,
+    var(--gold) 50%,
+    var(--gold-soft) 70%,
+    transparent);
+  opacity: 0.3;
+}
 
 /* Приветствие */
 .welcome-line {
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--rim);
-  margin-bottom: 0;
+  padding: 12px 24px 0;
 }
 .welcome-text {
-  font-family: 'Cormorant Garamond', serif;
-  font-style: italic; font-size: 15px; font-weight: 300;
-  color: var(--ink-mid); line-height: 1.5;
+  font-family: var(--font-serif);
+  font-style: italic; font-size: 14px; font-weight: 300;
+  color: var(--ivory-ghost); line-height: 1.5;
+  letter-spacing: 0.2px;
 }
 
-/* Popular horizontal scroll */
-.popular-section { padding: 18px 0 6px; }
-.popular-label {
-  font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase;
-  color: var(--ink-soft); font-weight: 600;
+/* Популярное — горизонтальный скролл */
+.popular-rail {
+  padding: 16px 0 0;
+}
+.popular-eyebrow {
+  padding: 0 24px;
+  font-size: 9px; letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--ivory-ghost); font-weight: 500;
   margin-bottom: 12px;
 }
 .popular-scroll {
   display: flex; gap: 10px;
   overflow-x: auto; scrollbar-width: none;
-  padding-bottom: 2px;
-  margin: 0 -20px; padding-left: 20px; padding-right: 20px;
+  padding: 0 24px 14px;
 }
 .popular-scroll::-webkit-scrollbar { display: none; }
 
-.popular-chip {
-  flex-shrink: 0;
-  display: flex; flex-direction: column;
-  width: 120px; border-radius: var(--r-md);
-  background: var(--card);
-  border: 1px solid var(--rim);
-  overflow: hidden; cursor: pointer;
-  transition: transform 0.2s ease, border-color 0.2s ease;
+.popular-item {
+  flex-shrink: 0; width: 110px;
+  cursor: pointer;
+  transition: transform var(--t-med) var(--ease-spring);
 }
-.popular-chip:active { transform: scale(0.96); }
-.popular-chip-img {
-  width: 100%; height: 72px;
-  background: var(--surface);
+.popular-item:active { transform: scale(0.95); }
+.popular-item-photo {
+  width: 110px; height: 80px;
+  border-radius: var(--r-md);
+  overflow: hidden; position: relative;
+  background: var(--stone);
+  margin-bottom: 8px;
+}
+.popular-item-photo img {
+  width: 100%; height: 100%; object-fit: cover;
+  transition: transform var(--t-slow) var(--ease-luxury);
+}
+.popular-item:active .popular-item-photo img { transform: scale(1.04); }
+.popular-item-photo-placeholder {
+  width: 100%; height: 100%;
   display: flex; align-items: center; justify-content: center;
-  overflow: hidden;
 }
-.popular-chip-img img { width: 100%; height: 100%; object-fit: cover; }
-.popular-chip-img .icon { width: 22px; height: 22px; stroke: var(--ink-soft); }
-.popular-chip-body { padding: 8px 10px 9px; }
-.popular-chip-name {
-  font-size: 12px; font-weight: 500; color: var(--ink);
+.popular-item-photo-placeholder .icon { width: 20px; height: 20px; stroke: var(--ivory-ghost); stroke-width: 1; }
+.popular-item-name {
+  font-size: 11.5px; font-weight: 500; color: var(--ivory-dim);
   line-height: 1.3;
   overflow: hidden; display: -webkit-box;
   -webkit-line-clamp: 2; -webkit-box-orient: vertical;
 }
-.popular-chip-price {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px; color: var(--accent);
-  margin-top: 4px; letter-spacing: -0.3px;
+.popular-item-price {
+  font-family: var(--font-serif);
+  font-size: 13px; font-weight: 400;
+  color: var(--gold); margin-top: 3px;
 }
 
-/* Categories nav */
+/* Категории nav */
 .categories-nav {
-  display: flex; gap: 0;
-  overflow-x: auto; scrollbar-width: none;
-  border-top: 1px solid var(--rim);
-  margin: 0 -20px; padding: 0 20px;
+  display: flex; overflow-x: auto; scrollbar-width: none;
+  padding: 0 24px;
+  border-top: 1px solid var(--ivory-trace);
+  gap: 2px;
 }
 .categories-nav::-webkit-scrollbar { display: none; }
 
 .cat-btn {
-  flex-shrink: 0; padding: 14px 18px 13px;
+  flex-shrink: 0; padding: 13px 16px;
   border: none; background: none;
-  font-family: 'Inter', sans-serif;
-  font-size: 13px; font-weight: 500;
-  color: var(--ink-soft); cursor: pointer;
-  white-space: nowrap;
-  position: relative;
-  transition: color 0.2s ease;
+  font-family: var(--font-sans);
+  font-size: 12px; font-weight: 400;
+  color: var(--ivory-ghost); cursor: pointer;
+  white-space: nowrap; position: relative;
+  letter-spacing: 0.3px;
+  transition: color var(--t-fast) ease;
 }
 .cat-btn::after {
   content: ''; position: absolute;
-  bottom: 0; left: 18px; right: 18px; height: 2px;
-  background: var(--accent);
-  border-radius: 2px 2px 0 0;
+  bottom: 0; left: 16px; right: 16px; height: 1px;
+  background: var(--gold);
   transform: scaleX(0);
-  transition: transform 0.25s cubic-bezier(0.22,1,0.36,1);
+  transition: transform var(--t-med) var(--ease-spring);
+  transform-origin: left;
 }
-.cat-btn.active { color: var(--ink); }
+.cat-btn.active { color: var(--ivory); }
 .cat-btn.active::after { transform: scaleX(1); }
 
-/* ══════════════════════════════════════════
-   MAIN — контент меню
-══════════════════════════════════════════ */
-.main { padding: 28px 20px 160px; }
+/* ═══════════════════════════════════════════════════
+   MAIN
+═══════════════════════════════════════════════════ */
+.main { padding: 32px 0 180px; }
 
-.category-section { margin-bottom: 48px; scroll-margin-top: 160px; }
+.category-section { margin-bottom: 56px; scroll-margin-top: 180px; }
 
 .category-heading {
-  display: flex; align-items: baseline; gap: 10px;
+  padding: 0 24px;
   margin-bottom: 20px;
+  display: flex; align-items: baseline; gap: 10px;
 }
 .category-title {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 26px; font-weight: 400;
-  color: var(--ink); letter-spacing: 0.2px;
+  font-family: var(--font-serif);
+  font-size: 28px; font-weight: 300;
+  color: var(--ivory); letter-spacing: 0.3px;
+  line-height: 1;
 }
 .category-count {
-  font-size: 12px; color: var(--ink-soft);
-  font-weight: 400;
+  font-size: 11px; color: var(--ivory-ghost);
+  font-weight: 400; letter-spacing: 0.5px;
 }
 
-.products-grid { display: flex; flex-direction: column; gap: 12px; }
+.products-grid {
+  display: flex; flex-direction: column;
+  gap: 1px; /* Блюда разделены тонкой линией воздуха */
+}
 
-/* ══════════════════════════════════════════
-   PRODUCT CARD
-══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════
+   PRODUCT CARD — кинематографичная
+═══════════════════════════════════════════════════ */
 .product-card {
-  background: var(--card);
-  border-radius: var(--r-xl);
-  border: 1px solid var(--rim);
-  overflow: hidden; cursor: pointer;
-  box-shadow: var(--shadow-card);
-  opacity: 0; transform: translateY(12px);
-  animation: cardReveal 0.5s cubic-bezier(0.22,1,0.36,1) forwards;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  position: relative; overflow: hidden;
+  cursor: pointer;
+  opacity: 0;
+  animation: cardReveal var(--t-slow) var(--ease-spring) forwards;
+  transition: background var(--t-fast) ease;
 }
 @keyframes cardReveal {
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-.product-card:active { transform: scale(0.99); border-color: var(--rim-strong); }
 
-/* Карточка с фото — фото сверху */
-.product-card.has-photo { display: flex; flex-direction: column; }
-.product-card-photo {
-  width: 100%; height: 200px;
-  overflow: hidden; position: relative;
-  background: var(--surface);
+/* С фото — фото занимает всю карточку */
+.product-card.has-photo {
+  margin: 0 0 16px;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
 }
-.product-card-photo img {
+.product-card.has-photo:last-child { margin-bottom: 0; }
+
+.product-photo-wrap {
+  position: relative;
+  width: 100%; padding-top: 65%;
+  overflow: hidden;
+  background: var(--stone);
+}
+.product-photo-wrap img {
+  position: absolute; inset: 0;
   width: 100%; height: 100%; object-fit: cover;
-  transition: transform 0.5s cubic-bezier(0.22,1,0.36,1);
-  display: block;
+  transition: transform 0.8s var(--ease-luxury);
+  will-change: transform;
 }
-.product-card:active .product-card-photo img { transform: scale(1.03); }
+.product-card:active .product-photo-wrap img { transform: scale(1.04); }
 
-/* Карточка без фото — горизонтальная */
-.product-card.no-photo {
-  display: flex; align-items: center; gap: 0;
-  padding: 0;
+/* Градиент снизу для читаемости текста поверх фото */
+.product-photo-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 30%,
+    rgba(8,8,7,0.4) 60%,
+    rgba(8,8,7,0.85) 100%
+  );
 }
-.product-card.no-photo .product-body { padding: 18px 20px; }
 
-.product-body { padding: 16px 18px 18px; flex: 1; }
-
-.product-badge-row { margin-bottom: 7px; }
-.product-badge {
+/* Бейдж поверх фото */
+.product-photo-badge {
+  position: absolute; top: 14px; left: 14px;
   display: inline-flex; align-items: center; gap: 4px;
-  padding: 2px 8px; border-radius: 100px;
-  font-size: 9.5px; font-weight: 600;
-  letter-spacing: 0.8px; text-transform: uppercase;
-  background: var(--accent-dim);
-  border: 1px solid rgba(201,169,110,0.2);
-  color: var(--accent);
+  padding: 3px 10px;
+  background: rgba(8,8,7,0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-pill);
+  font-size: 9px; font-weight: 500;
+  color: var(--gold); letter-spacing: 1.5px;
+  text-transform: uppercase;
 }
 
-.product-name {
-  font-size: 16px; font-weight: 600;
-  color: var(--ink); line-height: 1.35;
-  margin-bottom: 5px;
+/* Контент поверх фото — снизу */
+.product-photo-content {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 18px 18px 16px;
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;
 }
-.product-desc {
-  font-size: 13px; color: var(--ink-soft); line-height: 1.55;
-  margin-bottom: 14px;
+.product-photo-text { flex: 1; min-width: 0; }
+.product-name {
+  font-family: var(--font-serif);
+  font-size: 20px; font-weight: 400;
+  color: var(--ivory); line-height: 1.2;
+  letter-spacing: 0.2px;
+}
+.product-desc-photo {
+  font-size: 12px; color: rgba(242,239,230,0.6);
+  margin-top: 4px; line-height: 1.5;
+  overflow: hidden; display: -webkit-box;
+  -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+}
+.product-price-photo {
+  font-family: var(--font-serif);
+  font-size: 16px; font-weight: 400;
+  color: var(--gold); margin-top: 6px;
+  white-space: nowrap;
+}
+
+/* Без фото — элегантная строка */
+.product-card.no-photo {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--ivory-trace);
+  background: transparent;
+}
+.product-card.no-photo:active { background: rgba(242,239,230,0.02); }
+
+.product-row {
+  display: flex; align-items: center; gap: 16px;
+}
+.product-row-text { flex: 1; min-width: 0; }
+.product-name-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 3px;
+}
+.product-name-plain {
+  font-family: var(--font-serif);
+  font-size: 18px; font-weight: 400;
+  color: var(--ivory); letter-spacing: 0.2px;
+}
+.product-desc-plain {
+  font-size: 12.5px; color: var(--ivory-ghost); line-height: 1.5;
+  margin-top: 2px;
   overflow: hidden; display: -webkit-box;
   -webkit-line-clamp: 2; -webkit-box-orient: vertical;
 }
-.product-footer {
-  display: flex; align-items: center;
-  justify-content: space-between; gap: 12px;
+.product-price-plain {
+  font-family: var(--font-serif);
+  font-size: 15px; color: var(--gold);
+  margin-top: 8px; font-weight: 400;
 }
-.product-price {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 18px; font-weight: 500;
-  color: var(--ink); letter-spacing: -0.5px;
-  line-height: 1;
-}
-.product-price-sub {
-  font-family: 'Inter', sans-serif;
-  font-size: 10px; color: var(--ink-soft);
-  font-weight: 400; letter-spacing: 0.5px;
-  text-transform: uppercase; margin-top: 3px;
+.product-badge-inline {
+  display: inline-flex;
+  padding: 1px 7px;
+  border-radius: var(--r-pill);
+  background: var(--gold-trace);
+  border: 1px solid var(--glass-border);
+  font-size: 8.5px; font-weight: 500;
+  color: var(--gold); letter-spacing: 1.2px;
+  text-transform: uppercase; flex-shrink: 0;
 }
 
-/* Кнопка добавить */
-.add-btn {
-  width: 36px; height: 36px; border-radius: 50%;
-  background: var(--accent-dim);
-  border: 1px solid rgba(201,169,110,0.25);
-  color: var(--accent);
-  cursor: pointer; flex-shrink: 0;
-  display: flex; align-items: center; justify-content:center;
-  transition: background 0.18s ease, transform 0.15s ease, box-shadow 0.18s ease;
-}
-.add-btn .icon { width: 16px; height: 16px; stroke-width: 2; }
-.add-btn:active { transform: scale(0.9); background: var(--accent); color: var(--void); box-shadow: var(--shadow-accent); }
-
-/* Счётчик */
-.qty-control {
-  display: flex; align-items: center; gap: 12px;
-}
-.qty-btn {
-  width: 28px; height: 28px; border-radius: 50%;
-  border: 1px solid var(--rim-strong);
-  background: var(--surface);
-  color: var(--ink-mid);
+/* ── Кнопка добавления — премиальный ритуал ── */
+.add-ring {
+  flex-shrink: 0;
+  width: 38px; height: 38px; border-radius: 50%;
+  background: transparent;
+  border: 1px solid rgba(196,169,106,0.3);
+  color: var(--gold);
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  transition: opacity 0.15s ease, border-color 0.15s ease;
+  position: relative; overflow: hidden;
+  transition:
+    border-color var(--t-med) ease,
+    background var(--t-med) ease,
+    transform var(--t-fast) ease;
 }
-.qty-btn:active { opacity: 0.5; }
-.qty-btn .icon { width: 12px; height: 12px; }
-.qty-num {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 15px; font-weight: 600; color: var(--ink);
-  min-width: 20px; text-align: center;
-  animation: qtyPop 0.2s cubic-bezier(0.22,1,0.36,1);
+.add-ring::before {
+  content: '';
+  position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle, var(--gold-glow), transparent);
+  opacity: 0;
+  transition: opacity var(--t-med) ease;
 }
-@keyframes qtyPop { from { transform: scale(1.25); } to { transform: scale(1); } }
+.add-ring:active {
+  transform: scale(0.88);
+  border-color: var(--gold);
+  background: var(--gold-trace);
+}
+.add-ring:active::before { opacity: 1; }
+.add-ring .icon { width: 14px; height: 14px; stroke-width: 1.5; z-index: 1; }
 
-/* ══════════════════════════════════════════
-   SKELETON LOADING
-══════════════════════════════════════════ */
-.skeleton-wrap { display: flex; flex-direction: column; gap: 12px; }
-.skeleton-card {
-  background: var(--card);
-  border-radius: var(--r-xl);
-  border: 1px solid var(--rim);
-  overflow: hidden;
+/* Счётчик */
+.qty-unit {
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
 }
-.skeleton-photo { width: 100%; height: 200px; }
-.skeleton-body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 10px; }
-.skeleton-block {
-  background: linear-gradient(90deg,
-    var(--surface) 0%, var(--card-hover) 40%, var(--surface) 80%);
+.qty-ring {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--ivory-trace);
+  color: var(--ivory-dim);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity var(--t-fast) ease, border-color var(--t-fast) ease;
+}
+.qty-ring:active { opacity: 0.4; }
+.qty-ring .icon { width: 11px; height: 11px; }
+.qty-digit {
+  font-family: var(--font-serif);
+  font-size: 17px; font-weight: 400;
+  color: var(--ivory); min-width: 18px; text-align: center;
+  animation: digitPop 0.25s var(--ease-spring);
+}
+@keyframes digitPop {
+  from { transform: scale(1.3); opacity: 0.7; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+/* Контрол на карточке с фото — кнопка поверх */
+.photo-add-wrap {
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════
+   SKELETON
+═══════════════════════════════════════════════════ */
+.skeleton-wrap {
+  padding: 0 0 0;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.skeleton-card {
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--stone);
+}
+.skeleton-photo-block {
+  width: 100%; padding-top: 65%;
+  position: relative;
+}
+.skeleton-shimmer {
+  position: absolute; inset: 0;
+  background: linear-gradient(
+    105deg,
+    var(--stone) 0%,
+    var(--stone-light) 40%,
+    var(--stone) 60%
+  );
   background-size: 300% 100%;
-  animation: shimmer 1.6s ease infinite;
-  border-radius: 6px;
+  animation: shimmer 2s ease infinite;
 }
 @keyframes shimmer {
-  0%   { background-position: 100% 50%; }
-  100% { background-position: -50% 50%; }
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
 }
-.skeleton-line { height: 12px; border-radius: 6px; }
-.skeleton-line.w30 { width: 30%; }
-.skeleton-line.w70 { width: 70%; }
-.skeleton-line.w50 { width: 50%; height: 18px; }
+.skeleton-body-block {
+  padding: 16px 18px 18px;
+  display: flex; flex-direction: column; gap: 9px;
+  background: var(--graphite);
+}
+.skeleton-line {
+  height: 11px; border-radius: 6px;
+}
+.skeleton-line.w35 { width: 35%; }
+.skeleton-line.w65 { width: 65%; }
+.skeleton-line.w45 { width: 45%; height: 14px; }
 
-/* ══════════════════════════════════════════
-   CART BAR — плавающая капсула
-══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════
+   CART BAR — стеклянная капсула
+═══════════════════════════════════════════════════ */
 .cart-bar {
-  position: fixed; bottom: 28px; left: 20px; right: 20px;
+  position: fixed; bottom: 32px; left: 20px; right: 20px;
   z-index: 200; pointer-events: none;
-  transform: translateY(120%);
-  transition: transform 0.4s cubic-bezier(0.22,1,0.36,1);
+  transform: translateY(140%);
+  transition: transform 0.5s var(--ease-spring);
 }
 .cart-bar.visible { transform: translateY(0); pointer-events: all; }
 
-.cart-btn {
+.cart-capsule {
   width: 100%;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 18px;
-  background: var(--accent);
-  border: none; border-radius: var(--r-xl);
+  padding: 0 6px 0 20px;
+  height: 60px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-pill);
+  backdrop-filter: blur(32px) saturate(160%);
+  -webkit-backdrop-filter: blur(32px) saturate(160%);
+  box-shadow:
+    var(--shadow-gold),
+    0 1px 0 rgba(196,169,106,0.08) inset,
+    0 -1px 0 rgba(0,0,0,0.3) inset;
   cursor: pointer;
-  box-shadow: var(--shadow-accent), 0 16px 40px rgba(0,0,0,0.4);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform var(--t-fast) ease, box-shadow var(--t-fast) ease;
+  position: relative; overflow: hidden;
 }
-.cart-btn:active { transform: scale(0.98); }
-
-.cart-btn-left { display: flex; align-items: center; gap: 10px; }
-.cart-count-pill {
-  background: rgba(0,0,0,0.2);
-  border-radius: 100px; padding: 3px 9px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px; font-weight: 600;
-  color: var(--void);
+/* Блик */
+.cart-capsule::before {
+  content: '';
+  position: absolute; top: 0; left: 20%; right: 20%; height: 1px;
+  background: linear-gradient(90deg,
+    transparent, rgba(196,169,106,0.3), transparent);
 }
-.cart-label {
-  font-size: 14px; font-weight: 700;
-  color: var(--void); letter-spacing: 0.2px;
-}
-.cart-total {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 15px; font-weight: 600;
-  color: var(--void); letter-spacing: -0.3px;
+.cart-capsule:active {
+  transform: scale(0.98);
+  box-shadow: var(--shadow-gold), 0 4px 16px rgba(0,0,0,0.4);
 }
 
-/* ══════════════════════════════════════════
+.cart-capsule-left {
+  display: flex; align-items: center; gap: 12px;
+}
+.cart-count-gem {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold-soft), var(--gold));
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(196,169,106,0.3);
+}
+.cart-count-gem span {
+  font-family: var(--font-serif);
+  font-size: 15px; font-weight: 400;
+  color: var(--obsidian); line-height: 1;
+}
+.cart-label-text {
+  font-size: 13px; font-weight: 400; color: var(--ivory-dim);
+  letter-spacing: 0.5px;
+}
+.cart-total-text {
+  font-family: var(--font-serif);
+  font-size: 18px; font-weight: 400;
+  color: var(--ivory); letter-spacing: 0.2px;
+  padding-right: 4px;
+}
+.cart-arrow {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: var(--gold);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 20px rgba(196,169,106,0.25);
+  flex-shrink: 0;
+}
+.cart-arrow .icon {
+  width: 16px; height: 16px;
+  stroke: var(--obsidian); stroke-width: 1.8;
+  transform: rotate(-90deg);
+}
+
+/* ═══════════════════════════════════════════════════
    SCREENS
-══════════════════════════════════════════ */
+═══════════════════════════════════════════════════ */
 .screen {
   display: none; position: fixed; inset: 0;
-  background: var(--void); z-index: 300;
+  background: var(--obsidian); z-index: 300;
   overflow-y: auto; overflow-x: hidden;
-  animation: screenIn 0.35s cubic-bezier(0.22,1,0.36,1);
+  animation: screenReveal 0.45s var(--ease-spring);
 }
 .screen.active { display: block; }
-@keyframes screenIn {
-  from { transform: translateY(28px); opacity: 0; }
+@keyframes screenReveal {
+  from { transform: translateY(32px); opacity: 0; }
   to   { transform: translateY(0); opacity: 1; }
 }
 
 .screen-header {
   position: sticky; top: 0; z-index: 10;
-  background: var(--glass);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-bottom: 1px solid var(--rim);
+  background: var(--glass-bg);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border-bottom: 1px solid var(--glass-border);
   padding: 16px 20px;
-  display: flex; align-items: center; gap: 14px;
+  display: flex; align-items: center; gap: 16px;
 }
 .back-btn {
-  width: 40px; height: 40px; border-radius: var(--r-md);
-  border: 1px solid var(--rim-strong);
-  background: var(--card); cursor: pointer;
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 1px solid var(--ivory-trace);
+  background: transparent; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  color: var(--ink-mid); flex-shrink: 0;
-  transition: background 0.15s ease, transform 0.1s ease;
+  color: var(--ivory-dim); flex-shrink: 0;
+  transition: background var(--t-fast) ease, transform var(--t-fast) ease;
 }
-.back-btn:active { background: var(--card-hover); transform: scale(0.9); }
-.back-btn .icon { width: 17px; height: 17px; }
+.back-btn:active { background: var(--stone); transform: scale(0.9); }
+.back-btn .icon { width: 16px; height: 16px; }
 .screen-title {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 22px; font-weight: 400; color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 22px; font-weight: 300; color: var(--ivory);
+  letter-spacing: 0.3px;
 }
 
-/* ══════════════════════════════════════════
+/* ═══════════════════════════════════════════════════
    CART SCREEN
-══════════════════════════════════════════ */
-.cart-items-list { padding: 16px 20px 0; display: flex; flex-direction: column; gap: 8px; }
+═══════════════════════════════════════════════════ */
+.cart-items-list {
+  padding: 20px 20px 0;
+  display: flex; flex-direction: column; gap: 8px;
+}
 
 .cart-item {
-  background: var(--card);
-  border: 1px solid var(--rim);
-  border-radius: var(--r-lg);
-  padding: 14px 16px;
   display: flex; align-items: center; gap: 14px;
-  animation: cardReveal 0.3s ease;
+  padding: 14px 16px;
+  background: var(--graphite);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-lg);
+  animation: cardReveal 0.3s var(--ease-spring);
 }
-.cart-item-icon {
+.cart-item-gem {
   width: 44px; height: 44px; border-radius: var(--r-md);
-  background: var(--surface);
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
+  background: var(--stone);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  border: 1px solid var(--glass-border);
 }
-.cart-item-icon .icon { width: 18px; height: 18px; stroke: var(--accent); stroke-width: 1.3; }
+.cart-item-gem .icon { width: 17px; height: 17px; stroke: var(--gold); stroke-width: 1.1; }
 .cart-item-info { flex: 1; min-width: 0; }
-.cart-item-name { font-size: 14px; font-weight: 600; color: var(--ink); }
+.cart-item-name {
+  font-family: var(--font-serif);
+  font-size: 16px; font-weight: 400; color: var(--ivory);
+}
 .cart-item-price {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px; color: var(--ink-soft); margin-top: 3px;
+  font-size: 12px; color: var(--ivory-ghost); margin-top: 2px;
 }
 
 /* Order type */
-.order-type-section { padding: 20px 20px 0; }
+.section-block { padding: 20px 20px 0; }
 .section-eyebrow {
-  font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase;
-  color: var(--ink-soft); font-weight: 600; margin-bottom: 12px;
+  font-size: 9px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--ivory-ghost); font-weight: 500;
+  margin-bottom: 12px;
 }
-.order-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .type-btn {
-  padding: 16px 12px; border-radius: var(--r-lg);
-  border: 1px solid var(--rim);
-  background: var(--card); text-align: center; cursor: pointer;
-  transition: all 0.2s ease;
+  padding: 16px; border-radius: var(--r-lg);
+  border: 1px solid var(--ivory-trace);
+  background: var(--graphite); text-align: center; cursor: pointer;
+  transition: all var(--t-med) ease;
 }
 .type-btn.active {
-  border-color: var(--accent);
-  background: var(--accent-dim);
-  box-shadow: 0 0 0 1px var(--accent);
+  border-color: rgba(196,169,106,0.3);
+  background: var(--gold-trace);
 }
-.type-btn-icon { margin: 0 auto 9px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
-.type-btn-icon .icon { width: 22px; height: 22px; stroke: var(--accent); }
-.type-btn-label { font-size: 13px; font-weight: 600; color: var(--ink); }
+.type-btn-icon { margin: 0 auto 8px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; }
+.type-btn-icon .icon { width: 20px; height: 20px; stroke: var(--gold); stroke-width: 1.2; }
+.type-btn-label { font-size: 12.5px; font-weight: 500; color: var(--ivory-dim); }
 
 .table-banner {
   margin: 16px 20px 0;
   padding: 16px;
-  background: var(--accent-dim);
-  border: 1px solid rgba(201,169,110,0.2);
+  background: var(--gold-trace);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-lg);
   display: flex; align-items: center; gap: 14px;
 }
 .table-banner-icon {
   width: 40px; height: 40px; border-radius: var(--r-md);
-  background: var(--card);
+  background: var(--stone);
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.table-banner-icon .icon { width: 18px; height: 18px; stroke: var(--accent); }
-.table-banner-name { font-size: 15px; font-weight: 700; color: var(--ink); }
-.table-banner-sub { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+.table-banner-icon .icon { width: 18px; height: 18px; stroke: var(--gold); stroke-width: 1.2; }
+.table-banner-name {
+  font-family: var(--font-serif);
+  font-size: 16px; font-weight: 400; color: var(--ivory);
+}
+.table-banner-sub { font-size: 12px; color: var(--ivory-ghost); margin-top: 2px; }
 
 /* Form */
-.form-section { padding: 20px 20px 0; display: flex; flex-direction: column; gap: 12px; }
+.form-section { padding: 20px 20px 0; display: flex; flex-direction: column; gap: 10px; }
 .form-input {
-  width: 100%; padding: 15px 16px;
+  width: 100%; padding: 15px 18px;
   border-radius: var(--r-lg);
-  border: 1px solid var(--rim-strong);
-  background: var(--card);
-  font-size: 15px; color: var(--ink);
-  outline: none; font-family: 'Inter', sans-serif;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid var(--ivory-trace);
+  background: var(--graphite);
+  font-size: 15px; color: var(--ivory);
+  outline: none; font-family: var(--font-sans);
+  transition: border-color var(--t-fast) ease, box-shadow var(--t-fast) ease;
+  letter-spacing: 0.2px;
 }
 .form-input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-dim);
+  border-color: rgba(196,169,106,0.4);
+  box-shadow: 0 0 0 3px var(--gold-trace);
 }
-.form-input::placeholder { color: var(--ink-soft); }
+.form-input::placeholder { color: var(--ivory-ghost); }
 .form-textarea { resize: none; height: 80px; }
 
 /* Summary */
 .summary-card {
   margin: 20px 20px 0;
-  background: var(--card);
-  border: 1px solid var(--rim);
-  border-radius: var(--r-lg); padding: 16px 18px;
+  background: var(--graphite);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-lg); padding: 18px 20px;
 }
 .summary-row {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 7px 0;
-  font-size: 14px; color: var(--ink-soft);
+  padding: 6px 0; font-size: 13.5px; color: var(--ivory-ghost);
 }
-.summary-row.total {
-  border-top: 1px solid var(--rim); margin-top: 8px; padding-top: 14px;
-  font-size: 15px; font-weight: 700; color: var(--ink);
-}
-.summary-total-price {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 22px; font-weight: 600;
-  color: var(--accent); letter-spacing: -0.5px;
+.summary-rule { height: 1px; background: var(--ivory-trace); margin: 10px 0; }
+.summary-row.total { font-size: 14px; color: var(--ivory); font-weight: 500; }
+.summary-total-val {
+  font-family: var(--font-serif);
+  font-size: 24px; font-weight: 300;
+  color: var(--gold);
 }
 
 .checkout-btn {
-  margin: 20px 20px 48px;
-  width: calc(100% - 40px);
-  padding: 17px;
-  background: var(--accent);
-  border: none; border-radius: var(--r-xl);
-  color: var(--void);
-  font-family: 'Inter', sans-serif;
-  font-size: 15px; font-weight: 700;
-  cursor: pointer; letter-spacing: 0.2px;
-  box-shadow: var(--shadow-accent);
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  margin: 20px 20px 52px; width: calc(100% - 40px);
+  padding: 18px;
+  background: linear-gradient(135deg, var(--gold-soft), var(--gold));
+  border: none; border-radius: var(--r-pill);
+  color: var(--obsidian);
+  font-family: var(--font-sans);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  letter-spacing: 0.8px; text-transform: uppercase;
+  box-shadow: var(--shadow-gold);
+  transition: transform var(--t-fast) ease, box-shadow var(--t-fast) ease;
 }
-.checkout-btn:active { transform: scale(0.98); }
+.checkout-btn:active { transform: scale(0.98); box-shadow: none; }
 .checkout-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* ══════════════════════════════════════════
-   PRODUCT MODAL
-══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════
+   PRODUCT MODAL — fullscreen кинематографичный
+═══════════════════════════════════════════════════ */
 .product-modal-overlay {
   display: none; position: fixed; inset: 0; z-index: 400;
-  background: rgba(0,0,0,0.75);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  animation: fadeIn 0.25s ease;
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: overlayIn 0.3s ease;
 }
 .product-modal-overlay.active { display: flex; align-items: flex-end; }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
 
 .product-modal {
-  width: 100%; max-height: 90vh; overflow-y: auto;
-  background: var(--depth);
-  border-radius: 24px 24px 0 0;
-  border-top: 1px solid var(--rim-strong);
+  width: 100%; max-height: 92vh; overflow-y: auto;
+  background: var(--onyx);
+  border-radius: 28px 28px 0 0;
+  border-top: 1px solid var(--glass-border);
   position: relative;
-  animation: modalUp 0.38s cubic-bezier(0.22,1,0.36,1);
+  animation: modalUp 0.5s var(--ease-spring);
 }
 @keyframes modalUp {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
 }
+
 .modal-grip {
-  width: 40px; height: 4px; border-radius: 3px;
-  background: var(--rim-strong);
-  margin: 12px auto 0;
+  width: 36px; height: 3px; border-radius: 2px;
+  background: var(--pewter);
+  margin: 14px auto 0;
 }
-.modal-img {
-  width: 100%; height: 280px;
-  background: var(--surface); margin-top: 14px;
-  display: flex; align-items: center; justify-content: center;
-  overflow: hidden; position: relative;
+
+/* Фото почти fullscreen */
+.modal-photo {
+  width: 100%; margin-top: 14px;
+  position: relative;
+  overflow: hidden; background: var(--stone);
 }
-.modal-img img { width: 100%; height: 100%; object-fit: cover; }
-.modal-img .icon { width: 52px; height: 52px; stroke: var(--ink-soft); stroke-width: 1; }
-.modal-img.no-img { height: 0; margin: 0; }
+.modal-photo.tall { padding-top: 75%; }
+.modal-photo.no-photo { padding-top: 0; margin: 0; }
+.modal-photo img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%; object-fit: cover;
+  animation: modalPhotoIn 0.7s var(--ease-luxury);
+}
+@keyframes modalPhotoIn {
+  from { transform: scale(1.05); opacity: 0.7; }
+  to   { transform: scale(1); opacity: 1; }
+}
+.modal-photo-gradient {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 40%;
+  background: linear-gradient(transparent, var(--onyx));
+}
 
 .modal-close {
-  position: absolute; top: 14px; right: 14px;
-  width: 36px; height: 36px; border-radius: 50%;
-  background: rgba(10,10,11,0.7);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--rim-strong);
+  position: absolute; top: 14px; right: 14px; z-index: 5;
+  width: 38px; height: 38px; border-radius: 50%;
+  background: rgba(8,8,7,0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  color: var(--ink-mid);
-  transition: background 0.15s ease;
+  color: var(--ivory-dim);
+  transition: background var(--t-fast) ease;
 }
-.modal-close:active { background: var(--card); }
-.modal-close .icon { width: 16px; height: 16px; }
+.modal-close:active { background: var(--stone); }
+.modal-close .icon { width: 15px; height: 15px; }
 
-.modal-body { padding: 24px 22px 32px; }
-.modal-badge-row { margin-bottom: 10px; }
+.modal-body {
+  padding: 24px 24px 36px;
+  animation: modalBodyIn 0.5s var(--ease-luxury) 0.1s both;
+}
+@keyframes modalBodyIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.modal-badge { margin-bottom: 12px; }
+.modal-badge span {
+  display: inline-flex;
+  padding: 2px 10px;
+  border-radius: var(--r-pill);
+  background: var(--gold-trace);
+  border: 1px solid var(--glass-border);
+  font-size: 9px; font-weight: 500;
+  color: var(--gold); letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
 .modal-name {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 28px; font-weight: 400;
-  color: var(--ink); line-height: 1.2; margin-bottom: 10px;
+  font-family: var(--font-serif);
+  font-size: 30px; font-weight: 300;
+  color: var(--ivory); line-height: 1.15;
+  margin-bottom: 12px; letter-spacing: 0.2px;
 }
 .modal-desc {
-  font-size: 14px; color: var(--ink-mid); line-height: 1.65;
-  margin-bottom: 24px;
+  font-size: 14px; color: var(--ivory-ghost);
+  line-height: 1.7; margin-bottom: 28px;
+  font-weight: 300;
 }
 .modal-footer {
   display: flex; align-items: center;
   justify-content: space-between; gap: 16px;
-  padding-top: 20px; border-top: 1px solid var(--rim);
+  padding-top: 22px;
+  border-top: 1px solid var(--ivory-trace);
 }
-.modal-price {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 26px; font-weight: 500;
-  color: var(--ink); letter-spacing: -1px;
+.modal-price-block {}
+.modal-price-val {
+  font-family: var(--font-serif);
+  font-size: 28px; font-weight: 300;
+  color: var(--ivory); letter-spacing: -0.5px;
 }
-.modal-price-sub {
-  font-family: 'Inter', sans-serif;
-  font-size: 10px; color: var(--ink-soft);
-  text-transform: uppercase; letter-spacing: 0.8px;
-  margin-top: 3px;
+.modal-price-currency {
+  font-size: 11px; color: var(--ivory-ghost);
+  font-weight: 400; letter-spacing: 1px;
+  text-transform: uppercase; margin-top: 2px;
 }
 .modal-add-btn {
-  padding: 14px 24px;
-  background: var(--accent); border: none;
-  border-radius: var(--r-lg); cursor: pointer;
-  color: var(--void);
-  font-family: 'Inter', sans-serif;
-  font-size: 14px; font-weight: 700;
+  padding: 15px 28px;
+  background: linear-gradient(135deg, var(--gold-soft), var(--gold));
+  border: none; border-radius: var(--r-pill); cursor: pointer;
+  color: var(--obsidian);
+  font-family: var(--font-sans);
+  font-size: 13px; font-weight: 600;
+  letter-spacing: 0.5px;
+  box-shadow: var(--shadow-gold);
+  transition: transform var(--t-fast) ease;
   display: flex; align-items: center; gap: 8px;
-  box-shadow: var(--shadow-accent);
-  transition: transform 0.12s ease;
   flex-shrink: 0;
 }
-.modal-add-btn:active { transform: scale(0.96); }
-.modal-add-btn .icon { width: 16px; height: 16px; stroke-width: 2.2; }
-.modal-qty { display: flex; align-items: center; gap: 14px; }
-.modal-qty .qty-btn { width: 36px; height: 36px; }
-.modal-qty .qty-num { font-size: 16px; min-width: 24px; }
+.modal-add-btn:active { transform: scale(0.95); }
+.modal-add-btn .icon { width: 14px; height: 14px; stroke-width: 2; }
+.modal-qty-unit { display: flex; align-items: center; gap: 14px; }
+.modal-qty-unit .qty-ring { width: 38px; height: 38px; }
+.modal-qty-unit .qty-digit { font-size: 20px; min-width: 24px; }
 
-/* ══════════════════════════════════════════
-   SUCCESS SCREEN
-══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════
+   SUCCESS
+═══════════════════════════════════════════════════ */
 #successScreen.active {
   display: flex !important; flex-direction: column;
   align-items: center; justify-content: center;
-  min-height: 100vh; padding: 40px 32px;
+  min-height: 100vh; padding: 48px 32px;
   text-align: center;
 }
-.success-ring {
-  width: 100px; height: 100px; border-radius: 50%;
-  background: var(--accent-dim);
-  border: 1px solid rgba(201,169,110,0.3);
+
+.success-emblem {
+  width: 96px; height: 96px; border-radius: 50%;
+  background: var(--stone);
+  border: 1px solid var(--glass-border);
   display: flex; align-items: center; justify-content: center;
-  margin-bottom: 32px; position: relative;
-  animation: popIn 0.6s cubic-bezier(0.22,1,0.36,1);
+  margin-bottom: 36px; position: relative;
+  animation: emblemIn 0.7s var(--ease-spring);
 }
-.success-ring::before {
-  content: ''; position: absolute; inset: -12px; border-radius: 50%;
-  border: 1px solid rgba(201,169,110,0.15);
-  animation: ringPulse 2.5s ease-out 0.5s infinite;
+.success-emblem::before {
+  content: ''; position: absolute; inset: -14px; border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  animation: ringPulse 3s ease infinite 1s;
 }
-.success-ring .icon {
-  width: 38px; height: 38px; stroke: var(--accent); stroke-width: 1.5;
+.success-emblem::after {
+  content: ''; position: absolute; inset: -28px; border-radius: 50%;
+  border: 1px solid rgba(196,169,106,0.06);
+  animation: ringPulse 3s ease infinite 1.4s;
+}
+@keyframes ringPulse {
+  0%,100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.06); opacity: 0; }
+}
+.success-emblem .icon {
+  width: 36px; height: 36px; stroke: var(--gold); stroke-width: 1.2;
   stroke-dasharray: 60; stroke-dashoffset: 60;
-  animation: checkDraw 0.7s ease 0.3s forwards;
-}
-@keyframes popIn {
-  from { transform: scale(0.8); opacity: 0; }
-  to   { transform: scale(1); opacity: 1; }
+  animation: checkDraw 0.8s var(--ease-luxury) 0.4s forwards;
 }
 @keyframes checkDraw { to { stroke-dashoffset: 0; } }
-@keyframes ringPulse {
-  0%   { transform: scale(1); opacity: 0.5; }
-  100% { transform: scale(1.3); opacity: 0; }
-}
 
 .success-title {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 32px; font-weight: 400; color: var(--ink);
-  margin-bottom: 10px;
-  opacity: 0; animation: fadeSlideUp 0.4s ease 0.3s both;
+  font-family: var(--font-serif);
+  font-size: 30px; font-weight: 300; color: var(--ivory);
+  letter-spacing: 0.3px; margin-bottom: 10px;
+  opacity: 0; animation: fadeUp 0.5s ease 0.4s both;
 }
 .success-subtitle {
-  font-size: 15px; color: var(--ink-soft);
-  line-height: 1.6; margin-bottom: 32px;
-  opacity: 0; animation: fadeSlideUp 0.4s ease 0.4s both;
+  font-size: 14px; color: var(--ivory-ghost); line-height: 1.65;
+  margin-bottom: 36px; font-weight: 300;
+  opacity: 0; animation: fadeUp 0.5s ease 0.5s both;
 }
-.success-id-card {
-  background: var(--card);
-  border: 1px solid var(--rim);
-  border-radius: var(--r-lg);
-  padding: 18px 40px; margin-bottom: 36px;
-  opacity: 0; animation: fadeSlideUp 0.4s ease 0.5s both;
+.success-id {
+  background: var(--graphite);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-lg); padding: 20px 44px;
+  margin-bottom: 40px;
+  opacity: 0; animation: fadeUp 0.5s ease 0.6s both;
 }
-.success-id-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-soft); }
-.success-id-num {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 36px; font-weight: 600;
-  color: var(--accent); letter-spacing: -1px;
-  margin-top: 6px;
+.success-id-label {
+  font-size: 9px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--ivory-ghost); font-weight: 500;
+}
+.success-id-val {
+  font-family: var(--font-serif);
+  font-size: 38px; font-weight: 300;
+  color: var(--gold); letter-spacing: -1px; margin-top: 6px;
 }
 .back-menu-btn {
-  padding: 16px 44px;
-  background: var(--accent); border: none;
-  border-radius: var(--r-xl); cursor: pointer;
-  color: var(--void);
-  font-family: 'Inter', sans-serif;
-  font-size: 15px; font-weight: 700;
-  box-shadow: var(--shadow-accent);
-  opacity: 0; animation: fadeSlideUp 0.4s ease 0.6s both;
-  transition: transform 0.12s ease;
+  padding: 17px 48px;
+  background: linear-gradient(135deg, var(--gold-soft), var(--gold));
+  border: none; border-radius: var(--r-pill); cursor: pointer;
+  color: var(--obsidian);
+  font-family: var(--font-sans);
+  font-size: 13px; font-weight: 600;
+  letter-spacing: 0.8px; text-transform: uppercase;
+  box-shadow: var(--shadow-gold);
+  opacity: 0; animation: fadeUp 0.5s ease 0.7s both;
+  transition: transform var(--t-fast) ease;
 }
 .back-menu-btn:active { transform: scale(0.97); }
 
-@keyframes fadeSlideUp {
-  from { opacity: 0; transform: translateY(12px); }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ══════════════════════════════════════════
+/* ═══════════════════════════════════════════════════
    UTILS
-══════════════════════════════════════════ */
+═══════════════════════════════════════════════════ */
 .error-state {
-  text-align: center; padding: 60px 24px;
-  color: var(--ink-soft); font-size: 14px; line-height: 1.7;
+  text-align: center; padding: 80px 28px;
+  color: var(--ivory-ghost); font-size: 13.5px; line-height: 1.8;
 }
-.error-state-icon { margin: 0 auto 20px; width: 48px; height: 48px; stroke: var(--ink-soft); opacity: 0.4; }
-
-/* divider */
-.section-divider {
-  height: 1px; background: var(--rim);
-  margin: 0 -20px;
+.error-icon {
+  width: 40px; height: 40px; margin: 0 auto 20px;
+  stroke: var(--ivory-ghost); stroke-width: 1; fill: none;
+  opacity: 0.3;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -899,47 +1146,49 @@ svg { display: block; }
 
 <!-- ═══ SPLASH ═══ -->
 <div id="splash">
-  <div class="splash-inner">
-    <div class="splash-logo-ring">
-      <svg class="icon" viewBox="0 0 24 24"><path d="M18 8a4 4 0 0 1 0 8M6 4v16M6 4c0 2.5 2.5 2.5 2.5 5S6 11.5 6 14"/></svg>
+  <div class="splash-ambient"></div>
+  <div class="splash-ray"></div>
+  <div class="splash-content">
+    <div class="splash-emblem">
+      <div class="splash-emblem-ring"></div>
+      <div class="splash-emblem-inner">
+        <div class="splash-emblem-letter" id="splashLetter">T</div>
+      </div>
     </div>
-    <div class="splash-wordmark" id="splashName">TAOMLY</div>
-    <div class="splash-beam"></div>
-    <div class="splash-sub">Fine Dining Experience</div>
-    <div class="splash-dots">
-      <div class="splash-dot"></div>
-      <div class="splash-dot"></div>
-      <div class="splash-dot"></div>
-    </div>
+    <div class="splash-name" id="splashName">TAOMLY</div>
+    <div class="splash-rule"></div>
+    <div class="splash-tagline">Fine Dining Experience</div>
   </div>
 </div>
 
 <!-- ═══ MENU SCREEN ═══ -->
 <div id="menuScreen">
   <div class="header">
-    <div class="restaurant-row">
-      <div class="restaurant-logo" id="restaurantLogo">
-        <div class="restaurant-logo-letter" id="restaurantLetter">T</div>
+    <div class="header-top">
+      <div class="restaurant-emblem" id="restaurantLogo">
+        <div class="restaurant-emblem-letter" id="restaurantLetter">T</div>
       </div>
-      <div class="restaurant-meta">
+      <div class="restaurant-info">
         <div class="restaurant-name" id="restaurantName">Yuklanmoqda…</div>
         <div class="restaurant-address" id="restaurantAddress" style="display:none">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M12 21s-8-7.5-8-12a8 8 0 1 1 16 0c0 4.5-8 12-8 12z"/><circle cx="12" cy="9" r="2"/></svg>
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 21c0 0-7-7.5-7-11a7 7 0 1 1 14 0c0 3.5-7 11-7 11z"/><circle cx="12" cy="10" r="2"/></svg>
           <span id="restaurantAddressText"></span>
         </div>
         <div id="tableBadge" style="display:none" class="table-badge">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M3 9h18M3 9v10M21 9v10M3 19h18M7 9V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v4"/></svg>
+          <svg class="icon" viewBox="0 0 24 24"><path d="M3 9h18v10H3zM7 9V6a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v3"/></svg>
           <span id="tableBadgeText"></span>
         </div>
       </div>
     </div>
 
+    <div class="header-gold-rule"></div>
+
     <div id="welcomeLine" style="display:none" class="welcome-line">
       <div class="welcome-text" id="welcomeText"></div>
     </div>
 
-    <div id="popularSection" style="display:none" class="popular-section">
-      <div class="popular-label">Популярное</div>
+    <div id="popularSection" style="display:none" class="popular-rail">
+      <div class="popular-eyebrow">Популярное</div>
       <div class="popular-scroll" id="popularScroll"></div>
     </div>
 
@@ -947,10 +1196,9 @@ svg { display: block; }
   </div>
 
   <div class="main" id="menuContent">
-    <div class="skeleton-wrap">
-      <div class="skeleton-card"><div class="skeleton-block skeleton-photo"></div><div class="skeleton-body"><div class="skeleton-block skeleton-line w30"></div><div class="skeleton-block skeleton-line w70"></div><div class="skeleton-block skeleton-line w50"></div></div></div>
-      <div class="skeleton-card"><div class="skeleton-block skeleton-photo"></div><div class="skeleton-body"><div class="skeleton-block skeleton-line w30"></div><div class="skeleton-block skeleton-line w70"></div><div class="skeleton-block skeleton-line w50"></div></div></div>
-      <div class="skeleton-card"><div class="skeleton-block skeleton-photo"></div><div class="skeleton-body"><div class="skeleton-block skeleton-line w30"></div><div class="skeleton-block skeleton-line w70"></div><div class="skeleton-block skeleton-line w50"></div></div></div>
+    <div class="skeleton-wrap" style="padding: 0 20px">
+      <div class="skeleton-card"><div class="skeleton-photo-block"><div class="skeleton-shimmer"></div></div><div class="skeleton-body-block"><div class="skeleton-shimmer skeleton-line w35"></div><div class="skeleton-shimmer skeleton-line w65"></div><div class="skeleton-shimmer skeleton-line w45"></div></div></div>
+      <div class="skeleton-card"><div class="skeleton-photo-block"><div class="skeleton-shimmer"></div></div><div class="skeleton-body-block"><div class="skeleton-shimmer skeleton-line w35"></div><div class="skeleton-shimmer skeleton-line w65"></div><div class="skeleton-shimmer skeleton-line w45"></div></div></div>
     </div>
   </div>
 </div>
@@ -963,12 +1211,11 @@ svg { display: block; }
     </button>
     <span class="screen-title">Savat</span>
   </div>
-
   <div class="cart-items-list" id="cartItemsList"></div>
 
-  <div class="order-type-section" id="orderTypeSection">
+  <div class="section-block" id="orderTypeSection">
     <div class="section-eyebrow">Buyurtma turi</div>
-    <div class="order-type-grid">
+    <div class="type-grid">
       <div class="type-btn active" id="typeDelivery" onclick="selectType('delivery')">
         <div class="type-btn-icon">
           <svg class="icon" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2"/><circle cx="17" cy="19" r="2"/><path d="M4 19h2l1.5-9H17l3 6h-2M7.5 10L6 5H3"/></svg>
@@ -986,7 +1233,7 @@ svg { display: block; }
 
   <div class="table-banner" id="tableBanner" style="display:none">
     <div class="table-banner-icon">
-      <svg class="icon" viewBox="0 0 24 24"><path d="M3 9h18M3 9v10M21 9v10M3 19h18M7 9V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v4"/></svg>
+      <svg class="icon" viewBox="0 0 24 24"><path d="M3 9h18v10H3zM7 9V6a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v3"/></svg>
     </div>
     <div>
       <div class="table-banner-name" id="tableBannerTitle">Stol №1</div>
@@ -1006,25 +1253,26 @@ svg { display: block; }
       <span id="summaryCount">0 ta taom</span>
       <span id="summarySubtotal">0 so'm</span>
     </div>
+    <div class="summary-rule"></div>
     <div class="summary-row total">
       <span>Jami</span>
-      <span class="summary-total-price" id="summaryTotal">0</span>
+      <span class="summary-total-val" id="summaryTotal">0</span>
     </div>
   </div>
 
-  <button class="checkout-btn" id="checkoutBtn" onclick="submitOrder()">Buyurtma berish →</button>
+  <button class="checkout-btn" id="checkoutBtn" onclick="submitOrder()">Buyurtma berish</button>
 </div>
 
-<!-- ═══ SUCCESS SCREEN ═══ -->
+<!-- ═══ SUCCESS ═══ -->
 <div id="successScreen" class="screen">
-  <div class="success-ring">
+  <div class="success-emblem">
     <svg class="icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
   </div>
   <div class="success-title">Buyurtma qabul qilindi</div>
   <div class="success-subtitle" id="successSubtitle">Tez orada siz bilan bog'lanamiz.</div>
-  <div class="success-id-card">
+  <div class="success-id">
     <div class="success-id-label">Buyurtma raqami</div>
-    <div class="success-id-num" id="successOrderId">#0000</div>
+    <div class="success-id-val" id="successOrderId">#0000</div>
   </div>
   <button class="back-menu-btn" onclick="backToMenu()">Menyuga qaytish</button>
 </div>
@@ -1036,15 +1284,15 @@ svg { display: block; }
     <button class="modal-close" onclick="closeProductModal()">
       <svg class="icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
     </button>
-    <div class="modal-img" id="productModalImg"></div>
+    <div class="modal-photo" id="productModalPhoto"></div>
     <div class="modal-body">
-      <div class="modal-badge-row" id="productModalBadge"></div>
+      <div class="modal-badge" id="productModalBadge"></div>
       <div class="modal-name" id="productModalName"></div>
       <div class="modal-desc" id="productModalDesc"></div>
       <div class="modal-footer">
-        <div>
-          <div class="modal-price" id="productModalPrice"></div>
-          <div class="modal-price-sub">so'm</div>
+        <div class="modal-price-block">
+          <div class="modal-price-val" id="productModalPrice"></div>
+          <div class="modal-price-currency">so'm</div>
         </div>
         <div id="productModalCtrl"></div>
       </div>
@@ -1052,15 +1300,20 @@ svg { display: block; }
   </div>
 </div>
 
-<!-- ═══ CART BAR ═══ -->
+<!-- ═══ CART BAR — стеклянная капсула ═══ -->
 <div class="cart-bar" id="cartBar">
-  <button class="cart-btn" onclick="openCart()">
-    <div class="cart-btn-left">
-      <span class="cart-count-pill" id="cartCountBadge">0</span>
-      <span class="cart-label">Savat</span>
+  <div class="cart-capsule" onclick="openCart()">
+    <div class="cart-capsule-left">
+      <div class="cart-count-gem">
+        <span id="cartCountBadge">0</span>
+      </div>
+      <span class="cart-label-text">Savat</span>
     </div>
-    <span class="cart-total" id="cartTotalBar">0</span>
-  </button>
+    <span class="cart-total-text" id="cartTotalBar">0 so'm</span>
+    <div class="cart-arrow">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1096,82 +1349,65 @@ function parseParams() {
 }
 
 function fmt(p) { return p.toLocaleString('uz-UZ') + ' so\'m'; }
-function fmtMono(p) { return p.toLocaleString('uz-UZ'); }
+function fmtNum(p) { return p.toLocaleString('uz-UZ'); }
 
-/* ── applyBrandTheme — только акцент, тёмная основа неизменна ── */
+/* ══ applyBrandTheme — только акцент, основа неизменна ══ */
 function applyBrandTheme(r) {
   const root = document.documentElement;
 
-  let accentHex = null;
-
-  // Приоритет: primary_color → accent_color
-  if (r.primary_color) accentHex = r.primary_color;
-  else if (r.accent_color) accentHex = r.accent_color;
+  let accentHex = r.primary_color || r.accent_color || null;
 
   if (accentHex) {
-    // Проверяем контраст на тёмном фоне: если цвет слишком тёмный — осветляем
-    const accessible = _ensureContrast(accentHex, '#0A0A0B', 3.5);
-    root.style.setProperty('--accent',      accessible);
-    root.style.setProperty('--accent-dim',  _hexToRgba(accessible, 0.10));
-    root.style.setProperty('--accent-glow', _hexToRgba(accessible, 0.22));
-
-    const tc = document.getElementById('pwaThemeColor');
-    if (tc) tc.setAttribute('content', '#0A0A0B'); // тема всегда тёмная
+    const safe = _ensureContrast(accentHex, '#080807', 3.0);
+    root.style.setProperty('--gold',       safe);
+    root.style.setProperty('--gold-soft',  _darken(safe, 18));
+    root.style.setProperty('--gold-glow',  _hexToRgba(safe, 0.15));
+    root.style.setProperty('--gold-trace', _hexToRgba(safe, 0.07));
+    root.style.setProperty('--glass-border', _hexToRgba(safe, 0.12));
   }
 
   if (r.name) {
     const pt = document.getElementById('pwaTitle');
     if (pt) pt.setAttribute('content', r.name);
     document.title = r.name;
-    document.getElementById('splashName').textContent = r.name.toUpperCase();
+    const sn = document.getElementById('splashName');
+    if (sn) sn.textContent = r.name.toUpperCase();
+    const sl = document.getElementById('splashLetter');
+    if (sl) sl.textContent = r.name[0].toUpperCase();
   }
-
+  document.getElementById('pwaThemeColor').setAttribute('content', '#080807');
   if (restaurantSlug) {
     const ml = document.getElementById('pwaManifest');
     if (ml) ml.setAttribute('href', `/manifest/${restaurantSlug}.json`);
   }
 }
 
-function _hexToRgba(hex, alpha) {
-  if (!hex || hex.length < 7) return `rgba(201,169,110,${alpha})`;
-  const r = parseInt(hex.slice(1,3),16);
-  const g = parseInt(hex.slice(3,5),16);
-  const b = parseInt(hex.slice(5,7),16);
-  return `rgba(${r},${g},${b},${alpha})`;
+function _hexToRgba(hex, a) {
+  if (!hex||hex.length<7) return `rgba(196,169,106,${a})`;
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
 }
-
-/* Относительная яркость для контраста WCAG */
 function _relativeLuminance(hex) {
-  if (!hex || hex.length < 7) return 0;
-  const vals = [hex.slice(1,3), hex.slice(3,5), hex.slice(5,7)]
-    .map(h => { const v = parseInt(h,16)/255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4); });
-  return 0.2126*vals[0] + 0.7152*vals[1] + 0.0722*vals[2];
+  if (!hex||hex.length<7) return 0;
+  return [hex.slice(1,3),hex.slice(3,5),hex.slice(5,7)]
+    .map(h=>{const v=parseInt(h,16)/255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4);})
+    .reduce((s,v,i)=>s+[0.2126,0.7152,0.0722][i]*v, 0);
 }
-
-function _contrastRatio(hex1, hex2) {
-  const l1 = _relativeLuminance(hex1);
-  const l2 = _relativeLuminance(hex2);
-  return (Math.max(l1,l2)+0.05) / (Math.min(l1,l2)+0.05);
+function _contrast(h1,h2){const l1=_relativeLuminance(h1),l2=_relativeLuminance(h2);return(Math.max(l1,l2)+0.05)/(Math.min(l1,l2)+0.05);}
+function _ensureContrast(hex, bg, min) {
+  let h=hex, n=0;
+  while(_contrast(h,bg)<min && n<24){h=_lighten(h,10);n++;}
+  return h;
 }
-
-/* Осветляем акцент пока контраст не достигнет минимума */
-function _ensureContrast(accentHex, bgHex, minRatio) {
-  if (!accentHex || accentHex.length < 7) return '#C9A96E';
-  let hex = accentHex;
-  let attempts = 0;
-  while (_contrastRatio(hex, bgHex) < minRatio && attempts < 20) {
-    hex = _lighten(hex, 12);
-    attempts++;
-  }
-  return hex;
+function _lighten(hex,a){
+  if(!hex||hex.length<7)return hex;
+  return '#'+[parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16)]
+    .map(v=>Math.min(255,v+a).toString(16).padStart(2,'0')).join('');
 }
-
-function _lighten(hex, amount) {
-  if (!hex || hex.length < 7) return hex;
-  const r = Math.min(255, parseInt(hex.slice(1,3),16)+amount);
-  const g = Math.min(255, parseInt(hex.slice(3,5),16)+amount);
-  const b = Math.min(255, parseInt(hex.slice(5,7),16)+amount);
-  return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+function _darken(hex,a){
+  if(!hex||hex.length<7)return hex;
+  return '#'+[parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16)]
+    .map(v=>Math.max(0,v-a).toString(16).padStart(2,'0')).join('');
 }
 
 async function loadMenu() {
@@ -1179,28 +1415,24 @@ async function loadMenu() {
     const res = await fetch(`${API_BASE}/api/restaurants/${restaurantSlug}`);
     if (!res.ok) throw new Error('Server xatosi');
     restaurant = await res.json();
-
     applyBrandTheme(restaurant);
 
     document.getElementById('restaurantName').textContent = restaurant.name;
 
-    const addrEl = document.getElementById('restaurantAddress');
-    const addrText = document.getElementById('restaurantAddressText');
-    if (restaurant.address) {
-      addrText.textContent = restaurant.address;
-      addrEl.style.display = 'flex';
-    }
-
-    // Логотип
     const logoWrap = document.getElementById('restaurantLogo');
     if (restaurant.logo_url) {
       logoWrap.innerHTML = `<img src="${restaurant.logo_url}" alt="${restaurant.name}">`;
     } else {
-      const letter = restaurant.name ? restaurant.name[0].toUpperCase() : 'T';
-      logoWrap.innerHTML = `<div class="restaurant-logo-letter">${letter}</div>`;
+      const L = (restaurant.name||'T')[0].toUpperCase();
+      logoWrap.innerHTML = `<div class="restaurant-emblem-letter">${L}</div>`;
+      document.getElementById('restaurantLetter').textContent = L;
     }
 
-    // Приветствие
+    if (restaurant.address) {
+      document.getElementById('restaurantAddressText').textContent = restaurant.address;
+      document.getElementById('restaurantAddress').style.display = 'flex';
+    }
+
     if (restaurant.welcome_text) {
       document.getElementById('welcomeText').textContent = restaurant.welcome_text;
       document.getElementById('welcomeLine').style.display = 'block';
@@ -1217,53 +1449,53 @@ async function loadMenu() {
     renderMenu();
 
     setTimeout(() => {
-      document.getElementById('splash').classList.add('hidden');
-    }, 1600);
+      document.getElementById('splash').classList.add('out');
+      setTimeout(() => {
+        const s = document.getElementById('splash');
+        if (s) s.style.display = 'none';
+      }, 1000);
+    }, 1800);
 
   } catch(e) {
     document.getElementById('menuContent').innerHTML = `
       <div class="error-state">
-        <svg class="icon error-state-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+        <svg class="error-icon" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
         Menyu yuklanmadi.<br>Qayta urinib ko'ring.
       </div>`;
-    document.getElementById('splash').classList.add('hidden');
+    const s = document.getElementById('splash');
+    if (s) { s.classList.add('out'); setTimeout(()=>s.style.display='none',1000); }
   }
 }
 
-// Popular — блюда с is_popular=true
 function renderPopular() {
   const section = document.getElementById('popularSection');
   const scroll = document.getElementById('popularScroll');
   const items = [];
   (restaurant.categories||[]).forEach(cat => {
-    (cat.products||[]).forEach(p => {
-      if (p.is_popular) items.push(p);
-    });
+    (cat.products||[]).forEach(p => { if (p.is_popular) items.push(p); });
   });
-  if (items.length === 0) { section.style.display = 'none'; return; }
+  if (!items.length) { section.style.display='none'; return; }
   section.style.display = 'block';
   scroll.innerHTML = '';
   items.forEach(p => {
-    const chip = document.createElement('div');
-    chip.className = 'popular-chip';
-    chip.onclick = () => openProductModal(p.id);
+    const el = document.createElement('div');
+    el.className = 'popular-item';
+    el.onclick = () => openProductModal(p.id);
     const imgHtml = p.photo_url
-      ? `<img src="${p.photo_url}" alt="${p.name}">`
-      : `<svg class="icon" viewBox="0 0 24 24"><path d="M18 8a4 4 0 0 1 0 8M6 4v16M6 4c0 2.5 2.5 2.5 2.5 5S6 11.5 6 14"/></svg>`;
-    chip.innerHTML = `
-      <div class="popular-chip-img">${imgHtml}</div>
-      <div class="popular-chip-body">
-        <div class="popular-chip-name">${p.name}</div>
-        <div class="popular-chip-price">${fmtMono(p.price)}</div>
-      </div>`;
-    scroll.appendChild(chip);
+      ? `<img src="${p.photo_url}" alt="${p.name}" loading="lazy">`
+      : `<div class="popular-item-photo-placeholder"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a4 4 0 0 1 0 8M6 4v16M6 4c0 2.5 2.5 2.5 2.5 5S6 11.5 6 14"/></svg></div>`;
+    el.innerHTML = `
+      <div class="popular-item-photo">${imgHtml}</div>
+      <div class="popular-item-name">${p.name}</div>
+      <div class="popular-item-price">${fmt(p.price)}</div>`;
+    scroll.appendChild(el);
   });
 }
 
 async function resolveTableId() {
   try {
     const res = await fetch(`${API_BASE}/api/restaurants/${restaurantSlug}/table/${tableNumber}`);
-    if (res.ok) { const data = await res.json(); tableDbId = data.table_id; }
+    if (res.ok) { const d = await res.json(); tableDbId = d.table_id; }
   } catch(e) { tableDbId = null; }
 }
 
@@ -1272,26 +1504,26 @@ function renderCategories() {
   nav.innerHTML = '';
   (restaurant.categories||[]).forEach((cat, i) => {
     const btn = document.createElement('button');
-    btn.className = 'cat-btn' + (i===0 ? ' active' : '');
+    btn.className = 'cat-btn' + (i===0?' active':'');
     btn.textContent = cat.name;
     btn.onclick = () => {
-      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
       const el = document.getElementById('cat-'+cat.id);
-      if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+      if (el) el.scrollIntoView({behavior:'smooth',block:'start'});
     };
     nav.appendChild(btn);
   });
 }
 
-let cardAnimIdx = 0;
+let _animIdx = 0;
 
 function renderMenu() {
   const content = document.getElementById('menuContent');
   content.innerHTML = '';
-  cardAnimIdx = 0;
+  _animIdx = 0;
   (restaurant.categories||[]).forEach(cat => {
-    if (!cat.products||cat.products.length===0) return;
+    if (!cat.products||!cat.products.length) return;
     const sec = document.createElement('div');
     sec.className = 'category-section';
     sec.id = 'cat-'+cat.id;
@@ -1303,324 +1535,329 @@ function renderMenu() {
       <div class="products-grid" id="grid-${cat.id}"></div>`;
     content.appendChild(sec);
     const grid = sec.querySelector('#grid-'+cat.id);
-    cat.products.forEach(p => grid.appendChild(makeCard(p)));
+
+    // Карточки с фото оборачиваем в padding-контейнер
+    let photoGroup = null;
+    cat.products.forEach(p => {
+      if (p.photo_url) {
+        if (!photoGroup) {
+          photoGroup = document.createElement('div');
+          photoGroup.style.cssText = 'padding:0 20px;display:flex;flex-direction:column;gap:16px;';
+          grid.appendChild(photoGroup);
+        }
+        photoGroup.appendChild(makeCard(p));
+      } else {
+        photoGroup = null;
+        grid.appendChild(makeCard(p));
+      }
+    });
   });
 }
 
-const BADGE_DEFS = {
-  bestseller: { label: 'Bestseller' },
-  chef:       { label: 'Chef\'s Choice' },
-  new:        { label: 'New' },
-  spicy:      { label: '🌶 Spicy' },
+const BADGE_MAP = {
+  bestseller: 'Bestseller',
+  chef:       "Chef's Choice",
+  new:        'New Arrival',
+  spicy:      '🌶 Spicy',
 };
 
-function extractBadge(description) {
-  if (!description) return { badge: null, text: '' };
-  const match = description.match(/#(bestseller|chef|new|spicy)\b/i);
-  if (!match) return { badge: null, text: description };
-  const key = match[1].toLowerCase();
-  const text = description.replace(match[0], '').trim();
-  return { badge: BADGE_DEFS[key], text };
+function extractBadge(desc) {
+  if (!desc) return {badge:null,text:''};
+  const m = desc.match(/#(bestseller|chef|new|spicy)\b/i);
+  if (!m) return {badge:null,text:desc};
+  return {badge:BADGE_MAP[m[1].toLowerCase()], text:desc.replace(m[0],'').trim()};
 }
 
 function makeCard(p) {
   const div = document.createElement('div');
   const hasPhoto = !!p.photo_url;
-  div.className = 'product-card ' + (hasPhoto ? 'has-photo' : 'no-photo');
-  div.id = 'card-' + p.id;
-  div.style.animationDelay = (cardAnimIdx++ % 10) * 0.05 + 's';
-  div.onclick = () => openProductModal(p.id);
+  div.id = 'card-'+p.id;
+  div.style.animationDelay = (_animIdx++%12)*0.06+'s';
 
-  const qty = cart[p.id]?.qty || 0;
-  const { badge, text: descText } = extractBadge(p.description);
-  const badgeHtml = badge ? `<div class="product-badge-row"><span class="product-badge">${badge.label}</span></div>` : '';
+  const qty = cart[p.id]?.qty||0;
+  const {badge, text:descText} = extractBadge(p.description);
+  const badgeHtml = badge ? `<div class="product-photo-badge">${badge}</div>` : '';
+  const badgeInline = badge ? `<span class="product-badge-inline">${badge}</span>` : '';
 
   if (hasPhoto) {
+    div.className = 'product-card has-photo';
+    div.onclick = ()=>openProductModal(p.id);
     div.innerHTML = `
-      <div class="product-card-photo">
+      <div class="product-photo-wrap">
         <img src="${p.photo_url}" alt="${p.name}" loading="lazy">
-      </div>
-      <div class="product-body">
+        <div class="product-photo-overlay"></div>
         ${badgeHtml}
-        <div class="product-name">${p.name}</div>
-        ${descText ? `<div class="product-desc">${descText}</div>` : ''}
-        <div class="product-footer">
-          <div>
-            <div class="product-price">${fmtMono(p.price)}</div>
-            <div class="product-price-sub">so'm</div>
+        <div class="product-photo-content">
+          <div class="product-photo-text">
+            <div class="product-name">${p.name}</div>
+            ${descText?`<div class="product-desc-photo">${descText}</div>`:''}
+            <div class="product-price-photo">${fmt(p.price)}</div>
           </div>
-          <div id="ctrl-${p.id}" onclick="event.stopPropagation()">${ctrlHtml(p, qty)}</div>
+          <div class="photo-add-wrap" id="ctrl-${p.id}" onclick="event.stopPropagation()">
+            ${ctrlHtml(p,qty,true)}
+          </div>
         </div>
       </div>`;
   } else {
+    div.className = 'product-card no-photo';
+    div.onclick = ()=>openProductModal(p.id);
     div.innerHTML = `
-      <div class="product-body">
-        ${badgeHtml}
-        <div class="product-name">${p.name}</div>
-        ${descText ? `<div class="product-desc">${descText}</div>` : ''}
-        <div class="product-footer">
-          <div>
-            <div class="product-price">${fmtMono(p.price)}</div>
-            <div class="product-price-sub">so'm</div>
+      <div class="product-row">
+        <div class="product-row-text">
+          <div class="product-name-row">
+            <div class="product-name-plain">${p.name}</div>
+            ${badgeInline}
           </div>
-          <div id="ctrl-${p.id}" onclick="event.stopPropagation()">${ctrlHtml(p, qty)}</div>
+          ${descText?`<div class="product-desc-plain">${descText}</div>`:''}
+          <div class="product-price-plain">${fmt(p.price)}</div>
+        </div>
+        <div id="ctrl-${p.id}" onclick="event.stopPropagation()">
+          ${ctrlHtml(p,qty,false)}
         </div>
       </div>`;
   }
   return div;
 }
 
-function ctrlHtml(p, qty) {
-  if (qty === 0) return `<button class="add-btn" onclick="event.stopPropagation();addItem(${p.id})"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>`;
-  return `<div class="qty-control">
-    <button class="qty-btn" onclick="changeQty(${p.id},-1)"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
-    <span class="qty-num">${qty}</span>
-    <button class="qty-btn" onclick="changeQty(${p.id},1)"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+function ctrlHtml(p, qty, onPhoto) {
+  if (qty===0) return `<button class="add-ring" onclick="event.stopPropagation();addItem(${p.id})"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>`;
+  return `<div class="qty-unit">
+    <button class="qty-ring" onclick="changeQty(${p.id},-1)"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+    <span class="qty-digit">${qty}</span>
+    <button class="qty-ring" onclick="changeQty(${p.id},1)"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
   </div>`;
 }
 
 function findProduct(id) {
   for (const cat of (restaurant?.categories||[])) {
-    const p = cat.products.find(p => p.id === id);
+    const p = cat.products.find(p=>p.id===id);
     if (p) return p;
   }
   return null;
 }
 
 function addItem(id) {
-  const p = findProduct(id); if (!p) return;
-  cart[id] = { id, name:p.name, price:p.price, qty:1 };
+  const p=findProduct(id); if(!p)return;
+  cart[id]={id,name:p.name,price:p.price,qty:1};
   refreshCtrl(id); updateBar();
 }
-
-function changeQty(id, delta) {
-  if (!cart[id]) return;
-  cart[id].qty += delta;
-  if (cart[id].qty <= 0) delete cart[id];
+function changeQty(id,delta) {
+  if(!cart[id])return;
+  cart[id].qty+=delta;
+  if(cart[id].qty<=0)delete cart[id];
   refreshCtrl(id); updateBar();
-  if (productModalCurrentId === id) refreshModalCtrl();
+  if(productModalCurrentId===id)refreshModalCtrl();
 }
-
 function refreshCtrl(id) {
-  const el = document.getElementById('ctrl-'+id); if (!el) return;
-  const p = findProduct(id); if (!p) return;
-  el.innerHTML = ctrlHtml(p, cart[id]?.qty||0);
+  const el=document.getElementById('ctrl-'+id); if(!el)return;
+  const p=findProduct(id); if(!p)return;
+  const hasPhoto=!!p.photo_url;
+  el.innerHTML=ctrlHtml(p,cart[id]?.qty||0,hasPhoto);
 }
 
-/* ── PRODUCT MODAL ── */
-let productModalCurrentId = null;
+/* ── MODAL ── */
+let productModalCurrentId=null;
 
 function openProductModal(id) {
-  const p = findProduct(id); if (!p) return;
-  productModalCurrentId = id;
-  const { badge, text: descText } = extractBadge(p.description);
+  const p=findProduct(id); if(!p)return;
+  productModalCurrentId=id;
+  const {badge,text:descText}=extractBadge(p.description);
 
-  const imgWrap = document.getElementById('productModalImg');
-  if (p.photo_url) {
-    imgWrap.className = 'modal-img';
-    imgWrap.innerHTML = `<img src="${p.photo_url}" alt="${p.name}">`;
+  const photoEl=document.getElementById('productModalPhoto');
+  if(p.photo_url){
+    photoEl.className='modal-photo tall';
+    photoEl.innerHTML=`<img src="${p.photo_url}" alt="${p.name}"><div class="modal-photo-gradient"></div>`;
   } else {
-    imgWrap.className = 'modal-img no-img';
-    imgWrap.innerHTML = '';
+    photoEl.className='modal-photo no-photo';
+    photoEl.innerHTML='';
   }
 
-  document.getElementById('productModalBadge').innerHTML = badge ? `<span class="product-badge">${badge.label}</span>` : '';
-  document.getElementById('productModalName').textContent = p.name;
-  document.getElementById('productModalDesc').textContent = descText||'';
-  document.getElementById('productModalPrice').textContent = fmtMono(p.price);
+  document.getElementById('productModalBadge').innerHTML = badge?`<span>${badge}</span>`:'';
+  document.getElementById('productModalName').textContent=p.name;
+  document.getElementById('productModalDesc').textContent=descText||'';
+  document.getElementById('productModalPrice').textContent=fmtNum(p.price);
   refreshModalCtrl();
   document.getElementById('productModalOverlay').classList.add('active');
 }
 
 function refreshModalCtrl() {
-  const id = productModalCurrentId;
-  const p = findProduct(id); if (!p) return;
-  const qty = cart[id]?.qty||0;
-  const ctrl = document.getElementById('productModalCtrl');
-  if (qty === 0) {
-    ctrl.innerHTML = `<button class="modal-add-btn" onclick="addItem(${id});refreshModalCtrl()">
+  const id=productModalCurrentId;
+  const p=findProduct(id); if(!p)return;
+  const qty=cart[id]?.qty||0;
+  const ctrl=document.getElementById('productModalCtrl');
+  if(qty===0){
+    ctrl.innerHTML=`<button class="modal-add-btn" onclick="addItem(${id});refreshModalCtrl()">
       <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Qo'shish
     </button>`;
   } else {
-    ctrl.innerHTML = `<div class="modal-qty">
-      <div class="qty-control">
-        <button class="qty-btn" onclick="changeQty(${id},-1)"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
-        <span class="qty-num">${qty}</span>
-        <button class="qty-btn" onclick="changeQty(${id},1)"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
-      </div>
+    ctrl.innerHTML=`<div class="modal-qty-unit">
+      <button class="qty-ring" style="width:38px;height:38px" onclick="changeQty(${id},-1)"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+      <span class="qty-digit" style="font-size:20px;min-width:24px">${qty}</span>
+      <button class="qty-ring" style="width:38px;height:38px" onclick="changeQty(${id},1)"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
     </div>`;
   }
 }
 
 function closeProductModal() {
   document.getElementById('productModalOverlay').classList.remove('active');
-  productModalCurrentId = null;
+  productModalCurrentId=null;
 }
 
-function cartItems() { return Object.values(cart); }
-function cartTotal() { return cartItems().reduce((s,i) => s+i.price*i.qty, 0); }
-function cartCount() { return cartItems().reduce((s,i) => s+i.qty, 0); }
+function cartItems(){return Object.values(cart);}
+function cartTotal(){return cartItems().reduce((s,i)=>s+i.price*i.qty,0);}
+function cartCount(){return cartItems().reduce((s,i)=>s+i.qty,0);}
 
-function updateBar() {
-  const n = cartCount();
-  document.getElementById('cartCountBadge').textContent = n;
-  document.getElementById('cartTotalBar').textContent = fmtMono(cartTotal());
-  document.getElementById('cartBar').classList.toggle('visible', n>0);
+function updateBar(){
+  const n=cartCount();
+  document.getElementById('cartCountBadge').textContent=n;
+  document.getElementById('cartTotalBar').textContent=fmt(cartTotal());
+  document.getElementById('cartBar').classList.toggle('visible',n>0);
 }
 
-function openCart() { renderCart(); document.getElementById('cartScreen').classList.add('active'); }
-function closeCart() { document.getElementById('cartScreen').classList.remove('active'); }
+function openCart(){renderCart();document.getElementById('cartScreen').classList.add('active');}
+function closeCart(){document.getElementById('cartScreen').classList.remove('active');}
 
-function selectType(type) {
-  orderType = type;
-  document.getElementById('typeDelivery').classList.toggle('active', type==='delivery');
-  document.getElementById('typeTakeaway').classList.toggle('active', type==='takeaway');
-  document.getElementById('clientAddress').style.display = type==='delivery' ? 'block' : 'none';
+function selectType(type){
+  orderType=type;
+  document.getElementById('typeDelivery').classList.toggle('active',type==='delivery');
+  document.getElementById('typeTakeaway').classList.toggle('active',type==='takeaway');
+  document.getElementById('clientAddress').style.display=type==='delivery'?'block':'none';
 }
 
-function renderCart() {
-  const list = document.getElementById('cartItemsList');
-  list.innerHTML = '';
-  cartItems().forEach(item => {
-    const div = document.createElement('div');
-    div.className = 'cart-item';
-    div.innerHTML = `
-      <div class="cart-item-icon">
+function renderCart(){
+  const list=document.getElementById('cartItemsList');
+  list.innerHTML='';
+  cartItems().forEach(item=>{
+    const div=document.createElement('div');
+    div.className='cart-item';
+    div.innerHTML=`
+      <div class="cart-item-gem">
         <svg class="icon" viewBox="0 0 24 24"><path d="M18 8a4 4 0 0 1 0 8M6 4v16M6 4c0 2.5 2.5 2.5 2.5 5S6 11.5 6 14"/></svg>
       </div>
       <div class="cart-item-info">
         <div class="cart-item-name">${item.name}</div>
         <div class="cart-item-price">${item.qty} × ${fmt(item.price)}</div>
       </div>
-      <div class="qty-control">
-        <button class="qty-btn" onclick="cartChangeQty(${item.id},-1)"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
-        <span class="qty-num">${item.qty}</span>
-        <button class="qty-btn" onclick="cartChangeQty(${item.id},1)"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <div class="qty-unit">
+        <button class="qty-ring" onclick="cartChangeQty(${item.id},-1)"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+        <span class="qty-digit">${item.qty}</span>
+        <button class="qty-ring" onclick="cartChangeQty(${item.id},1)"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
       </div>`;
     list.appendChild(div);
   });
 
-  document.getElementById('summaryCount').textContent = cartCount() + ' ta taom';
-  document.getElementById('summarySubtotal').textContent = fmt(cartTotal());
-  document.getElementById('summaryTotal').textContent = fmtMono(cartTotal());
+  document.getElementById('summaryCount').textContent=cartCount()+' ta taom';
+  document.getElementById('summarySubtotal').textContent=fmt(cartTotal());
+  document.getElementById('summaryTotal').textContent=fmtNum(cartTotal());
 
-  if (orderType === 'dine_in') {
-    document.getElementById('orderTypeSection').style.display = 'none';
-    document.getElementById('clientAddress').style.display = 'none';
-    document.getElementById('clientName').style.display = 'none';
-    document.getElementById('clientPhone').style.display = 'none';
-    document.getElementById('tableBanner').style.display = 'flex';
-    document.getElementById('tableBannerTitle').textContent = 'Stol №'+tableNumber;
+  if(orderType==='dine_in'){
+    document.getElementById('orderTypeSection').style.display='none';
+    document.getElementById('clientAddress').style.display='none';
+    document.getElementById('clientName').style.display='none';
+    document.getElementById('clientPhone').style.display='none';
+    document.getElementById('tableBanner').style.display='flex';
+    document.getElementById('tableBannerTitle').textContent='Stol №'+tableNumber;
   } else {
-    document.getElementById('orderTypeSection').style.display = 'block';
-    document.getElementById('tableBanner').style.display = 'none';
-    document.getElementById('clientName').style.display = 'block';
-    document.getElementById('clientPhone').style.display = 'block';
-    document.getElementById('clientAddress').style.display = orderType==='delivery' ? 'block' : 'none';
+    document.getElementById('orderTypeSection').style.display='block';
+    document.getElementById('tableBanner').style.display='none';
+    document.getElementById('clientName').style.display='block';
+    document.getElementById('clientPhone').style.display='block';
+    document.getElementById('clientAddress').style.display=orderType==='delivery'?'block':'none';
   }
 }
 
-function cartChangeQty(id, delta) {
-  changeQty(id, delta);
-  if (cartCount()===0) { closeCart(); return; }
+function cartChangeQty(id,delta){
+  changeQty(id,delta);
+  if(cartCount()===0){closeCart();return;}
   renderCart();
 }
 
-async function submitOrder() {
-  const btn = document.getElementById('checkoutBtn');
-  const name = document.getElementById('clientName').value.trim();
-  const phone = document.getElementById('clientPhone').value.trim();
-  const address = document.getElementById('clientAddress').value.trim();
-  const comment = document.getElementById('clientComment').value.trim();
+async function submitOrder(){
+  const btn=document.getElementById('checkoutBtn');
+  const name=document.getElementById('clientName').value.trim();
+  const phone=document.getElementById('clientPhone').value.trim();
+  const address=document.getElementById('clientAddress').value.trim();
+  const comment=document.getElementById('clientComment').value.trim();
 
-  if (orderType !== 'dine_in') {
-    if (!name) { alert('Ismingizni kiriting'); return; }
-    if (!phone||phone==='+998') { alert('Telefon raqamingizni kiriting'); return; }
+  if(orderType!=='dine_in'){
+    if(!name){alert('Ismingizni kiriting');return;}
+    if(!phone||phone==='+998'){alert('Telefon raqamingizni kiriting');return;}
   }
-  if (orderType==='delivery'&&!address) { alert('Manzilni kiriting'); return; }
+  if(orderType==='delivery'&&!address){alert('Manzilni kiriting');return;}
 
-  const tg = window.Telegram?.WebApp;
-  const initData = tg?.initData;
-  if (!initData) { alert('Telegram Mini App dan foydalaning'); return; }
+  const tg=window.Telegram?.WebApp;
+  const initData=tg?.initData;
+  if(!initData){alert('Telegram Mini App dan foydalaning');return;}
 
-  btn.disabled = true;
-  btn.textContent = 'Yuborilmoqda…';
+  btn.disabled=true; btn.textContent='Yuborilmoqda…';
 
-  const payload = {
-    client_name: name||null,
-    client_phone: phone||null,
-    order_type: orderType,
-    address: orderType==='delivery' ? address : null,
-    table_id: orderType==='dine_in' ? tableDbId : null,
-    comment: comment||null,
-    items: cartItems().map(i => ({ product_id:i.id, quantity:i.qty }))
+  const payload={
+    client_name:name||null, client_phone:phone||null,
+    order_type:orderType,
+    address:orderType==='delivery'?address:null,
+    table_id:orderType==='dine_in'?tableDbId:null,
+    comment:comment||null,
+    items:cartItems().map(i=>({product_id:i.id,quantity:i.qty}))
   };
 
   try {
-    const res = await fetch(`${API_BASE}/api/orders/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Telegram-Init-Data': initData,
-        'X-Restaurant-Id': String(restaurant.id),
+    const res=await fetch(`${API_BASE}/api/orders/`,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'X-Telegram-Init-Data':initData,
+        'X-Restaurant-Id':String(restaurant.id),
       },
-      body: JSON.stringify(payload)
+      body:JSON.stringify(payload)
     });
-    if (!res.ok) { const err = await res.json(); throw new Error(err.detail||'Xato'); }
-    const order = await res.json();
+    if(!res.ok){const e=await res.json();throw new Error(e.detail||'Xato');}
+    const order=await res.json();
     showSuccess(order.id);
-  } catch(e) {
+  } catch(e){
     alert('Xato: '+e.message);
-    btn.disabled = false;
-    btn.textContent = 'Buyurtma berish →';
+    btn.disabled=false; btn.textContent='Buyurtma berish';
   }
 }
 
-function showSuccess(orderId) {
-  document.getElementById('successOrderId').textContent = '#'+String(orderId).padStart(4,'0');
-  if (orderType==='dine_in') {
-    document.getElementById('successSubtitle').textContent = 'Buyurtmangiz qabul qilindi! Tez orada stolga yetkaziladi';
-  } else if (orderType==='takeaway') {
-    document.getElementById('successSubtitle').textContent = "Tayyor bo'lganda xabar beramiz";
-  } else {
-    document.getElementById('successSubtitle').textContent = 'Tez orada yetkaziladi';
-  }
+function showSuccess(orderId){
+  document.getElementById('successOrderId').textContent='#'+String(orderId).padStart(4,'0');
+  const msgs={dine_in:'Buyurtmangiz qabul qilindi! Tez orada stolga yetkaziladi',takeaway:"Tayyor bo'lganda xabar beramiz",delivery:'Tez orada yetkaziladi'};
+  document.getElementById('successSubtitle').textContent=msgs[orderType]||msgs.delivery;
   document.getElementById('cartScreen').classList.remove('active');
   document.getElementById('successScreen').classList.add('active');
-  cart = {}; updateBar();
+  cart={}; updateBar();
 }
 
-function backToMenu() {
+function backToMenu(){
   document.getElementById('successScreen').classList.remove('active');
   renderMenu();
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  const tg = window.Telegram?.WebApp;
-  if (tg) { tg.ready(); tg.expand(); }
+window.addEventListener('DOMContentLoaded',()=>{
+  const tg=window.Telegram?.WebApp;
+  if(tg){tg.ready();tg.expand();}
   parseParams();
   loadMenu();
 });
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
     navigator.serviceWorker.register('/static/sw.js')
-      .then(reg => console.log('[SW]', reg.scope))
-      .catch(err => console.warn('[SW] failed:', err));
+      .then(r=>console.log('[SW]',r.scope))
+      .catch(e=>console.warn('[SW]',e));
   });
 }
 
-let _deferredInstallPrompt = null;
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
-  _deferredInstallPrompt = e;
-  const b = document.getElementById('installBanner');
-  if (b) b.style.display = 'flex';
+let _deferredInstallPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault(); _deferredInstallPrompt=e;
+  const b=document.getElementById('installBanner');
+  if(b) b.style.display='flex';
 });
-window.addEventListener('appinstalled', () => {
-  _deferredInstallPrompt = null;
-  const b = document.getElementById('installBanner');
-  if (b) b.style.display = 'none';
+window.addEventListener('appinstalled',()=>{
+  _deferredInstallPrompt=null;
+  const b=document.getElementById('installBanner');
+  if(b) b.style.display='none';
 });
 </script>
 </body>
