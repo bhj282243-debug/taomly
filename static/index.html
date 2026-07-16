@@ -1567,14 +1567,21 @@ function updateBar() {
   document.getElementById('cartBar').classList.toggle('visible', n > 0);
 }
 
-function openCart() { renderCart(); document.getElementById('cartScreen').classList.add('active'); }
+function openCart() {
+  document.getElementById('cartView').style.display = 'block';
+  document.getElementById('orderFormView').style.display = 'none';
+  document.getElementById('cartScreenTitle').textContent = 'Savat';
+  renderCart();
+  document.getElementById('cartScreen').classList.add('active');
+}
 function closeCart() { document.getElementById('cartScreen').classList.remove('active'); }
 
 function selectType(type) {
   orderType = type;
   document.getElementById('typeDelivery').classList.toggle('active', type === 'delivery');
   document.getElementById('typeTakeaway').classList.toggle('active', type === 'takeaway');
-  document.getElementById('clientAddress').style.display = type === 'delivery' ? 'block' : 'none';
+  const addrWrap = document.getElementById('addressWrap');
+  if (addrWrap) addrWrap.style.display = type === 'delivery' ? 'block' : 'none';
 }
 
 function showOrderForm() {
