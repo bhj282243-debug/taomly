@@ -59,27 +59,62 @@ svg { display:block; }
 /* ─── SPLASH ─── */
 #splash {
   position:fixed; inset:0;
-  background:var(--bg);
+  background:var(--ink);
   display:flex; flex-direction:column;
-  align-items:center; justify-content:center;
   z-index:999; transition:opacity 0.5s ease;
+  overflow:hidden;
 }
 #splash.hidden { opacity:0; pointer-events:none; }
 
-.splash-name {
-  font-family:'Playfair Display',serif;
-  font-size:32px; font-weight:700;
-  color:var(--ink); letter-spacing:0.3px;
+.splash-bg {
+  position:absolute; inset:0;
+  background:url('https://images.unsplash.com/photo-1529006557810-274b9b2fc783?w=600&q=80') center/cover no-repeat;
+  opacity:0.35;
 }
+.splash-overlay {
+  position:absolute; inset:0;
+  background:linear-gradient(to bottom, rgba(26,21,18,0.3) 0%, rgba(26,21,18,0.85) 100%);
+}
+.splash-content {
+  position:relative; z-index:1;
+  display:flex; flex-direction:column;
+  justify-content:flex-end;
+  padding:40px 24px 52px;
+  height:100%;
+}
+.splash-eyebrow {
+  font-size:10px; font-weight:600;
+  letter-spacing:2.5px; text-transform:uppercase;
+  color:var(--gold); margin-bottom:12px;
+}
+.splash-name {
+  font-family:'Cormorant Garamond',serif;
+  font-size:42px; font-weight:700;
+  color:#FAF7F1; letter-spacing:-0.5px;
+  line-height:1.05; margin-bottom:8px;
+}
+.splash-name em { font-style:italic; color:var(--gold); }
 .splash-line {
-  width:30px; height:1px; background:var(--gold);
+  width:36px; height:1.5px; background:var(--gold);
   margin:16px 0;
 }
 .splash-tagline {
-  font-size:13px; font-weight:500;
-  color:var(--ink-soft);
-  letter-spacing:0.3px;
+  font-size:14px; font-weight:400;
+  color:rgba(250,247,241,.7);
+  line-height:1.6; margin-bottom:32px;
 }
+.splash-menu-btn {
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  width:100%; height:54px;
+  background:var(--gold); color:var(--ink);
+  border:none; border-radius:15px;
+  font-size:15px; font-weight:700;
+  font-family:inherit; cursor:pointer;
+  letter-spacing:0.2px;
+  box-shadow:0 8px 24px rgba(212,175,80,.35);
+  transition:all 0.2s;
+}
+.splash-menu-btn:active { transform:scale(.97); }
 
 /* ─── HEADER ─── */
 .header {
@@ -313,27 +348,37 @@ svg { display:block; }
 
 /* ─── CATEGORIES ─── */
 .categories-scroll {
-  display:flex; gap:24px; overflow-x:auto;
-  padding-bottom:12px; scrollbar-width:none;
-  border-bottom:1px solid var(--line);
+  display:flex; gap:10px; overflow-x:auto;
+  padding:12px 16px; scrollbar-width:none;
+  background:var(--bg);
 }
 .categories-scroll::-webkit-scrollbar { display:none; }
 .cat-btn {
-  flex-shrink:0; padding:0 0 12px; border:none;
-  background:none;
+  flex-shrink:0; border:none; background:none;
+  cursor:pointer; padding:0; position:relative;
+}
+.cat-btn-inner {
+  width:86px; border-radius:14px; overflow:hidden;
+  border:2.5px solid transparent;
+  transition:all 0.2s; box-shadow:0 2px 8px rgba(26,21,18,.08);
+}
+.cat-btn.active .cat-btn-inner {
+  border-color:var(--gold);
+  box-shadow:0 4px 14px rgba(212,175,80,.25);
+}
+.cat-btn-img {
+  width:100%; height:64px; object-fit:cover;
+  display:block;
+}
+.cat-btn-label {
+  background:var(--surface); padding:6px 4px;
   font-family:'Inter',sans-serif;
-  font-size:13.5px; font-weight:600;
-  color:var(--ink-soft); cursor:pointer;
-  transition:color 0.2s ease, opacity 0.15s ease;
-  white-space:nowrap; position:relative;
+  font-size:11px; font-weight:600;
+  color:var(--ink); text-align:center;
+  white-space:nowrap; overflow:hidden;
+  text-overflow:ellipsis;
 }
-.cat-btn::after {
-  content:''; position:absolute; left:0; right:0; bottom:-1px; height:2px;
-  background:var(--ruby); transform:scaleX(0); transition:transform 0.25s ease;
-}
-.cat-btn:active { opacity:0.65; }
-.cat-btn.active { color:var(--ink); }
-.cat-btn.active::after { transform:scaleX(1); }
+.cat-btn.active .cat-btn-label { color:var(--gold); }
 
 /* ─── MAIN CONTENT ─── */
 .main { padding:26px 22px 140px; }
@@ -814,9 +859,18 @@ svg { display:block; }
 
 <!-- ─── SPLASH ─── -->
 <div id="splash">
-  <div class="splash-name" id="splashName">Taomly</div>
-  <div class="splash-line"></div>
-  <div class="splash-tagline">Mazali taomlar buyurtmasi</div>
+  <div class="splash-bg"></div>
+  <div class="splash-overlay"></div>
+  <div class="splash-content">
+    <div class="splash-eyebrow" id="splashEyebrow">Buxoro · Mazali taomlar</div>
+    <div class="splash-name" id="splashName">Taomly<br><em>Restoran</em></div>
+    <div class="splash-line"></div>
+    <div class="splash-tagline" id="splashTagline">Issiq taomlar, toza ingredientlar.<br>Tez yetkazib berish.</div>
+    <button class="splash-menu-btn" onclick="goToMenu()">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9h18M3 15h18"/></svg>
+      Menuni ko'rish
+    </button>
+  </div>
 </div>
 
 <!-- ─── MENU SCREEN ─── -->
@@ -1138,14 +1192,15 @@ async function loadMenu() {
     // Обновляем Hero баннер данными ресторана
     const eyebrow = document.getElementById('heroBannerEyebrow');
     const heroImg = document.getElementById('heroBannerImg');
-    if (eyebrow) eyebrow.textContent = restaurant.address || 'Tez va mazali';
-    if (heroImg && restaurant.logo_url) {
-      heroImg.innerHTML = `<img src="${restaurant.logo_url}" alt="${restaurant.name}" onerror="this.parentNode.style.display='none'">`;
-    }
+    // Обновляем splash данными ресторана
+    const splashName = document.getElementById('splashName');
+    const splashEyebrow = document.getElementById('splashEyebrow');
+    const splashTagline = document.getElementById('splashTagline');
+    if (splashName) splashName.innerHTML = `${restaurant.name}<br><em>Restoran</em>`;
+    if (splashEyebrow && restaurant.address) splashEyebrow.textContent = restaurant.address;
+    if (splashTagline && restaurant.welcome_text) splashTagline.textContent = restaurant.welcome_text;
 
-    setTimeout(() => {
-      document.getElementById('splash').classList.add('hidden');
-    }, 1400);
+    // Splash скрывается только по кнопке — не автоматически
 
   } catch (e) {
     document.getElementById('menuContent').innerHTML =
@@ -1194,13 +1249,47 @@ async function resolveTableId() {
   } catch (e) { tableDbId = null; }
 }
 
+// Фото для категорий — по ключевым словам в названии
+const CAT_PHOTOS = {
+  'суп':     'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=200&q=80',
+  'шурпа':   'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=200&q=80',
+  'горяч':   'https://images.unsplash.com/photo-1574484284002-952d92456975?w=200&q=80',
+  'мангал':  'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=200&q=80',
+  'шашлык':  'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=200&q=80',
+  'салат':   'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=200&q=80',
+  'напит':   'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=200&q=80',
+  'десерт':  'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=200&q=80',
+  'плов':    'https://images.unsplash.com/photo-1574484284002-952d92456975?w=200&q=80',
+  'завтрак': 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?w=200&q=80',
+  'пицца':   'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=200&q=80',
+  'бургер':  'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200&q=80',
+  'default': 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=200&q=80',
+};
+
+function getCatPhoto(name) {
+  const lower = (name || '').toLowerCase();
+  for (const key of Object.keys(CAT_PHOTOS)) {
+    if (key !== 'default' && lower.includes(key)) return CAT_PHOTOS[key];
+  }
+  return CAT_PHOTOS['default'];
+}
+
+function goToMenu() {
+  document.getElementById('splash').classList.add('hidden');
+}
+
 function renderCategories() {
   const nav = document.getElementById('categoriesNav');
   nav.innerHTML = '';
   restaurant.categories.forEach((cat, i) => {
+    const photo = getCatPhoto(cat.name);
     const btn = document.createElement('button');
     btn.className = 'cat-btn' + (i === 0 ? ' active' : '');
-    btn.textContent = cat.name;
+    btn.innerHTML = `
+      <div class="cat-btn-inner">
+        <img class="cat-btn-img" src="${photo}" alt="${cat.name}" onerror="this.src='${CAT_PHOTOS['default']}'">
+        <div class="cat-btn-label">${cat.name}</div>
+      </div>`;
     btn.onclick = () => {
       document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
