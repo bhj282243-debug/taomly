@@ -59,62 +59,27 @@ svg { display:block; }
 /* ─── SPLASH ─── */
 #splash {
   position:fixed; inset:0;
-  background:var(--ink);
+  background:var(--bg);
   display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
   z-index:999; transition:opacity 0.5s ease;
-  overflow:hidden;
 }
 #splash.hidden { opacity:0; pointer-events:none; }
 
-.splash-bg {
-  position:absolute; inset:0;
-  background:url('https://images.unsplash.com/photo-1529006557810-274b9b2fc783?w=600&q=80') center/cover no-repeat;
-  opacity:0.35;
-}
-.splash-overlay {
-  position:absolute; inset:0;
-  background:linear-gradient(to bottom, rgba(26,21,18,0.3) 0%, rgba(26,21,18,0.85) 100%);
-}
-.splash-content {
-  position:relative; z-index:1;
-  display:flex; flex-direction:column;
-  justify-content:flex-end;
-  padding:40px 24px 52px;
-  height:100%;
-}
-.splash-eyebrow {
-  font-size:10px; font-weight:600;
-  letter-spacing:2.5px; text-transform:uppercase;
-  color:var(--gold); margin-bottom:12px;
-}
 .splash-name {
-  font-family:'Cormorant Garamond',serif;
-  font-size:42px; font-weight:700;
-  color:#FAF7F1; letter-spacing:-0.5px;
-  line-height:1.05; margin-bottom:8px;
+  font-family:'Playfair Display',serif;
+  font-size:32px; font-weight:700;
+  color:var(--ink); letter-spacing:0.3px;
 }
-.splash-name em { font-style:italic; color:var(--gold); }
 .splash-line {
-  width:36px; height:1.5px; background:var(--gold);
+  width:30px; height:1px; background:var(--gold);
   margin:16px 0;
 }
 .splash-tagline {
-  font-size:14px; font-weight:400;
-  color:rgba(250,247,241,.7);
-  line-height:1.6; margin-bottom:32px;
+  font-size:13px; font-weight:500;
+  color:var(--ink-soft);
+  letter-spacing:0.3px;
 }
-.splash-menu-btn {
-  display:flex; align-items:center; justify-content:center; gap:10px;
-  width:100%; height:54px;
-  background:var(--gold); color:var(--ink);
-  border:none; border-radius:15px;
-  font-size:15px; font-weight:700;
-  font-family:inherit; cursor:pointer;
-  letter-spacing:0.2px;
-  box-shadow:0 8px 24px rgba(212,175,80,.35);
-  transition:all 0.2s;
-}
-.splash-menu-btn:active { transform:scale(.97); }
 
 /* ─── HEADER ─── */
 .header {
@@ -166,160 +131,6 @@ svg { display:block; }
   font-size:15px; color:var(--ink-soft); line-height:1.4;
 }
 
-/* ─── WELCOME LINE (replaces hero banner) ─── */
-.welcome-line { margin:2px 0 24px; }
-.welcome-rule { width:26px; height:1px; background:var(--gold); margin-bottom:11px; }
-.welcome-text {
-  font-family:'Cormorant Garamond',serif; font-style:italic;
-  font-size:15px; color:var(--ink-soft); line-height:1.4;
-}
-
-/* ─── HERO BANNER ─── */
-.hero-banner {
-  background:var(--surface);
-  border-bottom:1px solid var(--line);
-  padding:20px 16px 18px;
-  display:flex; align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  position:relative; overflow:hidden;
-}
-.hero-banner::after {
-  content:''; position:absolute;
-  top:-30px; right:-30px;
-  width:160px; height:160px; border-radius:50%;
-  background:radial-gradient(ellipse,rgba(212,175,80,.05) 0%,transparent 70%);
-  pointer-events:none;
-}
-.hero-banner-text { flex:1; position:relative; z-index:1; }
-.hero-banner-eyebrow {
-  font-size:9px; font-weight:600;
-  letter-spacing:1.8px; text-transform:uppercase;
-  color:var(--gold); margin-bottom:7px;
-}
-.hero-banner-title {
-  font-family:'Cormorant Garamond',serif;
-  font-size:26px; font-weight:700;
-  line-height:1.1; color:var(--ink);
-  letter-spacing:-0.5px; margin-bottom:7px;
-}
-.hero-banner-title em { font-style:italic; color:var(--gold); }
-.hero-banner-sub {
-  font-size:11.5px; color:var(--ink-soft);
-  line-height:1.5; margin-bottom:10px;
-}
-.hero-banner-pills { display:flex; flex-direction:column; gap:4px; margin-bottom:12px; }
-.hero-banner-pill {
-  display:flex; align-items:center; gap:6px;
-  font-size:11px; color:var(--ink-soft);
-}
-.hero-banner-pill-dot {
-  width:4px; height:4px; border-radius:50%;
-  background:var(--gold); flex-shrink:0;
-}
-.hero-banner-btn {
-  display:inline-flex; align-items:center; gap:7px;
-  height:38px; padding:0 16px;
-  background:var(--ink); color:#FAF7F1;
-  border:none; border-radius:11px;
-  font-size:13px; font-weight:600;
-  font-family:inherit; cursor:pointer;
-  white-space:nowrap;
-  transition:all 0.2s;
-}
-.hero-banner-btn:active { transform:scale(.97); }
-.hero-banner-img {
-  width:110px; height:110px; border-radius:18px;
-  overflow:hidden; flex-shrink:0;
-  box-shadow:0 8px 24px rgba(26,21,18,.14);
-  border:1px solid var(--line);
-  position:relative; z-index:1;
-}
-.hero-banner-img img { width:100%; height:100%; object-fit:cover; }
-
-/* ─── POPULAR SECTION ─── */
-.popular-section { padding:18px 0 0; }
-.popular-label {
-  font-size:10px; font-weight:700; letter-spacing:1.8px;
-  text-transform:uppercase; color:var(--ink-soft);
-  padding:0 16px; margin-bottom:10px;
-}
-.popular-strip {
-  display:flex; gap:10px; padding:0 16px;
-  overflow-x:auto; scrollbar-width:none;
-}
-.popular-strip::-webkit-scrollbar { display:none; }
-.popular-card {
-  flex-shrink:0; width:120px;
-  background:var(--card); border:1px solid var(--line);
-  border-radius:14px; overflow:hidden; cursor:pointer;
-  transition:all 0.2s;
-}
-.popular-card:active { transform:scale(.96); }
-.popular-card-img {
-  width:100%; height:80px;
-  background:var(--gold-pale);
-  display:flex; align-items:center; justify-content:center;
-  overflow:hidden;
-}
-.popular-card-img img { width:100%; height:100%; object-fit:cover; }
-.popular-card-info { padding:8px 10px 10px; }
-.popular-card-name {
-  font-size:11px; font-weight:600; color:var(--ink);
-  line-height:1.3; margin-bottom:3px;
-  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
-}
-.popular-card-price {
-  font-size:12px; font-weight:700; color:var(--gold);
-}
-
-/* ─── OFFLINE BANNER ─── */
-#offlineBanner {
-  display:none; position:fixed;
-  top:0; left:0; right:0;
-  background:#B84032; color:#fff;
-  font-size:12px; font-weight:600;
-  text-align:center; padding:9px 16px;
-  z-index:998; letter-spacing:0.2px;
-}
-#offlineBanner.show { display:block; }
-
-/* ─── PWA INSTALL BANNER ─── */
-#installBanner {
-  display:none; position:fixed;
-  bottom:16px; left:14px; right:14px;
-  background:#FFFDF9; border:1px solid var(--gold);
-  border-radius:16px; padding:16px 18px;
-  box-shadow:0 8px 28px rgba(44,33,27,.18);
-  z-index:500; flex-direction:column; gap:10px;
-}
-.install-top { display:flex; align-items:center; gap:10px; }
-.install-title { font-size:14px; font-weight:700; color:var(--ink); }
-.install-sub { font-size:12px; color:var(--ink-soft); line-height:1.4; }
-.install-actions { display:flex; gap:8px; }
-.install-btn {
-  flex:1; height:40px; border:none; border-radius:11px;
-  font-size:13px; font-weight:600; cursor:pointer;
-  font-family:inherit; transition:all 0.15s;
-}
-.install-btn-primary { background:var(--ink); color:#FAF7F1; }
-.install-btn-primary:hover { background:#3D2E26; }
-.install-btn-secondary { background:transparent; color:var(--ink-soft); border:1.5px solid var(--line); }
-
-/* ─── TOAST ─── */
-#toastEl {
-  position:fixed; bottom:90px; left:50%;
-  transform:translateX(-50%) translateY(8px);
-  background:var(--ink); color:#FAF7F1;
-  padding:9px 18px; border-radius:24px;
-  font-size:12.5px; font-weight:500;
-  opacity:0; transition:all 0.25s;
-  z-index:600; white-space:nowrap;
-  pointer-events:none;
-  box-shadow:0 4px 16px rgba(26,21,18,.25);
-}
-#toastEl.show { opacity:1; transform:translateX(-50%) translateY(0); }
-
 /* ─── FEATURED SECTION (Bugungi tavsiya) ─── */
 .featured-scroll {
   display:flex; gap:12px; overflow-x:auto;
@@ -348,37 +159,27 @@ svg { display:block; }
 
 /* ─── CATEGORIES ─── */
 .categories-scroll {
-  display:flex; gap:10px; overflow-x:auto;
-  padding:12px 16px; scrollbar-width:none;
-  background:var(--bg);
+  display:flex; gap:24px; overflow-x:auto;
+  padding-bottom:12px; scrollbar-width:none;
+  border-bottom:1px solid var(--line);
 }
 .categories-scroll::-webkit-scrollbar { display:none; }
 .cat-btn {
-  flex-shrink:0; border:none; background:none;
-  cursor:pointer; padding:0; position:relative;
-}
-.cat-btn-inner {
-  width:86px; border-radius:14px; overflow:hidden;
-  border:2.5px solid transparent;
-  transition:all 0.2s; box-shadow:0 2px 8px rgba(26,21,18,.08);
-}
-.cat-btn.active .cat-btn-inner {
-  border-color:var(--gold);
-  box-shadow:0 4px 14px rgba(212,175,80,.25);
-}
-.cat-btn-img {
-  width:100%; height:64px; object-fit:cover;
-  display:block;
-}
-.cat-btn-label {
-  background:var(--surface); padding:6px 4px;
+  flex-shrink:0; padding:0 0 12px; border:none;
+  background:none;
   font-family:'Inter',sans-serif;
-  font-size:11px; font-weight:600;
-  color:var(--ink); text-align:center;
-  white-space:nowrap; overflow:hidden;
-  text-overflow:ellipsis;
+  font-size:13.5px; font-weight:600;
+  color:var(--ink-soft); cursor:pointer;
+  transition:color 0.2s ease, opacity 0.15s ease;
+  white-space:nowrap; position:relative;
 }
-.cat-btn.active .cat-btn-label { color:var(--gold); }
+.cat-btn::after {
+  content:''; position:absolute; left:0; right:0; bottom:-1px; height:2px;
+  background:var(--ruby); transform:scaleX(0); transition:transform 0.25s ease;
+}
+.cat-btn:active { opacity:0.65; }
+.cat-btn.active { color:var(--ink); }
+.cat-btn.active::after { transform:scaleX(1); }
 
 /* ─── MAIN CONTENT ─── */
 .main { padding:26px 22px 140px; }
@@ -525,65 +326,25 @@ svg { display:block; }
 
 /* ─── CART ITEMS ─── */
 .cart-items { padding:4px 20px 16px; display:flex; flex-direction:column; gap:10px; }
-.cart-list { padding:10px 16px 4px; }
 .cart-item {
+  background:var(--card);
+  border-radius:var(--radius-md); padding:12px 14px;
   display:flex; align-items:center; gap:12px;
-  padding:12px 0; border-bottom:1px solid var(--line);
+  box-shadow:var(--shadow-sm);
+  animation:cardIn 0.3s ease;
 }
-.cart-item:last-child { border-bottom:none; }
-.cart-item-img {
-  width:52px; height:52px; border-radius:11px;
-  background:var(--gold-pale);
+.cart-item-gem {
+  width:42px; height:42px; border-radius:var(--radius-sm);
+  background:var(--surface);
   display:flex; align-items:center; justify-content:center;
-  flex-shrink:0; overflow:hidden; border:1px solid var(--line);
+  flex-shrink:0;
 }
-.cart-item-img img { width:100%; height:100%; object-fit:cover; }
+.cart-item-gem .icon { width:18px; height:18px; stroke:var(--gold-soft); }
 .cart-item-info { flex:1; min-width:0; }
-.cart-item-name { font-size:13px; font-weight:600; color:var(--ink); margin-bottom:2px; }
-.cart-item-price { font-size:11.5px; color:var(--ink-soft); }
-.cart-trust {
-  margin:10px 16px 0; padding:10px 14px;
-  background:var(--surface); border-radius:11px;
-  font-size:11.5px; color:var(--ink-soft);
-  display:flex; align-items:center; gap:7px; border:1px solid var(--line);
+.cart-item-name { font-size:14px; font-weight:600; color:var(--ink); }
+.cart-item-price {
+  font-size:13px; color:var(--ink-soft); margin-top:3px;
 }
-.cart-summary { padding:0 16px; }
-.cart-summary-row {
-  display:flex; justify-content:space-between; align-items:baseline;
-  padding:14px 0 0; border-top:1px solid var(--line); margin-top:10px;
-}
-.cart-summary-label { font-size:15px; font-weight:600; color:var(--ink); }
-.cart-summary-val {
-  font-family:'Cormorant Garamond',serif;
-  font-size:26px; font-weight:700; color:var(--gold);
-}
-.to-form-btn {
-  display:block; width:calc(100% - 32px);
-  margin:12px 16px 18px; padding:15px;
-  background:var(--ink); color:#FAF7F1;
-  border:none; border-radius:13px;
-  font-size:14px; font-weight:600;
-  font-family:inherit; cursor:pointer;
-  transition:all 0.2s;
-}
-.to-form-btn:active { transform:scale(.98); }
-.form-wrap { padding:4px 16px 28px; }
-.form-back-btn {
-  background:none; border:none; color:var(--ink-soft);
-  font-size:13px; font-family:inherit; cursor:pointer;
-  padding:10px 0 18px; display:flex; align-items:center; gap:6px;
-}
-.form-section-title {
-  font-size:10px; font-weight:700; letter-spacing:1.4px;
-  color:var(--ink-soft); padding:16px 0 10px;
-}
-.delivery-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
-.d-opt {
-  padding:13px; border:1.5px solid var(--line); border-radius:11px;
-  cursor:pointer; text-align:center; font-size:13px; font-weight:500;
-  color:var(--ink-soft); transition:all 0.2s; font-family:inherit;
-}
-.d-opt.active { border-color:var(--gold); background:var(--gold-pale); color:var(--gold); font-weight:600; }
 
 /* ─── ORDER TYPE ─── */
 .order-type-section { padding:8px 20px 18px; }
@@ -891,30 +652,15 @@ svg { display:block; }
 </head>
 <body>
 
-<!-- ─── OFFLINE BANNER ─── -->
-<div id="offlineBanner">📡 Internet aloqasi yo'q</div>
-
-<!-- ─── TOAST ─── -->
-<div id="toastEl"></div>
-
 <!-- ─── SPLASH ─── -->
 <div id="splash">
-  <div class="splash-bg"></div>
-  <div class="splash-overlay"></div>
-  <div class="splash-content">
-    <div class="splash-eyebrow" id="splashEyebrow">Buxoro · Mazali taomlar</div>
-    <div class="splash-name" id="splashName">Taomly<br><em>Restoran</em></div>
-    <div class="splash-line"></div>
-    <div class="splash-tagline" id="splashTagline">Issiq taomlar, toza ingredientlar.<br>Tez yetkazib berish.</div>
-    <button class="splash-menu-btn" onclick="goToMenu()">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9h18M3 15h18"/></svg>
-      Menuni ko'rish
-    </button>
-  </div>
+  <div class="splash-name" id="splashName">Taomly</div>
+  <div class="splash-line"></div>
+  <div class="splash-tagline">Mazali taomlar buyurtmasi</div>
 </div>
 
 <!-- ─── MENU SCREEN ─── -->
-<div id="menuScreen" style="display:none;">
+<div id="menuScreen">
   <div class="header">
     <div class="restaurant-row">
       <div class="restaurant-logo" id="restaurantLogo">
@@ -932,12 +678,6 @@ svg { display:block; }
     <div class="welcome-line" id="welcomeLine" style="display:none;">
       <div class="welcome-rule"></div>
       <div class="welcome-text" id="welcomeText">Sevimli taomingizni tanlang</div>
-    </div>
-
-    <!-- POPULAR SECTION -->
-    <div class="popular-section" id="popularSection" style="display:none;">
-      <div class="popular-label">⭐ Mashhur taomlar</div>
-      <div class="popular-strip" id="popularStrip"></div>
     </div>
     <div id="featuredSection" style="display:none; margin-bottom:18px;">
       <div class="category-title-wrap">
@@ -962,69 +702,52 @@ svg { display:block; }
     <button class="back-btn" onclick="closeCart()">
       <svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
     </button>
-    <span class="screen-title" id="cartScreenTitle">Savat</span>
+    <span class="screen-title">Savat</span>
   </div>
+  <div class="cart-items" id="cartItemsList"></div>
 
-  <!-- CART VIEW -->
-  <div id="cartView">
-    <div class="cart-list" id="cartItemsList"></div>
-
-    <div class="cart-summary" id="cartSummaryBlock" style="display:none">
-      <div class="cart-trust">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        To'lash olishda — xavfsiz
+  <div class="order-type-section" id="orderTypeSection">
+    <div class="section-label">Buyurtma turi</div>
+    <div class="order-type-btns">
+      <div class="type-btn active" id="typeDelivery" onclick="selectType('delivery')">
+        <div class="type-btn-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2"/><circle cx="17" cy="19" r="2"/><path d="M4 19h2l1.5-9H17l3 6h-2M7.5 10L6 5H3"/></svg></div>
+        <div class="type-btn-label">Yetkazib berish</div>
       </div>
-      <div class="cart-summary-row">
-        <span class="cart-summary-label">Jami</span>
-        <span class="cart-summary-val" id="summaryTotal">0 so'm</span>
+      <div class="type-btn" id="typeTakeaway" onclick="selectType('takeaway')">
+        <div class="type-btn-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M4 9h16l-1.5 11a1 1 0 0 1-1 .9H6.5a1 1 0 0 1-1-.9L4 9zM8 9V6a4 4 0 0 1 8 0v3"/></svg></div>
+        <div class="type-btn-label">Olib ketish</div>
       </div>
-      <button class="to-form-btn" onclick="showOrderForm()">Buyurtma berish →</button>
     </div>
   </div>
 
-  <!-- ORDER FORM VIEW -->
-  <div id="orderFormView" style="display:none">
-    <div class="form-wrap">
-      <button class="form-back-btn" onclick="showCartView()">
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-        Savatga qaytish
-      </button>
-
-      <!-- Stol uchun -->
-      <div class="table-info-banner" id="tableBanner" style="display:none;">
-        <div class="table-info-banner-icon">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M3 9h18M3 9v10M21 9v10M3 19h18M7 9V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v4"/></svg>
-        </div>
-        <div>
-          <div class="table-info-banner-title" id="tableBannerTitle">Stol №1</div>
-          <div class="table-info-banner-sub">Buyurtma stolga yetkaziladi</div>
-        </div>
-      </div>
-
-      <!-- Yetkazish uchun forma -->
-      <div id="deliveryFormFields">
-        <label class="field-label">ISM</label>
-        <input class="form-input" type="text" id="clientName" placeholder="Ismingiz">
-        <label class="field-label" style="margin-top:10px">TELEFON</label>
-        <input class="form-input" type="tel" id="clientPhone" placeholder="+998 90 000 00 00">
-
-        <div class="form-section-title">YETKAZISH USULI</div>
-        <div class="delivery-row">
-          <div class="d-opt active" id="typeDelivery" onclick="selectType('delivery')">Yetkazib berish</div>
-          <div class="d-opt" id="typeTakeaway" onclick="selectType('takeaway')">Olib ketish</div>
-        </div>
-        <div id="addressWrap">
-          <label class="field-label">MANZIL</label>
-          <input class="form-input" type="text" id="clientAddress" placeholder="Ko'cha, uy, xonadon">
-        </div>
-      </div>
-
-      <label class="field-label" style="margin-top:10px">IZOH</label>
-      <textarea class="form-input form-textarea" id="clientComment" placeholder="Ixtiyoriy"></textarea>
-
-      <button class="checkout-btn" id="checkoutBtn" onclick="submitOrder()">Buyurtmani tasdiqlash →</button>
+  <div class="table-info-banner" id="tableBanner" style="display:none;">
+    <div class="table-info-banner-icon">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M3 9h18M3 9v10M21 9v10M3 19h18M7 9V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v4"/></svg>
+    </div>
+    <div>
+      <div class="table-info-banner-title" id="tableBannerTitle">Stol №1</div>
+      <div class="table-info-banner-sub">Buyurtma stolga yetkaziladi</div>
     </div>
   </div>
+
+  <div class="form-section">
+    <input class="form-input" type="text" id="clientName" placeholder="Ismingiz" />
+    <input class="form-input" type="tel" id="clientPhone" placeholder="+998 XX XXX XX XX" value="+998" />
+    <input class="form-input" type="text" id="clientAddress" placeholder="Manzil (yetkazib berish uchun)" />
+    <textarea class="form-input form-textarea" id="clientComment" placeholder="Izoh (ixtiyoriy)"></textarea>
+  </div>
+
+  <div class="summary-card">
+    <div class="summary-row">
+      <span id="summaryCount">0 ta taom</span>
+      <span id="summarySubtotal">0 so'm</span>
+    </div>
+    <div class="summary-row total">
+      <span>Jami</span>
+      <span id="summaryTotal">0 so'm</span>
+    </div>
+  </div>
+  <button class="checkout-btn" id="checkoutBtn" onclick="submitOrder()">Buyurtma berish →</button>
 </div>
 
 <!-- ─── SUCCESS SCREEN ─── -->
@@ -1222,22 +945,12 @@ async function loadMenu() {
     }
 
     renderFeatured();
-    renderPopular();
     renderCategories();
     renderMenu();
 
-    // Обновляем Hero баннер данными ресторана
-    const eyebrow = document.getElementById('heroBannerEyebrow');
-    const heroImg = document.getElementById('heroBannerImg');
-    // Обновляем splash данными ресторана
-    const splashName = document.getElementById('splashName');
-    const splashEyebrow = document.getElementById('splashEyebrow');
-    const splashTagline = document.getElementById('splashTagline');
-    if (splashName) splashName.innerHTML = `${restaurant.name}<br><em>Restoran</em>`;
-    if (splashEyebrow && restaurant.address) splashEyebrow.textContent = restaurant.address;
-    if (splashTagline && restaurant.welcome_text) splashTagline.textContent = restaurant.welcome_text;
-
-    // Splash скрывается только по кнопке — не автоматически
+    setTimeout(() => {
+      document.getElementById('splash').classList.add('hidden');
+    }, 1400);
 
   } catch (e) {
     document.getElementById('menuContent').innerHTML =
@@ -1286,50 +999,13 @@ async function resolveTableId() {
   } catch (e) { tableDbId = null; }
 }
 
-// Фото для категорий — по ключевым словам в названии
-const CAT_PHOTOS = {
-  'суп':     'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=200&q=80',
-  'шурпа':   'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=200&q=80',
-  'горяч':   'https://images.unsplash.com/photo-1574484284002-952d92456975?w=200&q=80',
-  'мангал':  'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=200&q=80',
-  'шашлык':  'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=200&q=80',
-  'салат':   'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=200&q=80',
-  'напит':   'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=200&q=80',
-  'десерт':  'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=200&q=80',
-  'плов':    'https://images.unsplash.com/photo-1574484284002-952d92456975?w=200&q=80',
-  'завтрак': 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?w=200&q=80',
-  'пицца':   'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=200&q=80',
-  'бургер':  'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200&q=80',
-  'default': 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=200&q=80',
-};
-
-function getCatPhoto(name) {
-  const lower = (name || '').toLowerCase();
-  for (const key of Object.keys(CAT_PHOTOS)) {
-    if (key !== 'default' && lower.includes(key)) return CAT_PHOTOS[key];
-  }
-  return CAT_PHOTOS['default'];
-}
-
-function goToMenu() {
-  document.getElementById('splash').classList.add('hidden');
-  const ms = document.getElementById('menuScreen');
-  ms.style.display = 'block';
-  ms.style.animation = 'slideUp 0.35s cubic-bezier(0.22,1,0.36,1)';
-}
-
 function renderCategories() {
   const nav = document.getElementById('categoriesNav');
   nav.innerHTML = '';
   restaurant.categories.forEach((cat, i) => {
-    const photo = getCatPhoto(cat.name);
     const btn = document.createElement('button');
     btn.className = 'cat-btn' + (i === 0 ? ' active' : '');
-    btn.innerHTML = `
-      <div class="cat-btn-inner">
-        <img class="cat-btn-img" src="${photo}" alt="${cat.name}" onerror="this.src='${CAT_PHOTOS['default']}'">
-        <div class="cat-btn-label">${cat.name}</div>
-      </div>`;
+    btn.textContent = cat.name;
     btn.onclick = () => {
       document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
@@ -1387,64 +1063,15 @@ function makeCard(p) {
   div.className = 'product-card';
   div.id = 'card-' + p.id;
   div.style.animationDelay = (cardAnimIndex++ % 8) * 0.04 + 's';
-// Словарь фото по названиям блюд (Unsplash)
-const FOOD_PHOTOS = {
-  // Супы
-  'шурпа':    'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=300&q=80',
-  'мастава':  'https://images.unsplash.com/photo-1547592180-85f173990554?w=300&q=80',
-  'лагман':   'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=300&q=80',
-  'гелак':    'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=300&q=80',
-  'суп':      'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=300&q=80',
-  'бульон':   'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=300&q=80',
-  // Горячее
-  'плов':     'https://images.unsplash.com/photo-1574484284002-952d92456975?w=300&q=80',
-  'димлама':  'https://images.unsplash.com/photo-1574484284002-952d92456975?w=300&q=80',
-  'балик':    'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=300&q=80',
-  'рыба':     'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=300&q=80',
-  'курица':   'https://images.unsplash.com/photo-1532550907401-a500c9a57435?w=300&q=80',
-  'товук':    'https://images.unsplash.com/photo-1532550907401-a500c9a57435?w=300&q=80',
-  'котлет':   'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300&q=80',
-  // Мангал
-  'шашлык':   'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=300&q=80',
-  'кабоб':    'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=300&q=80',
-  'қабоб':    'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=300&q=80',
-  'мангал':   'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=300&q=80',
-  'говядин':  'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=300&q=80',
-  'баранин':  'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=300&q=80',
-  // Салаты
-  'салат':    'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=300&q=80',
-  'ачичук':   'https://images.unsplash.com/photo-1592417817098-8fd3d9eb14a5?w=300&q=80',
-  'овощ':     'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=300&q=80',
-  // Напитки
-  'чай':      'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=300&q=80',
-  'кофе':     'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=300&q=80',
-  'сок':      'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=300&q=80',
-  'айран':    'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=300&q=80',
-  'вода':     'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=300&q=80',
-  'напит':    'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=300&q=80',
-  // Десерты
-  'десерт':   'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=300&q=80',
-  'торт':     'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300&q=80',
-  'мороженое':'https://images.unsplash.com/photo-1497034825429-c343d7c6a68f?w=300&q=80',
-  // Хлеб
-  'нон':      'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=300&q=80',
-  'хлеб':     'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=300&q=80',
-  'самса':    'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=300&q=80',
-};
-
-function getFoodPhoto(name) {
-  const lower = (name || '').toLowerCase();
-  for (const key of Object.keys(FOOD_PHOTOS)) {
-    if (lower.includes(key)) return FOOD_PHOTOS[key];
-  }
-  return 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=300&q=80';
-}
-
   const qty = cart[p.id]?.qty || 0;
   const { badge, text: descText } = extractBadge(p.description);
   const badgeHtml = badge ? `<span class="badge-tag">${badge.label}</span>` : '';
-  const photoSrc = p.photo_url || getFoodPhoto(p.name);
-  const imgBlock = `<div class="product-img" onclick="openProductModal(${p.id})"><img src="${photoSrc}" alt="${p.name}" onerror="this.src='https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=300&q=80'"></div>`;
+  // Если фото нет — карточка остаётся чистой текстовой, без иконки-заглушки.
+  // Дешёвая декоративная картинка "нет фото" дешевит карточку сильнее,
+  // чем её отсутствие.
+  const imgBlock = p.photo_url
+    ? `<div class="product-img" onclick="openProductModal(${p.id})"><img src="${p.photo_url}" alt="${p.name}"></div>`
+    : '';
   div.innerHTML = `
     ${imgBlock}
     <div class="product-info">
@@ -1483,7 +1110,6 @@ function addItem(id) {
   if (!p) return;
   cart[id] = { id, name:p.name, price:p.price, qty:1 };
   refreshCtrl(id); updateBar();
-  showToast(`${p.name} savatga qo'shildi ✓`);
 }
 
 function changeQty(id, delta) {
@@ -1567,63 +1193,29 @@ function updateBar() {
   document.getElementById('cartBar').classList.toggle('visible', n > 0);
 }
 
-function openCart() {
-  document.getElementById('cartView').style.display = 'block';
-  document.getElementById('orderFormView').style.display = 'none';
-  document.getElementById('cartScreenTitle').textContent = 'Savat';
-  renderCart();
-  document.getElementById('cartScreen').classList.add('active');
-}
+function openCart() { renderCart(); document.getElementById('cartScreen').classList.add('active'); }
 function closeCart() { document.getElementById('cartScreen').classList.remove('active'); }
 
 function selectType(type) {
   orderType = type;
   document.getElementById('typeDelivery').classList.toggle('active', type === 'delivery');
   document.getElementById('typeTakeaway').classList.toggle('active', type === 'takeaway');
-  const addrWrap = document.getElementById('addressWrap');
-  if (addrWrap) addrWrap.style.display = type === 'delivery' ? 'block' : 'none';
-}
-
-function showOrderForm() {
-  if (orderType === 'dine_in') { submitOrder(); return; }
-  document.getElementById('cartView').style.display = 'none';
-  document.getElementById('orderFormView').style.display = 'block';
-  document.getElementById('cartScreenTitle').textContent = 'Buyurtma';
-}
-
-function showCartView() {
-  document.getElementById('orderFormView').style.display = 'none';
-  document.getElementById('cartView').style.display = 'block';
-  document.getElementById('cartScreenTitle').textContent = 'Savat';
+  document.getElementById('clientAddress').style.display = type === 'delivery' ? 'block' : 'none';
 }
 
 function renderCart() {
   const list = document.getElementById('cartItemsList');
   list.innerHTML = '';
-  const items = cartItems();
-
-  if (items.length === 0) {
-    list.innerHTML = `<div style="text-align:center;padding:52px 0;color:var(--ink-soft)">
-      <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:12px;opacity:.4"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>
-      <div style="font-size:14px;font-weight:500">Savat bo'sh</div>
-    </div>`;
-    document.getElementById('cartSummaryBlock').style.display = 'none';
-    return;
-  }
-
-  items.forEach(item => {
-    const photo = item.photo_url || getFoodPhoto(item.name);
+  cartItems().forEach(item => {
     const div = document.createElement('div');
     div.className = 'cart-item';
     div.innerHTML = `
-      <div class="cart-item-img">
-        <img src="${photo}" alt="${item.name}" onerror="this.src='https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=100&q=60'">
-      </div>
+      <div class="cart-item-gem"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a4 4 0 0 1 0 8M6 4v16M6 4c0 2.5 2.5 2.5 2.5 5S6 11.5 6 14"/></svg></div>
       <div class="cart-item-info">
         <div class="cart-item-name">${item.name}</div>
         <div class="cart-item-price">${item.qty} × ${fmt(item.price)}</div>
       </div>
-      <div class="qty-control" onclick="event.stopPropagation()">
+      <div class="qty-control">
         <button class="qty-btn" onclick="cartChangeQty(${item.id},-1)"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
         <span class="qty-num">${item.qty}</span>
         <button class="qty-btn" onclick="cartChangeQty(${item.id},1)"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
@@ -1631,16 +1223,23 @@ function renderCart() {
     list.appendChild(div);
   });
 
+  document.getElementById('summaryCount').textContent = cartCount() + ' ta taom';
+  document.getElementById('summarySubtotal').textContent = fmt(cartTotal());
   document.getElementById('summaryTotal').textContent = fmt(cartTotal());
-  document.getElementById('cartSummaryBlock').style.display = 'block';
 
   if (orderType === 'dine_in') {
-    document.getElementById('deliveryFormFields').style.display = 'none';
+    document.getElementById('orderTypeSection').style.display = 'none';
+    document.getElementById('clientAddress').style.display = 'none';
+    document.getElementById('clientName').style.display = 'none';
+    document.getElementById('clientPhone').style.display = 'none';
     document.getElementById('tableBanner').style.display = 'flex';
     document.getElementById('tableBannerTitle').textContent = 'Stol №' + tableNumber;
   } else {
-    document.getElementById('deliveryFormFields').style.display = 'block';
+    document.getElementById('orderTypeSection').style.display = 'block';
     document.getElementById('tableBanner').style.display = 'none';
+    document.getElementById('clientName').style.display = 'block';
+    document.getElementById('clientPhone').style.display = 'block';
+    document.getElementById('clientAddress').style.display = orderType === 'delivery' ? 'block' : 'none';
   }
 }
 
@@ -1652,23 +1251,30 @@ function cartChangeQty(id, delta) {
 
 async function submitOrder() {
   const btn = document.getElementById('checkoutBtn');
-  const name = orderType !== 'dine_in' ? document.getElementById('clientName').value.trim() : null;
-  const phone = orderType !== 'dine_in' ? document.getElementById('clientPhone').value.trim() : null;
-  const address = document.getElementById('clientAddress')?.value.trim() || null;
+  const name = document.getElementById('clientName').value.trim();
+  const phone = document.getElementById('clientPhone').value.trim();
+  const address = document.getElementById('clientAddress').value.trim();
   const comment = document.getElementById('clientComment').value.trim();
 
   if (orderType !== 'dine_in') {
-    if (!name) { showToast('Ismingizni kiriting'); return; }
-    if (!phone) { showToast('Telefon raqamingizni kiriting'); return; }
+    if (!name) { alert('Ismingizni kiriting'); return; }
+    if (!phone || phone === '+998') { alert('Telefon raqamingizni kiriting'); return; }
   }
-  if (orderType === 'delivery' && !address) { showToast('Manzilni kiriting'); return; }
+  if (orderType === 'delivery' && !address) { alert('Manzilni kiriting'); return; }
 
+  // initData обязателен — без него сервер отклонит запрос с 401
   const tg = window.Telegram?.WebApp;
-  const initData = tg?.initData || '';
+  const initData = tg?.initData;
+  if (!initData) {
+    alert('Telegram Mini App dan foydalaning');
+    return;
+  }
 
   btn.disabled = true;
   btn.textContent = 'Yuborilmoqda...';
 
+  // restaurant_id и client_telegram_id убраны из payload —
+  // сервер берёт их из заголовков X-Restaurant-Id и X-Telegram-Init-Data
   const payload = {
     client_name: name || null,
     client_phone: phone || null,
@@ -1680,24 +1286,24 @@ async function submitOrder() {
   };
 
   try {
-    const headers = {
-      'Content-Type': 'application/json',
-      'X-Restaurant-Id': String(restaurant.id),
-    };
-    if (initData) headers['X-Telegram-Init-Data'] = initData;
-
     const res = await fetch(`${API_BASE}/api/orders/`, {
       method: 'POST',
-      headers,
+      headers: {
+        'Content-Type': 'application/json',
+        // Сервер верифицирует подпись Telegram HMAC-SHA256
+        'X-Telegram-Init-Data': initData,
+        // Сервер загружает ресторан и его бот-токен для верификации
+        'X-Restaurant-Id': String(restaurant.id),
+      },
       body: JSON.stringify(payload)
     });
     if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Xato'); }
     const order = await res.json();
     showSuccess(order.id);
   } catch (e) {
-    showToast('Xato: ' + e.message);
+    alert('Xato: ' + e.message);
     btn.disabled = false;
-    btn.textContent = 'Buyurtmani tasdiqlash →';
+    btn.textContent = 'Buyurtma berish →';
   }
 }
 
@@ -1743,103 +1349,20 @@ if ('serviceWorker' in navigator) {
 // ── PWA: Install Prompt ────────────────────────────────────────────────
 // Сохраняем событие beforeinstallprompt для кастомной кнопки установки
 let _deferredInstallPrompt = null;
-const PWA_DISMISS_KEY = 'pwa_dismiss_ts';
-const PWA_DISMISS_DAYS = 7;
-
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   _deferredInstallPrompt = e;
-  // Не показывать если уже установлено или отложено недавно
-  if (window.matchMedia('(display-mode: standalone)').matches) return;
-  const dismissed = localStorage.getItem(PWA_DISMISS_KEY);
-  if (dismissed && Date.now() - parseInt(dismissed) < PWA_DISMISS_DAYS * 86400000) return;
-  setTimeout(() => {
-    const installBanner = document.getElementById('installBanner');
-    if (installBanner) installBanner.style.display = 'flex';
-  }, 4000);
+  // Показываем баннер "Добавить на рабочий стол" если он есть в DOM
+  const installBanner = document.getElementById('installBanner');
+  if (installBanner) installBanner.style.display = 'flex';
 });
 
 window.addEventListener('appinstalled', () => {
   _deferredInstallPrompt = null;
   const installBanner = document.getElementById('installBanner');
   if (installBanner) installBanner.style.display = 'none';
+  console.log('[PWA] App installed');
 });
-
-async function installApp() {
-  if (!_deferredInstallPrompt) return;
-  _deferredInstallPrompt.prompt();
-  const { outcome } = await _deferredInstallPrompt.userChoice;
-  if (outcome === 'accepted') {
-    document.getElementById('installBanner').style.display = 'none';
-  }
-  _deferredInstallPrompt = null;
-}
-
-function dismissInstall() {
-  document.getElementById('installBanner').style.display = 'none';
-  localStorage.setItem(PWA_DISMISS_KEY, Date.now().toString());
-}
-
-// ── TOAST ──────────────────────────────────────────────────────────────
-let _toastTimer = null;
-function showToast(msg) {
-  const el = document.getElementById('toastEl');
-  if (!el) return;
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
-}
-
-// ── OFFLINE BANNER ─────────────────────────────────────────────────────
-function updateOnlineStatus() {
-  const banner = document.getElementById('offlineBanner');
-  if (!banner) return;
-  banner.classList.toggle('show', !navigator.onLine);
-}
-window.addEventListener('online', updateOnlineStatus);
-window.addEventListener('offline', updateOnlineStatus);
-updateOnlineStatus();
-
-// ── POPULAR SECTION ────────────────────────────────────────────────────
-function renderPopular() {
-  const section = document.getElementById('popularSection');
-  const strip = document.getElementById('popularStrip');
-  if (!section || !strip) return;
-  const items = [];
-  (restaurant.categories || []).forEach(cat => {
-    (cat.products || []).forEach(p => {
-      if (p.is_popular && p.is_available !== false) items.push(p);
-    });
-  });
-  if (items.length === 0) { section.style.display = 'none'; return; }
-  section.style.display = 'block';
-  strip.innerHTML = items.map(p => {
-    const imgHtml = p.photo_url
-      ? `<img src="${p.photo_url}" alt="${p.name}" onerror="this.parentNode.innerHTML='🍽️'">`
-      : `<span style="font-size:28px">🍽️</span>`;
-    return `<div class="popular-card" onclick="openProductModal(${p.id})">
-      <div class="popular-card-img">${imgHtml}</div>
-      <div class="popular-card-info">
-        <div class="popular-card-name">${p.name}</div>
-        <div class="popular-card-price">${fmt(p.price)}</div>
-      </div>
-    </div>`;
-  }).join('');
-}
 </script>
-<!-- ─── PWA INSTALL BANNER ─── -->
-<div id="installBanner">
-  <div class="install-top">
-    <span style="font-size:20px">📲</span>
-    <span class="install-title" id="installBannerTitle">Ilovani o'rnating</span>
-  </div>
-  <div class="install-sub">Telefoningiz ekranidan tezroq oching</div>
-  <div class="install-actions">
-    <button class="install-btn install-btn-primary" onclick="installApp()">O'rnatish</button>
-    <button class="install-btn install-btn-secondary" onclick="dismissInstall()">Keyinroq</button>
-  </div>
-</div>
-
 </body>
 </html>
