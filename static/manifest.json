@@ -1,11 +1,11 @@
 {
-  "name": "Taomly — Ресторан",
+  "name": "Taomly — Restoran",
   "short_name": "Taomly",
-  "description": "Заказ еды через Telegram Mini App",
+  "description": "Tez va mazali taomlar buyurtmasi",
   "start_url": "/app",
   "display": "standalone",
   "background_color": "#FAF6EE",
-  "theme_color": "#8B1A2E",
+  "theme_color": "#FAF6EE",
   "orientation": "portrait-primary",
   "lang": "uz",
   "scope": "/",
@@ -20,7 +20,13 @@
       "src": "/static/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/static/apple-touch-icon.png",
