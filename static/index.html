@@ -525,25 +525,65 @@ svg { display:block; }
 
 /* ─── CART ITEMS ─── */
 .cart-items { padding:4px 20px 16px; display:flex; flex-direction:column; gap:10px; }
+.cart-list { padding:10px 16px 4px; }
 .cart-item {
-  background:var(--card);
-  border-radius:var(--radius-md); padding:12px 14px;
   display:flex; align-items:center; gap:12px;
-  box-shadow:var(--shadow-sm);
-  animation:cardIn 0.3s ease;
+  padding:12px 0; border-bottom:1px solid var(--line);
 }
-.cart-item-gem {
-  width:42px; height:42px; border-radius:var(--radius-sm);
-  background:var(--surface);
+.cart-item:last-child { border-bottom:none; }
+.cart-item-img {
+  width:52px; height:52px; border-radius:11px;
+  background:var(--gold-pale);
   display:flex; align-items:center; justify-content:center;
-  flex-shrink:0;
+  flex-shrink:0; overflow:hidden; border:1px solid var(--line);
 }
-.cart-item-gem .icon { width:18px; height:18px; stroke:var(--gold-soft); }
+.cart-item-img img { width:100%; height:100%; object-fit:cover; }
 .cart-item-info { flex:1; min-width:0; }
-.cart-item-name { font-size:14px; font-weight:600; color:var(--ink); }
-.cart-item-price {
-  font-size:13px; color:var(--ink-soft); margin-top:3px;
+.cart-item-name { font-size:13px; font-weight:600; color:var(--ink); margin-bottom:2px; }
+.cart-item-price { font-size:11.5px; color:var(--ink-soft); }
+.cart-trust {
+  margin:10px 16px 0; padding:10px 14px;
+  background:var(--surface); border-radius:11px;
+  font-size:11.5px; color:var(--ink-soft);
+  display:flex; align-items:center; gap:7px; border:1px solid var(--line);
 }
+.cart-summary { padding:0 16px; }
+.cart-summary-row {
+  display:flex; justify-content:space-between; align-items:baseline;
+  padding:14px 0 0; border-top:1px solid var(--line); margin-top:10px;
+}
+.cart-summary-label { font-size:15px; font-weight:600; color:var(--ink); }
+.cart-summary-val {
+  font-family:'Cormorant Garamond',serif;
+  font-size:26px; font-weight:700; color:var(--gold);
+}
+.to-form-btn {
+  display:block; width:calc(100% - 32px);
+  margin:12px 16px 18px; padding:15px;
+  background:var(--ink); color:#FAF7F1;
+  border:none; border-radius:13px;
+  font-size:14px; font-weight:600;
+  font-family:inherit; cursor:pointer;
+  transition:all 0.2s;
+}
+.to-form-btn:active { transform:scale(.98); }
+.form-wrap { padding:4px 16px 28px; }
+.form-back-btn {
+  background:none; border:none; color:var(--ink-soft);
+  font-size:13px; font-family:inherit; cursor:pointer;
+  padding:10px 0 18px; display:flex; align-items:center; gap:6px;
+}
+.form-section-title {
+  font-size:10px; font-weight:700; letter-spacing:1.4px;
+  color:var(--ink-soft); padding:16px 0 10px;
+}
+.delivery-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+.d-opt {
+  padding:13px; border:1.5px solid var(--line); border-radius:11px;
+  cursor:pointer; text-align:center; font-size:13px; font-weight:500;
+  color:var(--ink-soft); transition:all 0.2s; font-family:inherit;
+}
+.d-opt.active { border-color:var(--gold); background:var(--gold-pale); color:var(--gold); font-weight:600; }
 
 /* ─── ORDER TYPE ─── */
 .order-type-section { padding:8px 20px 18px; }
@@ -922,52 +962,69 @@ svg { display:block; }
     <button class="back-btn" onclick="closeCart()">
       <svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
     </button>
-    <span class="screen-title">Savat</span>
+    <span class="screen-title" id="cartScreenTitle">Savat</span>
   </div>
-  <div class="cart-items" id="cartItemsList"></div>
 
-  <div class="order-type-section" id="orderTypeSection">
-    <div class="section-label">Buyurtma turi</div>
-    <div class="order-type-btns">
-      <div class="type-btn active" id="typeDelivery" onclick="selectType('delivery')">
-        <div class="type-btn-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2"/><circle cx="17" cy="19" r="2"/><path d="M4 19h2l1.5-9H17l3 6h-2M7.5 10L6 5H3"/></svg></div>
-        <div class="type-btn-label">Yetkazib berish</div>
+  <!-- CART VIEW -->
+  <div id="cartView">
+    <div class="cart-list" id="cartItemsList"></div>
+
+    <div class="cart-summary" id="cartSummaryBlock" style="display:none">
+      <div class="cart-trust">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        To'lash olishda — xavfsiz
       </div>
-      <div class="type-btn" id="typeTakeaway" onclick="selectType('takeaway')">
-        <div class="type-btn-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M4 9h16l-1.5 11a1 1 0 0 1-1 .9H6.5a1 1 0 0 1-1-.9L4 9zM8 9V6a4 4 0 0 1 8 0v3"/></svg></div>
-        <div class="type-btn-label">Olib ketish</div>
+      <div class="cart-summary-row">
+        <span class="cart-summary-label">Jami</span>
+        <span class="cart-summary-val" id="summaryTotal">0 so'm</span>
       </div>
+      <button class="to-form-btn" onclick="showOrderForm()">Buyurtma berish →</button>
     </div>
   </div>
 
-  <div class="table-info-banner" id="tableBanner" style="display:none;">
-    <div class="table-info-banner-icon">
-      <svg class="icon" viewBox="0 0 24 24"><path d="M3 9h18M3 9v10M21 9v10M3 19h18M7 9V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v4"/></svg>
-    </div>
-    <div>
-      <div class="table-info-banner-title" id="tableBannerTitle">Stol №1</div>
-      <div class="table-info-banner-sub">Buyurtma stolga yetkaziladi</div>
-    </div>
-  </div>
+  <!-- ORDER FORM VIEW -->
+  <div id="orderFormView" style="display:none">
+    <div class="form-wrap">
+      <button class="form-back-btn" onclick="showCartView()">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Savatga qaytish
+      </button>
 
-  <div class="form-section">
-    <input class="form-input" type="text" id="clientName" placeholder="Ismingiz" />
-    <input class="form-input" type="tel" id="clientPhone" placeholder="+998 XX XXX XX XX" value="+998" />
-    <input class="form-input" type="text" id="clientAddress" placeholder="Manzil (yetkazib berish uchun)" />
-    <textarea class="form-input form-textarea" id="clientComment" placeholder="Izoh (ixtiyoriy)"></textarea>
-  </div>
+      <!-- Stol uchun -->
+      <div class="table-info-banner" id="tableBanner" style="display:none;">
+        <div class="table-info-banner-icon">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M3 9h18M3 9v10M21 9v10M3 19h18M7 9V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v4"/></svg>
+        </div>
+        <div>
+          <div class="table-info-banner-title" id="tableBannerTitle">Stol №1</div>
+          <div class="table-info-banner-sub">Buyurtma stolga yetkaziladi</div>
+        </div>
+      </div>
 
-  <div class="summary-card">
-    <div class="summary-row">
-      <span id="summaryCount">0 ta taom</span>
-      <span id="summarySubtotal">0 so'm</span>
-    </div>
-    <div class="summary-row total">
-      <span>Jami</span>
-      <span id="summaryTotal">0 so'm</span>
+      <!-- Yetkazish uchun forma -->
+      <div id="deliveryFormFields">
+        <label class="field-label">ISM</label>
+        <input class="form-input" type="text" id="clientName" placeholder="Ismingiz">
+        <label class="field-label" style="margin-top:10px">TELEFON</label>
+        <input class="form-input" type="tel" id="clientPhone" placeholder="+998 90 000 00 00">
+
+        <div class="form-section-title">YETKAZISH USULI</div>
+        <div class="delivery-row">
+          <div class="d-opt active" id="typeDelivery" onclick="selectType('delivery')">Yetkazib berish</div>
+          <div class="d-opt" id="typeTakeaway" onclick="selectType('takeaway')">Olib ketish</div>
+        </div>
+        <div id="addressWrap">
+          <label class="field-label">MANZIL</label>
+          <input class="form-input" type="text" id="clientAddress" placeholder="Ko'cha, uy, xonadon">
+        </div>
+      </div>
+
+      <label class="field-label" style="margin-top:10px">IZOH</label>
+      <textarea class="form-input form-textarea" id="clientComment" placeholder="Ixtiyoriy"></textarea>
+
+      <button class="checkout-btn" id="checkoutBtn" onclick="submitOrder()">Buyurtmani tasdiqlash →</button>
     </div>
   </div>
-  <button class="checkout-btn" id="checkoutBtn" onclick="submitOrder()">Buyurtma berish →</button>
 </div>
 
 <!-- ─── SUCCESS SCREEN ─── -->
@@ -1520,19 +1577,46 @@ function selectType(type) {
   document.getElementById('clientAddress').style.display = type === 'delivery' ? 'block' : 'none';
 }
 
+function showOrderForm() {
+  if (orderType === 'dine_in') { submitOrder(); return; }
+  document.getElementById('cartView').style.display = 'none';
+  document.getElementById('orderFormView').style.display = 'block';
+  document.getElementById('cartScreenTitle').textContent = 'Buyurtma';
+}
+
+function showCartView() {
+  document.getElementById('orderFormView').style.display = 'none';
+  document.getElementById('cartView').style.display = 'block';
+  document.getElementById('cartScreenTitle').textContent = 'Savat';
+}
+
 function renderCart() {
   const list = document.getElementById('cartItemsList');
   list.innerHTML = '';
-  cartItems().forEach(item => {
+  const items = cartItems();
+
+  if (items.length === 0) {
+    list.innerHTML = `<div style="text-align:center;padding:52px 0;color:var(--ink-soft)">
+      <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:12px;opacity:.4"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>
+      <div style="font-size:14px;font-weight:500">Savat bo'sh</div>
+    </div>`;
+    document.getElementById('cartSummaryBlock').style.display = 'none';
+    return;
+  }
+
+  items.forEach(item => {
+    const photo = item.photo_url || getFoodPhoto(item.name);
     const div = document.createElement('div');
     div.className = 'cart-item';
     div.innerHTML = `
-      <div class="cart-item-gem"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a4 4 0 0 1 0 8M6 4v16M6 4c0 2.5 2.5 2.5 2.5 5S6 11.5 6 14"/></svg></div>
+      <div class="cart-item-img">
+        <img src="${photo}" alt="${item.name}" onerror="this.src='https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=100&q=60'">
+      </div>
       <div class="cart-item-info">
         <div class="cart-item-name">${item.name}</div>
         <div class="cart-item-price">${item.qty} × ${fmt(item.price)}</div>
       </div>
-      <div class="qty-control">
+      <div class="qty-control" onclick="event.stopPropagation()">
         <button class="qty-btn" onclick="cartChangeQty(${item.id},-1)"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
         <span class="qty-num">${item.qty}</span>
         <button class="qty-btn" onclick="cartChangeQty(${item.id},1)"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
@@ -1540,23 +1624,16 @@ function renderCart() {
     list.appendChild(div);
   });
 
-  document.getElementById('summaryCount').textContent = cartCount() + ' ta taom';
-  document.getElementById('summarySubtotal').textContent = fmt(cartTotal());
   document.getElementById('summaryTotal').textContent = fmt(cartTotal());
+  document.getElementById('cartSummaryBlock').style.display = 'block';
 
   if (orderType === 'dine_in') {
-    document.getElementById('orderTypeSection').style.display = 'none';
-    document.getElementById('clientAddress').style.display = 'none';
-    document.getElementById('clientName').style.display = 'none';
-    document.getElementById('clientPhone').style.display = 'none';
+    document.getElementById('deliveryFormFields').style.display = 'none';
     document.getElementById('tableBanner').style.display = 'flex';
     document.getElementById('tableBannerTitle').textContent = 'Stol №' + tableNumber;
   } else {
-    document.getElementById('orderTypeSection').style.display = 'block';
+    document.getElementById('deliveryFormFields').style.display = 'block';
     document.getElementById('tableBanner').style.display = 'none';
-    document.getElementById('clientName').style.display = 'block';
-    document.getElementById('clientPhone').style.display = 'block';
-    document.getElementById('clientAddress').style.display = orderType === 'delivery' ? 'block' : 'none';
   }
 }
 
@@ -1568,30 +1645,23 @@ function cartChangeQty(id, delta) {
 
 async function submitOrder() {
   const btn = document.getElementById('checkoutBtn');
-  const name = document.getElementById('clientName').value.trim();
-  const phone = document.getElementById('clientPhone').value.trim();
-  const address = document.getElementById('clientAddress').value.trim();
+  const name = orderType !== 'dine_in' ? document.getElementById('clientName').value.trim() : null;
+  const phone = orderType !== 'dine_in' ? document.getElementById('clientPhone').value.trim() : null;
+  const address = document.getElementById('clientAddress')?.value.trim() || null;
   const comment = document.getElementById('clientComment').value.trim();
 
   if (orderType !== 'dine_in') {
-    if (!name) { alert('Ismingizni kiriting'); return; }
-    if (!phone || phone === '+998') { alert('Telefon raqamingizni kiriting'); return; }
+    if (!name) { showToast('Ismingizni kiriting'); return; }
+    if (!phone) { showToast('Telefon raqamingizni kiriting'); return; }
   }
-  if (orderType === 'delivery' && !address) { alert('Manzilni kiriting'); return; }
+  if (orderType === 'delivery' && !address) { showToast('Manzilni kiriting'); return; }
 
-  // initData обязателен — без него сервер отклонит запрос с 401
   const tg = window.Telegram?.WebApp;
-  const initData = tg?.initData;
-  if (!initData) {
-    alert('Telegram Mini App dan foydalaning');
-    return;
-  }
+  const initData = tg?.initData || '';
 
   btn.disabled = true;
   btn.textContent = 'Yuborilmoqda...';
 
-  // restaurant_id и client_telegram_id убраны из payload —
-  // сервер берёт их из заголовков X-Restaurant-Id и X-Telegram-Init-Data
   const payload = {
     client_name: name || null,
     client_phone: phone || null,
@@ -1603,24 +1673,24 @@ async function submitOrder() {
   };
 
   try {
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-Restaurant-Id': String(restaurant.id),
+    };
+    if (initData) headers['X-Telegram-Init-Data'] = initData;
+
     const res = await fetch(`${API_BASE}/api/orders/`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Сервер верифицирует подпись Telegram HMAC-SHA256
-        'X-Telegram-Init-Data': initData,
-        // Сервер загружает ресторан и его бот-токен для верификации
-        'X-Restaurant-Id': String(restaurant.id),
-      },
+      headers,
       body: JSON.stringify(payload)
     });
     if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Xato'); }
     const order = await res.json();
     showSuccess(order.id);
   } catch (e) {
-    alert('Xato: ' + e.message);
+    showToast('Xato: ' + e.message);
     btn.disabled = false;
-    btn.textContent = 'Buyurtma berish →';
+    btn.textContent = 'Buyurtmani tasdiqlash →';
   }
 }
 
