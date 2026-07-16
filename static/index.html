@@ -1425,7 +1425,6 @@ async function loadMenu() {
     } else {
       const L = (restaurant.name||'T')[0].toUpperCase();
       logoWrap.innerHTML = `<div class="restaurant-emblem-letter">${L}</div>`;
-      document.getElementById('restaurantLetter').textContent = L;
     }
 
     if (restaurant.address) {
