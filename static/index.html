@@ -1140,9 +1140,447 @@ svg { display: block; }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════
+   PRESIDENT LUX — ATMOSPHERE LAYER
+   Все эффекты GPU-оптимизированы (transform/opacity/filter)
+═══════════════════════════════════════════════════ */
+
+/* ── Золотая система ── */
+:root {
+  --g1: #F7E7A8;
+  --g2: #E6C76A;
+  --g3: #D4AF37;
+  --g4: #B8860B;
+  --g5: #8B6B3F;
+  --gold-grad:    linear-gradient(135deg, #F7E7A8 0%, #D4AF37 50%, #B8860B 100%);
+  --gold-grad-h:  linear-gradient(90deg, #8B6B3F, #E6C76A, #F7E7A8, #E6C76A, #8B6B3F);
+  --gold-glow-sm: 0 0 12px rgba(212,175,55,0.25);
+  --gold-glow-md: 0 0 24px rgba(212,175,55,0.32), 0 0 48px rgba(212,175,55,0.12);
+  --gold-glow-lg: 0 0 40px rgba(212,175,55,0.40), 0 0 80px rgba(212,175,55,0.18);
+}
+
+/* ── Canvas частицы ── */
+#particles-canvas {
+  position: fixed; inset: 0; z-index: 0;
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+/* ── Атмосферные световые лучи ── */
+#atmo-wrap {
+  position: fixed; inset: 0; z-index: 1;
+  pointer-events: none; overflow: hidden;
+}
+
+/* Верхний золотой луч */
+.atmo-top {
+  position: absolute; top: -20%; left: 50%;
+  width: 140%; height: 55%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse 70% 60% at 50% 0%,
+    rgba(212,175,55,0.055) 0%,
+    rgba(212,175,55,0.02) 50%,
+    transparent 100%);
+  animation: atmoBreath 20s ease-in-out infinite;
+  mix-blend-mode: screen;
+}
+
+/* Левый боковой луч */
+.atmo-left {
+  position: absolute; top: 20%; left: -10%;
+  width: 45%; height: 60%;
+  background: radial-gradient(ellipse 80% 100% at 0% 50%,
+    rgba(212,175,55,0.035) 0%,
+    transparent 70%);
+  animation: atmoBreath 25s ease-in-out 5s infinite;
+  mix-blend-mode: screen;
+}
+
+/* Правый боковой луч */
+.atmo-right {
+  position: absolute; top: 20%; right: -10%;
+  width: 45%; height: 60%;
+  background: radial-gradient(ellipse 80% 100% at 100% 50%,
+    rgba(212,175,55,0.03) 0%,
+    transparent 70%);
+  animation: atmoBreath 28s ease-in-out 10s infinite;
+  mix-blend-mode: screen;
+}
+
+/* Нижнее сияние */
+.atmo-bottom {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: 35%;
+  background: radial-gradient(ellipse 80% 60% at 50% 100%,
+    rgba(212,175,55,0.04) 0%,
+    transparent 70%);
+  animation: atmoBreath 22s ease-in-out 7s infinite;
+  mix-blend-mode: screen;
+}
+
+@keyframes atmoBreath {
+  0%,100% { opacity: 0.7; transform: scale(1) translateX(0); }
+  33%      { opacity: 1;   transform: scale(1.04) translateX(1%); }
+  66%      { opacity: 0.8; transform: scale(0.97) translateX(-1%); }
+}
+
+/* ── Фон — не просто чёрный ── */
+body {
+  background:
+    radial-gradient(ellipse 100% 50% at 50% 0%, rgba(212,175,55,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 0% 100%, rgba(212,175,55,0.025) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(212,175,55,0.025) 0%, transparent 50%),
+    radial-gradient(ellipse 100% 100% at 50% 50%, #0E0E0C 0%, #080807 100%);
+  background-attachment: fixed;
+}
+
+/* Виньетка */
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 90% 90% at 50% 50%,
+    transparent 40%,
+    rgba(0,0,0,0.4) 100%);
+}
+
+/* ── Карточки — дорогое стекло ── */
+.product-card.has-photo {
+  border: 1px solid rgba(212,175,55,0.12);
+  box-shadow:
+    0 1px 0 rgba(247,231,168,0.08) inset,
+    0 -1px 0 rgba(0,0,0,0.3) inset,
+    0 20px 60px rgba(0,0,0,0.55),
+    0 4px 16px rgba(0,0,0,0.3);
+  position: relative;
+}
+.product-card.has-photo::before {
+  content: '';
+  position: absolute; top: 0; left: 15%; right: 15%; height: 1px; z-index: 2;
+  background: linear-gradient(90deg,
+    transparent, rgba(247,231,168,0.18), transparent);
+  border-radius: 0;
+}
+
+.product-card.no-photo {
+  position: relative;
+  transition: background 0.3s ease, transform 0.35s var(--ease-spring);
+}
+.product-card.no-photo:active {
+  background: rgba(212,175,55,0.04);
+  transform: translateY(-1px);
+}
+
+/* ── Цена — градиентное золото ── */
+.product-price {
+  background: var(--gold-grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 6px rgba(212,175,55,0.3));
+}
+.product-price-photo {
+  background: var(--gold-grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 8px rgba(212,175,55,0.4));
+  font-size: 17px;
+}
+.product-price-sub { -webkit-text-fill-color: var(--ivory-ghost); }
+
+.popular-item-price {
+  background: var(--gold-grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.modal-price-val {
+  background: var(--gold-grad-h);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  background-size: 200% 100%;
+  animation: goldShimmer 4s ease infinite;
+}
+.summary-total-val {
+  background: var(--gold-grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 8px rgba(212,175,55,0.35));
+}
+
+@keyframes goldShimmer {
+  0%,100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+/* ── Кнопка добавить — стекло + металл ── */
+.add-ring {
+  background: radial-gradient(circle at 40% 35%,
+    rgba(247,231,168,0.08), rgba(212,175,55,0.04));
+  border: 1px solid rgba(212,175,55,0.35);
+  box-shadow:
+    0 0 0 1px rgba(247,231,168,0.06) inset,
+    var(--gold-glow-sm);
+  transition:
+    transform 0.3s var(--ease-spring),
+    box-shadow 0.3s ease,
+    background 0.3s ease;
+  animation: btnBreath 4s ease-in-out infinite;
+}
+.add-ring:active {
+  transform: scale(0.88);
+  box-shadow: var(--gold-glow-md);
+  background: rgba(212,175,55,0.12);
+}
+@keyframes btnBreath {
+  0%,100% { box-shadow: 0 0 8px rgba(212,175,55,0.2), 0 0 0 1px rgba(247,231,168,0.05) inset; }
+  50%      { box-shadow: 0 0 18px rgba(212,175,55,0.35), 0 0 0 1px rgba(247,231,168,0.08) inset; }
+}
+
+/* Ripple при нажатии */
+.add-ring::after {
+  content: '';
+  position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle, rgba(212,175,55,0.3), transparent 70%);
+  opacity: 0; transform: scale(0);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.add-ring:active::after {
+  opacity: 1; transform: scale(1.5);
+}
+
+/* ── Кнопки qty — металл ── */
+.qty-ring {
+  background: radial-gradient(circle at 40% 35%, rgba(255,255,255,0.04), transparent);
+  border: 1px solid rgba(242,239,230,0.1);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset;
+  transition: transform 0.25s var(--ease-spring), box-shadow 0.25s ease;
+}
+.qty-ring:active {
+  transform: scale(0.88);
+  box-shadow: 0 0 10px rgba(212,175,55,0.25);
+  border-color: rgba(212,175,55,0.3);
+}
+
+/* ── Корзина — дорогая панель ── */
+.cart-capsule {
+  background: rgba(10,10,8,0.92);
+  border: 1px solid rgba(212,175,55,0.22);
+  box-shadow:
+    0 -2px 0 rgba(247,231,168,0.08) inset,
+    0 2px 0 rgba(0,0,0,0.5) inset,
+    0 24px 60px rgba(0,0,0,0.7),
+    0 8px 32px rgba(0,0,0,0.5),
+    var(--gold-glow-md);
+  animation: cartGlow 5s ease-in-out infinite;
+}
+@keyframes cartGlow {
+  0%,100% { box-shadow:
+    0 -2px 0 rgba(247,231,168,0.08) inset,
+    0 2px 0 rgba(0,0,0,0.5) inset,
+    0 24px 60px rgba(0,0,0,0.7),
+    0 8px 32px rgba(0,0,0,0.5),
+    0 0 20px rgba(212,175,55,0.2); }
+  50%      { box-shadow:
+    0 -2px 0 rgba(247,231,168,0.08) inset,
+    0 2px 0 rgba(0,0,0,0.5) inset,
+    0 24px 60px rgba(0,0,0,0.7),
+    0 8px 32px rgba(0,0,0,0.5),
+    0 0 36px rgba(212,175,55,0.36); }
+}
+
+.cart-bar.visible .cart-capsule {
+  animation: cartEntrance 0.5s var(--ease-spring), cartGlow 5s ease-in-out 0.5s infinite;
+}
+@keyframes cartEntrance {
+  0%   { transform: scale(0.94) translateY(6px); }
+  60%  { transform: scale(1.02) translateY(-2px); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+.cart-count-gem {
+  background: var(--gold-grad);
+  box-shadow: var(--gold-glow-md);
+  animation: gemBreath 4s ease-in-out infinite;
+}
+@keyframes gemBreath {
+  0%,100% { box-shadow: 0 4px 16px rgba(212,175,55,0.3); }
+  50%      { box-shadow: 0 4px 28px rgba(212,175,55,0.55); }
+}
+
+.cart-arrow {
+  background: var(--gold-grad);
+  box-shadow: var(--gold-glow-sm);
+}
+
+/* ── Checkout кнопка — живая золотая ── */
+.checkout-btn {
+  background: var(--gold-grad);
+  box-shadow: var(--gold-glow-md);
+  animation: checkoutBreath 4s ease-in-out infinite;
+  position: relative; overflow: hidden;
+}
+.checkout-btn::before {
+  content: '';
+  position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  animation: btnSheen 6s ease-in-out infinite;
+}
+@keyframes checkoutBreath {
+  0%,100% { box-shadow: 0 8px 32px rgba(212,175,55,0.3), 0 2px 8px rgba(212,175,55,0.2); }
+  50%      { box-shadow: 0 12px 48px rgba(212,175,55,0.5), 0 4px 16px rgba(212,175,55,0.3); }
+}
+@keyframes btnSheen {
+  0%,100% { left: -100%; }
+  40%,60% { left: 160%; }
+}
+
+/* ── Back to menu кнопка ── */
+.back-menu-btn {
+  background: var(--gold-grad);
+  box-shadow: var(--gold-glow-md);
+  position: relative; overflow: hidden;
+}
+.back-menu-btn::before {
+  content: '';
+  position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  animation: btnSheen 5s ease-in-out 1s infinite;
+}
+
+/* ── Modal add btn ── */
+.modal-add-btn {
+  background: var(--gold-grad);
+  box-shadow: var(--gold-glow-sm);
+  position: relative; overflow: hidden;
+  animation: btnBreath 4s ease-in-out infinite;
+}
+.modal-add-btn::before {
+  content: '';
+  position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  animation: btnSheen 7s ease-in-out 2s infinite;
+}
+
+/* ── Категории — стеклянные pills ── */
+.cat-btn {
+  position: relative;
+  transition: color 0.3s ease;
+}
+.cat-btn.active {
+  text-shadow: 0 0 12px rgba(212,175,55,0.4);
+}
+.cat-btn::after {
+  background: var(--gold-grad);
+  height: 1.5px;
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(212,175,55,0.5);
+}
+
+/* ── Поля ввода — золотой focus ── */
+.form-input:focus {
+  border-color: rgba(212,175,55,0.5);
+  box-shadow:
+    0 0 0 3px rgba(212,175,55,0.07),
+    0 0 20px rgba(212,175,55,0.1);
+}
+
+/* ── Заголовки категорий ── */
+.category-title {
+  text-shadow: 0 0 24px rgba(212,175,55,0.12);
+  letter-spacing: 0.5px;
+}
+
+/* ── Золотая линия в хедере ── */
+.header-gold-rule {
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(212,175,55,0.2) 20%,
+    rgba(247,231,168,0.5) 50%,
+    rgba(212,175,55,0.2) 80%,
+    transparent);
+  opacity: 1;
+  height: 1px;
+  animation: ruleShimmer 8s ease-in-out infinite;
+}
+@keyframes ruleShimmer {
+  0%,100% { opacity: 0.6; }
+  50%      { opacity: 1; }
+}
+
+/* ── Splash имя ресторана ── */
+.splash-name {
+  text-shadow: 0 0 20px rgba(212,175,55,0.2);
+}
+
+/* ── Популярные чипы — hover lift ── */
+.popular-item {
+  transition: transform 0.35s var(--ease-spring);
+}
+.popular-item:active {
+  transform: scale(0.94) translateY(2px);
+}
+
+/* ── Успех кольцо — золотое дыхание ── */
+.success-emblem {
+  box-shadow:
+    0 0 0 1px rgba(212,175,55,0.2),
+    0 0 30px rgba(212,175,55,0.15);
+  animation: emblemIn 0.7s var(--ease-spring), successGlow 4s ease-in-out 1s infinite;
+}
+@keyframes successGlow {
+  0%,100% { box-shadow: 0 0 20px rgba(212,175,55,0.15); }
+  50%      { box-shadow: 0 0 40px rgba(212,175,55,0.3); }
+}
+
+/* ── Карт итем в корзине ── */
+.cart-item {
+  border: 1px solid rgba(212,175,55,0.08);
+  background: linear-gradient(135deg, rgba(26,26,23,0.95), rgba(20,20,18,0.98));
+}
+.cart-item-gem {
+  background: radial-gradient(circle at 40% 35%,
+    rgba(212,175,55,0.08), var(--stone));
+  border: 1px solid rgba(212,175,55,0.15);
+}
+
+/* ── Table banner золотой ── */
+.table-banner {
+  border: 1px solid rgba(212,175,55,0.18);
+  box-shadow: 0 0 20px rgba(212,175,55,0.06);
+}
+
+/* ── Type btn active ── */
+.type-btn.active {
+  border-color: rgba(212,175,55,0.4);
+  box-shadow: 0 0 16px rgba(212,175,55,0.1), 0 0 0 1px rgba(212,175,55,0.2);
+}
+
+/* Оптимизация GPU */
+.cart-capsule, .add-ring, .checkout-btn,
+.product-card.has-photo, .atmo-top, .atmo-left,
+.atmo-right, .atmo-bottom, #particles-canvas {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+}
+
 </style>
 </head>
 <body>
+
+<!-- ═══ ATMOSPHERE LAYERS ═══ -->
+<canvas id="particles-canvas"></canvas>
+<div id="atmo-wrap">
+  <div class="atmo-top"></div>
+  <div class="atmo-left"></div>
+  <div class="atmo-right"></div>
+  <div class="atmo-bottom"></div>
+</div>
+
 
 <!-- ═══ SPLASH ═══ -->
 <div id="splash">
@@ -1854,5 +2292,78 @@ window.addEventListener('appinstalled',()=>{
   if(b) b.style.display='none';
 });
 </script>
+
+<script>
+/* ── Золотые частицы — как пыль в солнечном свете ── */
+(function() {
+  const canvas = document.getElementById('particles-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  let W, H, particles = [];
+  const COUNT = 28;
+  const COLORS = [
+    'rgba(247,231,168,', 'rgba(230,199,106,', 'rgba(212,175,55,', 'rgba(184,134,11,'
+  ];
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+
+  function createParticle() {
+    return {
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: Math.random() * 1.2 + 0.3,
+      vx: (Math.random() - 0.5) * 0.18,
+      vy: -Math.random() * 0.22 - 0.06,
+      alpha: Math.random() * 0.45 + 0.05,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      life: Math.random(),
+      speed: Math.random() * 0.003 + 0.001,
+    };
+  }
+
+  function init() {
+    resize();
+    particles = [];
+    for (let i = 0; i < COUNT; i++) {
+      const p = createParticle();
+      p.y = Math.random() * H;
+      particles.push(p);
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    particles.forEach((p, i) => {
+      p.life += p.speed;
+      const pulse = Math.sin(p.life * Math.PI * 2) * 0.5 + 0.5;
+      const a = p.alpha * pulse;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.color + a + ')';
+      ctx.fill();
+
+      p.x += p.vx;
+      p.y += p.vy;
+
+      if (p.y < -5 || p.x < -5 || p.x > W + 5) {
+        particles[i] = createParticle();
+        particles[i].y = H + 5;
+        if (p.x < -5) particles[i].x = W + 5;
+        if (p.x > W + 5) particles[i].x = -5;
+      }
+    });
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', () => { resize(); });
+  init();
+  draw();
+})();
+</script>
+
 </body>
 </html>
