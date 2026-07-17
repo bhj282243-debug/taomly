@@ -821,11 +821,127 @@ svg{display:block;}
   pointer-events:none;
 }
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ══════════════ OFFLINE BANNER ══════════════ */
+#offlineBanner{
+  position:fixed;top:0;left:0;right:0;z-index:8000;
+  padding:11px 20px;
+  background:rgba(10,10,9,0.97);
+  border-bottom:1px solid rgba(212,175,55,0.25);
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  transform:translateY(-100%);transition:transform .35s var(--es);
+  box-shadow:0 4px 20px rgba(0,0,0,0.5);
+}
+#offlineBanner.show{transform:translateY(0);}
+.offline-dot{width:7px;height:7px;border-radius:50%;background:#888;flex-shrink:0;}
+.offline-txt{font-size:12.5px;color:var(--iv3);letter-spacing:.3px;}
+
+/* ══════════════ ERROR / RETRY SCREEN ══════════════ */
+#errorScreen{
+  display:none;position:fixed;inset:0;z-index:600;
+  background:var(--obs);
+  flex-direction:column;align-items:center;justify-content:center;
+  padding:40px 32px;text-align:center;
+}
+#errorScreen.active{display:flex;}
+.err-icon{
+  width:72px;height:72px;border-radius:50%;
+  background:radial-gradient(circle at 38% 30%,#1a1a18,#0e0e0d);
+  border:1px solid rgba(212,175,55,0.2);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:28px;
+  box-shadow:0 8px 28px rgba(0,0,0,0.6);
+}
+.err-icon .icon{width:28px;height:28px;stroke:rgba(212,175,55,0.5);stroke-width:1.2;}
+.err-title{
+  font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;
+  color:var(--ivory);letter-spacing:.3px;margin-bottom:10px;
+}
+.err-sub{font-size:13px;color:var(--iv4);line-height:1.7;margin-bottom:36px;font-weight:300;}
+.retry-btn{
+  padding:16px 40px;background:var(--gs);border:none;border-radius:100px;
+  color:var(--obs);font-family:'Inter',sans-serif;
+  font-size:13px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;
+  cursor:pointer;
+  box-shadow:0 1px 0 rgba(244,232,160,0.34) inset,0 -1px 0 rgba(0,0,0,0.2) inset,var(--sg);
+  transition:transform .18s ease;
+}
+.retry-btn:active{transform:scale(0.96);}
+
+/* ══════════════ PWA INSTALL BANNER ══════════════ */
+#installBanner{
+  display:none;position:fixed;bottom:108px;left:18px;right:18px;z-index:190;
+  background:rgba(10,10,9,0.97);
+  border:1px solid rgba(212,175,55,0.28);border-radius:20px;
+  padding:16px 18px;
+  flex-direction:row;align-items:center;gap:14px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.6),0 1px 0 rgba(244,232,160,0.06) inset;
+  animation:bannerUp .4s var(--es);
+}
+@keyframes bannerUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.pwa-ico{
+  width:44px;height:44px;border-radius:12px;flex-shrink:0;
+  background:var(--gs);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 14px rgba(212,175,55,0.28);
+}
+.pwa-ico .icon{width:20px;height:20px;stroke:var(--obs);stroke-width:1.8;}
+.pwa-txt{flex:1;min-width:0;}
+.pwa-title{font-size:13px;font-weight:500;color:var(--ivory);letter-spacing:.2px;}
+.pwa-sub{font-size:11px;color:var(--iv4);margin-top:2px;}
+.pwa-btn{
+  padding:9px 16px;background:var(--gs);border:none;border-radius:100px;
+  color:var(--obs);font-size:11.5px;font-weight:600;letter-spacing:.5px;
+  cursor:pointer;flex-shrink:0;white-space:nowrap;
+  box-shadow:0 1px 0 rgba(244,232,160,0.3) inset;
+  transition:transform .15s ease;
+}
+.pwa-btn:active{transform:scale(0.95);}
+.pwa-close{
+  width:28px;height:28px;border-radius:50%;border:1px solid rgba(247,245,240,0.1);
+  background:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--iv4);flex-shrink:0;transition:background .15s ease;
+}
+.pwa-close:active{background:var(--stone);}
+.pwa-close .icon{width:12px;height:12px;}
 </style>
 </head>
 <body>
 
 <!-- SPLASH -->
+
+<!-- OFFLINE BANNER -->
+<div id="offlineBanner">
+  <div class="offline-dot"></div>
+  <span class="offline-txt">Internet aloqasi yo'q</span>
+</div>
+
+<!-- ERROR / RETRY SCREEN -->
+<div id="errorScreen">
+  <div class="err-icon">
+    <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+  </div>
+  <div class="err-title">Yuklab bo'lmadi</div>
+  <div class="err-sub" id="errorMsg">Menyu yuklanmadi.<br>Internetni tekshiring va qayta urinib ko'ring.</div>
+  <button class="retry-btn" onclick="retryLoad()">Qayta urinish</button>
+</div>
+
+<!-- PWA INSTALL BANNER -->
+<div id="installBanner">
+  <div class="pwa-ico">
+    <svg class="icon" viewBox="0 0 24 24"><path d="M12 2v13M8 11l4 4 4-4M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2"/></svg>
+  </div>
+  <div class="pwa-txt">
+    <div class="pwa-title" id="pwaInstallTitle">Ilovani o'rnating</div>
+    <div class="pwa-sub">Tezroq ishlaydi, offline ham</div>
+  </div>
+  <button class="pwa-btn" onclick="installPWA()">O'rnatish</button>
+  <button class="pwa-close" onclick="dismissInstall()">
+    <svg class="icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+  </button>
+</div>
+
 <div id="splash">
   <div class="spl-halo"></div>
   <div class="spl-line"></div>
@@ -1088,6 +1204,7 @@ async function loadMenu(){
     if(restaurant.welcome_text){document.getElementById('welcomeText').textContent=restaurant.welcome_text;document.getElementById('welcomeLine').style.display='block';}
     if(tableNumber){document.getElementById('tableBadgeText').textContent='Stol №'+tableNumber;document.getElementById('tableBadge').style.display='inline-flex';await resolveTableId();}
     renderPopular();renderCategories();renderMenu();
+    const pi=document.getElementById('pwaInstallTitle');if(pi&&restaurant.name)pi.textContent=restaurant.name+' ilovasini o\'rnating';
     setTimeout(()=>{
       document.getElementById('splash').classList.add('out');
       setTimeout(()=>{
@@ -1097,7 +1214,7 @@ async function loadMenu(){
       },1000);
     },1800);
   }catch(e){
-    document.body.innerHTML=`<pre style="color:#D4AF37;padding:24px;white-space:pre-wrap;font-size:13px;background:#050505">${e.message}\n\n${e.stack}</pre>`;
+    showError(e.message);
   }
 }
 
@@ -1349,6 +1466,42 @@ function showSuccess(orderId){
 function backToMenu(){document.getElementById('successScreen').classList.remove('active');renderMenu();}
 
 
+
+// ── Offline detection ──
+function updateOnlineStatus(){
+  const b=document.getElementById('offlineBanner');
+  if(!navigator.onLine){b.classList.add('show');}
+  else{b.classList.remove('show');}
+}
+window.addEventListener('online',updateOnlineStatus);
+window.addEventListener('offline',updateOnlineStatus);
+
+// ── Error / Retry ──
+function showError(msg){
+  // Скрываем splash
+  const s=document.getElementById('splash');if(s)s.style.display='none';
+  if(msg)document.getElementById('errorMsg').innerHTML=msg+'<br><br>Internetni tekshiring va qayta urinib ko'ring.';
+  document.getElementById('errorScreen').classList.add('active');
+}
+function retryLoad(){
+  document.getElementById('errorScreen').classList.remove('active');
+  // Показываем splash снова
+  const s=document.getElementById('splash');
+  if(s){s.style.display='flex';s.classList.remove('out');}
+  loadMenu();
+}
+
+// ── PWA Install ──
+function installPWA(){
+  if(!_dip)return;
+  _dip.prompt();
+  _dip.userChoice.then(()=>{_dip=null;dismissInstall();});
+}
+function dismissInstall(){
+  const b=document.getElementById('installBanner');
+  if(b){b.style.transition='opacity .3s ease';b.style.opacity='0';setTimeout(()=>b.style.display='none',300);}
+}
+
 let _toastTimer=null;
 function showToast(msg){
   const t=document.getElementById('toast');
@@ -1359,7 +1512,7 @@ function showToast(msg){
 
 window.addEventListener('DOMContentLoaded',()=>{
   const tg=window.Telegram?.WebApp;if(tg){tg.ready();tg.expand();}
-  parseParams();loadMenu();
+  parseParams();loadMenu();updateOnlineStatus();
 });
 if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/static/sw.js').then(r=>console.log('[SW]',r.scope)).catch(e=>console.warn('[SW]',e));});}
 let _dip=null;
