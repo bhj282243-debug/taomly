@@ -170,6 +170,7 @@ svg{display:block;}
 .hero-med{
   width:86px;height:86px;border-radius:50%;
   background:rgba(8,8,7,0.55);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
   border:1px solid rgba(212,175,55,0.38);
   box-shadow:
     0 1px 0 rgba(244,232,160,0.16) inset,
@@ -212,7 +213,7 @@ svg{display:block;}
 .hero-chip{
   display:inline-flex;align-items:center;gap:5px;
   padding:6px 14px;border-radius:100px;
-  background:rgba(8,8,7,0.75);
+  background:rgba(8,8,7,0.55);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
   border:1px solid var(--gl);
   font-size:11px;color:var(--iv2);letter-spacing:.3px;
 }
@@ -354,7 +355,7 @@ svg{display:block;}
 .prod-grid{display:flex;flex-direction:column;}
 
 /* ══════════════ CARD WITH PHOTO ══════════════ */
-.pcard{position:relative;overflow:hidden;cursor:pointer;opacity:0;animation:cardIn var(--ts) var(--es) forwards;}
+.pcard{position:relative;overflow:hidden;cursor:pointer;opacity:0;animation:cardIn var(--ts) var(--es) forwards;will-change:transform;}
 @keyframes cardIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 
 .pcard.has-photo{
@@ -421,7 +422,7 @@ svg{display:block;}
 .pphoto-badge{
   position:absolute;top:16px;left:16px;
   display:inline-flex;align-items:center;gap:4px;padding:4px 12px;
-  background:rgba(5,5,5,0.88);
+  background:rgba(5,5,5,0.72);backdrop-filter:blur(16px);
   border:1px solid var(--gl);border-radius:100px;
   font-size:9px;font-weight:500;color:var(--g2);letter-spacing:1.5px;text-transform:uppercase;
 }
@@ -446,6 +447,7 @@ svg{display:block;}
   border-radius:20px;
   /* Glassmorphism */
   background:rgba(10,10,9,0.55);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
   border:1px solid rgba(212,175,55,0.14);
   box-shadow:
     0 1px 0 rgba(244,232,160,0.05) inset,
@@ -605,7 +607,7 @@ svg{display:block;}
 @keyframes scrIn{from{transform:translateY(32px);opacity:0}to{transform:translateY(0);opacity:1}}
 .scr-hdr{
   position:sticky;top:0;z-index:10;
-  background:rgba(5,5,5,0.97);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  background:rgba(5,5,5,0.97);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
   border-bottom:1px solid var(--gl);box-shadow:0 1px 0 rgba(244,232,160,0.04) inset;
   padding:18px 22px;display:flex;align-items:center;gap:18px;
 }
@@ -680,6 +682,7 @@ svg{display:block;}
   width:100%;padding:17px 20px;border-radius:18px;
   border:1px solid rgba(247,245,240,0.09);
   background:rgba(10,10,9,0.62);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
   font-size:15px;color:var(--ivory);outline:none;
   font-family:'Inter',sans-serif;letter-spacing:.2px;
   box-shadow:0 2px 10px rgba(0,0,0,0.38) inset,0 1px 0 rgba(255,255,255,0.025) inset;
@@ -729,7 +732,7 @@ svg{display:block;}
 .checkout-btn:disabled{opacity:.4;cursor:not-allowed;animation:none;}
 
 /* ══════════════ MODAL ══════════════ */
-.modal-overlay{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.90);animation:ovIn .3s ease;}
+.modal-overlay{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.84);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);animation:ovIn .3s ease;}
 .modal-overlay.active{display:flex;align-items:flex-end;}
 @keyframes ovIn{from{opacity:0}to{opacity:1}}
 .modal{width:100%;max-height:92vh;overflow-y:auto;background:var(--onyx);border-radius:28px 28px 0 0;border-top:1px solid var(--gb);box-shadow:0 -1px 0 rgba(244,232,160,0.09) inset,0 -40px 80px rgba(0,0,0,0.8);position:relative;animation:mUp .5s var(--es);}
@@ -754,7 +757,7 @@ svg{display:block;}
 .modal-ph-crest::after{content:'';position:absolute;inset:10px;border:1px solid rgba(212,175,55,0.15);transform:rotate(45deg);border-radius:3px;}
 .modal-ph-crest .icon{width:28px;height:28px;stroke:rgba(212,175,55,0.40);stroke-width:1;z-index:1;}
 .modal-grad{position:absolute;bottom:0;left:0;right:0;height:40%;background:linear-gradient(transparent,var(--onyx));}
-.modal-close{position:absolute;top:16px;right:16px;z-index:5;width:40px;height:40px;border-radius:50%;background:rgba(5,5,5,0.92);border:1px solid var(--gl);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--iv2);box-shadow:0 1px 0 rgba(244,232,160,0.05) inset;transition:background var(--tf) ease;}
+.modal-close{position:absolute;top:16px;right:16px;z-index:5;width:40px;height:40px;border-radius:50%;background:rgba(5,5,5,0.76);backdrop-filter:blur(16px);border:1px solid var(--gl);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--iv2);box-shadow:0 1px 0 rgba(244,232,160,0.05) inset;transition:background var(--tf) ease;}
 .modal-close:active{background:var(--stone);}
 .modal-close .icon{width:15px;height:15px;}
 .modal-body{padding:26px 26px 40px;animation:mBodyIn .5s var(--el) .1s both;}
@@ -803,144 +806,57 @@ svg{display:block;}
 
 @keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 
-.cart-cap{will-change:transform;transform:translateZ(0);}
+.cart-cap,.add-ring,.checkout-btn,.pcard.has-photo,.rest-emb,.spl-coin,.hero-med{will-change:transform,opacity;transform:translateZ(0);}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
 
-/* ══════════════ TOAST ══════════════ */
-#toast{
-  position:fixed;bottom:110px;left:50%;transform:translateX(-50%) translateY(20px);
-  z-index:9000;
-  background:rgba(15,15,14,0.97);
-  border:1px solid rgba(212,175,55,0.35);
-  border-radius:100px;
-  padding:13px 24px;
-  font-size:13px;color:var(--ivory);
-  white-space:nowrap;
-  box-shadow:0 4px 24px rgba(0,0,0,0.6),0 0 0 1px rgba(212,175,55,0.08);
-  opacity:0;transition:opacity .25s ease,transform .25s ease;
-  pointer-events:none;
-}
-#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-
-/* ══════════════ OFFLINE BANNER ══════════════ */
-#offlineBanner{
-  position:fixed;top:0;left:0;right:0;z-index:8000;
-  padding:11px 20px;
-  background:rgba(10,10,9,0.97);
-  border-bottom:1px solid rgba(212,175,55,0.25);
-  display:flex;align-items:center;justify-content:center;gap:9px;
-  transform:translateY(-100%);transition:transform .35s var(--es);
-  box-shadow:0 4px 20px rgba(0,0,0,0.5);
-}
+/* ══ OFFLINE BANNER ══ */
+#offlineBanner{position:fixed;top:0;left:0;right:0;z-index:8000;padding:11px 20px;background:rgba(10,10,9,0.97);border-bottom:1px solid rgba(212,175,55,0.25);display:flex;align-items:center;justify-content:center;gap:9px;transform:translateY(-100%);transition:transform .35s ease;box-shadow:0 4px 20px rgba(0,0,0,0.5);}
 #offlineBanner.show{transform:translateY(0);}
 .offline-dot{width:7px;height:7px;border-radius:50%;background:#888;flex-shrink:0;}
 .offline-txt{font-size:12.5px;color:var(--iv3);letter-spacing:.3px;}
-
-/* ══════════════ ERROR / RETRY SCREEN ══════════════ */
-#errorScreen{
-  display:none;position:fixed;inset:0;z-index:600;
-  background:var(--obs);
-  flex-direction:column;align-items:center;justify-content:center;
-  padding:40px 32px;text-align:center;
-}
+/* ══ ERROR SCREEN ══ */
+#errorScreen{display:none;position:fixed;inset:0;z-index:600;background:var(--obs);flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center;}
 #errorScreen.active{display:flex;}
-.err-icon{
-  width:72px;height:72px;border-radius:50%;
-  background:radial-gradient(circle at 38% 30%,#1a1a18,#0e0e0d);
-  border:1px solid rgba(212,175,55,0.2);
-  display:flex;align-items:center;justify-content:center;
-  margin-bottom:28px;
-  box-shadow:0 8px 28px rgba(0,0,0,0.6);
-}
-.err-icon .icon{width:28px;height:28px;stroke:rgba(212,175,55,0.5);stroke-width:1.2;}
-.err-title{
-  font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;
-  color:var(--ivory);letter-spacing:.3px;margin-bottom:10px;
-}
+.err-icon{width:72px;height:72px;border-radius:50%;background:radial-gradient(circle at 38% 30%,#1a1a18,#0e0e0d);border:1px solid rgba(212,175,55,0.2);display:flex;align-items:center;justify-content:center;margin-bottom:28px;box-shadow:0 8px 28px rgba(0,0,0,0.6);}
+.err-icon svg{width:28px;height:28px;stroke:rgba(212,175,55,0.5);stroke-width:1.2;fill:none;}
+.err-title{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;color:var(--ivory);letter-spacing:.3px;margin-bottom:10px;}
 .err-sub{font-size:13px;color:var(--iv4);line-height:1.7;margin-bottom:36px;font-weight:300;}
-.retry-btn{
-  padding:16px 40px;background:var(--gs);border:none;border-radius:100px;
-  color:var(--obs);font-family:'Inter',sans-serif;
-  font-size:13px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;
-  cursor:pointer;
-  box-shadow:0 1px 0 rgba(244,232,160,0.34) inset,0 -1px 0 rgba(0,0,0,0.2) inset,var(--sg);
-  transition:transform .18s ease;
-}
+.retry-btn{padding:16px 40px;background:var(--gs);border:none;border-radius:100px;color:var(--obs);font-family:'Inter',sans-serif;font-size:13px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;cursor:pointer;transition:transform .18s ease;}
 .retry-btn:active{transform:scale(0.96);}
-
-/* ══════════════ PWA INSTALL BANNER ══════════════ */
-#installBanner{
-  display:none;position:fixed;bottom:108px;left:18px;right:18px;z-index:190;
-  background:rgba(10,10,9,0.97);
-  border:1px solid rgba(212,175,55,0.28);border-radius:20px;
-  padding:16px 18px;
-  flex-direction:row;align-items:center;gap:14px;
-  box-shadow:0 8px 32px rgba(0,0,0,0.6),0 1px 0 rgba(244,232,160,0.06) inset;
-  animation:bannerUp .4s var(--es);
-}
-@keyframes bannerUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-.pwa-ico{
-  width:44px;height:44px;border-radius:12px;flex-shrink:0;
-  background:var(--gs);
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 14px rgba(212,175,55,0.28);
-}
-.pwa-ico .icon{width:20px;height:20px;stroke:var(--obs);stroke-width:1.8;}
+/* ══ PWA BANNER ══ */
+#installBanner{display:none;position:fixed;bottom:108px;left:18px;right:18px;z-index:190;background:rgba(10,10,9,0.97);border:1px solid rgba(212,175,55,0.28);border-radius:20px;padding:16px 18px;flex-direction:row;align-items:center;gap:14px;box-shadow:0 8px 32px rgba(0,0,0,0.6);}
+.pwa-ico{width:44px;height:44px;border-radius:12px;flex-shrink:0;background:var(--gs);display:flex;align-items:center;justify-content:center;}
+.pwa-ico svg{width:20px;height:20px;stroke:var(--obs);stroke-width:1.8;fill:none;}
 .pwa-txt{flex:1;min-width:0;}
 .pwa-title{font-size:13px;font-weight:500;color:var(--ivory);letter-spacing:.2px;}
 .pwa-sub{font-size:11px;color:var(--iv4);margin-top:2px;}
-.pwa-btn{
-  padding:9px 16px;background:var(--gs);border:none;border-radius:100px;
-  color:var(--obs);font-size:11.5px;font-weight:600;letter-spacing:.5px;
-  cursor:pointer;flex-shrink:0;white-space:nowrap;
-  box-shadow:0 1px 0 rgba(244,232,160,0.3) inset;
-  transition:transform .15s ease;
-}
+.pwa-btn{padding:9px 16px;background:var(--gs);border:none;border-radius:100px;color:var(--obs);font-size:11.5px;font-weight:600;letter-spacing:.5px;cursor:pointer;flex-shrink:0;white-space:nowrap;transition:transform .15s ease;}
 .pwa-btn:active{transform:scale(0.95);}
-.pwa-close{
-  width:28px;height:28px;border-radius:50%;border:1px solid rgba(247,245,240,0.1);
-  background:none;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  color:var(--iv4);flex-shrink:0;transition:background .15s ease;
-}
-.pwa-close:active{background:var(--stone);}
-.pwa-close .icon{width:12px;height:12px;}
+.pwa-close{width:28px;height:28px;border-radius:50%;border:1px solid rgba(247,245,240,0.1);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--iv4);flex-shrink:0;}
+.pwa-close svg{width:12px;height:12px;stroke:currentColor;stroke-width:2;fill:none;}
+/* ══ TOAST ══ */
+#toast{position:fixed;bottom:110px;left:50%;transform:translateX(-50%) translateY(20px);z-index:9000;background:rgba(15,15,14,0.97);border:1px solid rgba(212,175,55,0.35);border-radius:100px;padding:13px 24px;font-size:13px;color:var(--ivory);white-space:nowrap;opacity:0;transition:opacity .25s ease,transform .25s ease;pointer-events:none;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
 </head>
 <body>
 
 <!-- SPLASH -->
 
-<!-- OFFLINE BANNER -->
-<div id="offlineBanner">
-  <div class="offline-dot"></div>
-  <span class="offline-txt">Internet aloqasi yo'q</span>
-</div>
-
-<!-- ERROR / RETRY SCREEN -->
+<div id="offlineBanner"><div class="offline-dot"></div><span class="offline-txt">Internet aloqasi yo'q</span></div>
 <div id="errorScreen">
-  <div class="err-icon">
-    <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-  </div>
+  <div class="err-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
   <div class="err-title">Yuklab bo'lmadi</div>
-  <div class="err-sub" id="errorMsg">Menyu yuklanmadi.<br>Internetni tekshiring va qayta urinib ko'ring.</div>
+  <div class="err-sub" id="errorMsg">Menyu yuklanmadi. Internetni tekshiring va qayta urinib ko'ring.</div>
   <button class="retry-btn" onclick="retryLoad()">Qayta urinish</button>
 </div>
-
-<!-- PWA INSTALL BANNER -->
 <div id="installBanner">
-  <div class="pwa-ico">
-    <svg class="icon" viewBox="0 0 24 24"><path d="M12 2v13M8 11l4 4 4-4M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2"/></svg>
-  </div>
-  <div class="pwa-txt">
-    <div class="pwa-title" id="pwaInstallTitle">Ilovani o'rnating</div>
-    <div class="pwa-sub">Tezroq ishlaydi, offline ham</div>
-  </div>
+  <div class="pwa-ico"><svg viewBox="0 0 24 24"><path d="M12 2v13M8 11l4 4 4-4M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2"/></svg></div>
+  <div class="pwa-txt"><div class="pwa-title" id="pwaInstallTitle">Ilovani o'rnating</div><div class="pwa-sub">Tezroq ishlaydi</div></div>
   <button class="pwa-btn" onclick="installPWA()">O'rnatish</button>
-  <button class="pwa-close" onclick="dismissInstall()">
-    <svg class="icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
-  </button>
+  <button class="pwa-close" onclick="dismissInstall()"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
 </div>
+<div id="toast"></div>
 
 <div id="splash">
   <div class="spl-halo"></div>
@@ -1204,7 +1120,7 @@ async function loadMenu(){
     if(restaurant.welcome_text){document.getElementById('welcomeText').textContent=restaurant.welcome_text;document.getElementById('welcomeLine').style.display='block';}
     if(tableNumber){document.getElementById('tableBadgeText').textContent='Stol №'+tableNumber;document.getElementById('tableBadge').style.display='inline-flex';await resolveTableId();}
     renderPopular();renderCategories();renderMenu();
-    const pi=document.getElementById('pwaInstallTitle');if(pi&&restaurant.name)pi.textContent=restaurant.name+' ilovasini o\'rnating';
+    const pi=document.getElementById('pwaInstallTitle');if(pi&&restaurant.name)pi.textContent=restaurant.name+" ilovasini o'rnating";
     setTimeout(()=>{
       document.getElementById('splash').classList.add('out');
       setTimeout(()=>{
@@ -1466,50 +1382,32 @@ function showSuccess(orderId){
 function backToMenu(){document.getElementById('successScreen').classList.remove('active');renderMenu();}
 
 
-
-// ── Offline detection ──
-function updateOnlineStatus(){
-  const b=document.getElementById('offlineBanner');
-  if(!navigator.onLine){b.classList.add('show');}
-  else{b.classList.remove('show');}
-}
+// ── Offline ──
+function updateOnlineStatus(){const b=document.getElementById('offlineBanner');if(!navigator.onLine){b.classList.add('show');}else{b.classList.remove('show');}}
 window.addEventListener('online',updateOnlineStatus);
 window.addEventListener('offline',updateOnlineStatus);
 
-// ── Error / Retry ──
+// ── Error/Retry ──
 function showError(msg){
-  // Скрываем splash
+  console.error('[Taomly]',msg);
   const s=document.getElementById('splash');if(s)s.style.display='none';
-  if(msg)document.getElementById('errorMsg').innerHTML=msg+'<br><br>Internetni tekshiring va qayta urinib ko'ring.';
-  document.getElementById('errorScreen').classList.add('active');
+  const h=document.getElementById('heroScreen');if(h)h.classList.remove('active');
+  const em=document.getElementById('errorMsg');
+  if(em)em.textContent=(msg||'Yuklab bolmadi')+' — Internetni tekshiring va qayta urinib koring.';
+  const es=document.getElementById('errorScreen');if(es){es.style.display='flex';es.classList.add('active');}
 }
 function retryLoad(){
-  const es=document.getElementById('errorScreen');
-  if(es){es.classList.remove('active');es.style.display='none';}
-  // Показываем splash снова
-  const s=document.getElementById('splash');
-  if(s){s.style.display='flex';s.style.animation='';s.classList.remove('out');s.style.opacity='1';}
+  const es=document.getElementById('errorScreen');if(es){es.classList.remove('active');es.style.display='none';}
+  const s=document.getElementById('splash');if(s){s.style.display='flex';s.style.opacity='1';s.classList.remove('out');}
   loadMenu();
 }
 
-// ── PWA Install ──
-function installPWA(){
-  if(!_dip)return;
-  _dip.prompt();
-  _dip.userChoice.then(()=>{_dip=null;dismissInstall();});
-}
-function dismissInstall(){
-  const b=document.getElementById('installBanner');
-  if(b){b.style.transition='opacity .3s ease';b.style.opacity='0';setTimeout(()=>b.style.display='none',300);}
-}
+// ── PWA dismissInstall ──
+function dismissInstall(){const b=document.getElementById('installBanner');if(b){b.style.opacity='0';setTimeout(()=>b.style.display='none',300);}}
 
+// ── Toast ──
 let _toastTimer=null;
-function showToast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
-  if(_toastTimer)clearTimeout(_toastTimer);
-  _toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
-}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');if(_toastTimer)clearTimeout(_toastTimer);_toastTimer=setTimeout(()=>t.classList.remove('show'),2800);}
 
 window.addEventListener('DOMContentLoaded',()=>{
   const tg=window.Telegram?.WebApp;if(tg){tg.ready();tg.expand();}
@@ -1520,7 +1418,5 @@ let _dip=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();_dip=e;const b=document.getElementById('installBanner');if(b)b.style.display='flex';});
 window.addEventListener('appinstalled',()=>{_dip=null;const b=document.getElementById('installBanner');if(b)b.style.display='none';});
 </script>
-
-<div id="toast"></div>
 </body>
 </html>
