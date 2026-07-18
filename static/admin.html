@@ -76,7 +76,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 .stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--gl);border-bottom:1px solid var(--gl);}
 .stats-bar-card{background:rgba(5,5,5,0.97);padding:14px 10px;text-align:center;}
 .stats-bar-val{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;background:var(--gm);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
-.stats-bar-label{font-size:10px;color:var(--iv4);font-weight:500;margin-top:4px;letter-spacing:.5px;}
+.stats-bar-label{font-size:10px;color:var(--iv2);font-weight:500;margin-top:4px;letter-spacing:.5px;}
 
 /* ══ ORDER TABS ══ */
 .tabs{display:flex;background:rgba(10,10,9,0.97);border-bottom:1px solid var(--gl);overflow-x:auto;scrollbar-width:none;padding:0 12px;}
@@ -90,7 +90,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 @keyframes cardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .order-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
 .order-id{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:400;color:var(--ivory);}
-.order-time{font-size:11.5px;color:#9A9590;margin-top:2px;}
+.order-time{font-size:11.5px;color:var(--iv2);margin-top:2px;}
 
 /* STATUS BADGES */
 .status-badge{padding:5px 12px;border-radius:100px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:5px;letter-spacing:.3px;}
@@ -103,17 +103,17 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 .status-completed{background:rgba(74,72,68,0.3);color:var(--iv3);border:1px solid rgba(74,72,68,0.3);}.status-completed::before{background:var(--iv3);}
 .status-cancelled{background:rgba(176,28,28,0.12);color:#EF9A9A;border:1px solid rgba(176,28,28,0.2);}.status-cancelled::before{background:#EF9A9A;}
 
-.order-type{font-size:12px;color:var(--iv2);margin-bottom:10px;display:flex;align-items:center;gap:5px;}
+.order-type{font-size:12px;font-weight:500;color:var(--ivory);margin-bottom:10px;display:flex;align-items:center;gap:5px;}
 .order-type .icon{width:12px;height:12px;}
 .client-info{margin-bottom:12px;}
-.client-name{font-size:15px;font-weight:500;color:var(--ivory);}
+.client-name{font-size:15px;font-weight:600;color:var(--ivory);}
 .client-phone{font-size:13px;color:var(--g2);margin-top:3px;}
-.client-address{font-size:12.5px;color:#9A9590;margin-top:2px;}
+.client-address{font-size:12.5px;color:var(--iv2);margin-top:2px;}
 .items-list{border-top:1px solid rgba(247,245,240,0.05);padding-top:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:6px;}
-.item-row{display:flex;justify-content:space-between;font-size:12.5px;color:var(--iv2);}
-.item-row span:last-child{color:var(--iv4);}
+.item-row{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ivory);}
+.item-row span:last-child{color:var(--iv2);}
 .order-total{display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(247,245,240,0.05);padding-top:12px;margin-bottom:14px;}
-.order-total-label{font-size:12px;color:var(--iv2);letter-spacing:.3px;}
+.order-total-label{font-size:12px;color:var(--ivory);letter-spacing:.3px;}
 .order-total-val{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;background:var(--gm);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
 .action-btns{display:flex;gap:8px;margin-bottom:10px;}
 .btn{flex:1;padding:13px;border:none;border-radius:100px;font-size:13px;font-weight:600;cursor:pointer;transition:transform .12s;font-family:'Inter',sans-serif;letter-spacing:.4px;}
