@@ -7,6 +7,10 @@ config.py — Taomly Platform
   - Устраняет дублирование логики WEBHOOK_SECRET в api.py и agency.py
   - Все переменные проверяются при старте — не в рантайме
   - Единое место для документирования всех env-переменных
+
+Изменения v6 (Security Patch):
+  - SUPERADMIN_EMAIL перенесён из os.getenv в superadmin.py → settings
+  - SUPERADMIN_PASSWORD перенесён сюда как _require() — старт без него невозможен
 """
 
 import hashlib
@@ -47,6 +51,13 @@ class _Settings:
     SECRET_KEY: str = _require("SECRET_KEY")
     FERNET_KEY: str = _validate_fernet_key(_require("FERNET_KEY"))
 
+    # SUPERADMIN_PASSWORD обязателен — старт без него невозможен.
+    # Генерация: openssl rand -hex 32
+    SUPERADMIN_PASSWORD: str = _require("SUPERADMIN_PASSWORD")
+
+    # SUPERADMIN_EMAIL: дефолт допустим, но рекомендуется переопределить.
+    SUPERADMIN_EMAIL: str = os.getenv("SUPERADMIN_EMAIL", "superadmin@taomly.uz")
+
     # ── Опциональные с дефолтами ───────────────────────────────────────
     WEBHOOK_URL: str = os.getenv("WEBHOOK_URL", "")
     BOT_TOKEN: str = os.getenv("BOT_TOKEN", "")
@@ -78,6 +89,9 @@ class _Settings:
     # Rate limiting (requests per minute for sensitive endpoints)
     RATE_LIMIT_LOGIN: str = os.getenv("RATE_LIMIT_LOGIN", "10/minute")
     RATE_LIMIT_API: str = os.getenv("RATE_LIMIT_API", "120/minute")
+
+    # Rate limiting для суперадмин-логина (жёстче обычного)
+    RATE_LIMIT_SUPERADMIN_LOGIN: str = os.getenv("RATE_LIMIT_SUPERADMIN_LOGIN", "5/minute")
 
 
 settings = _Settings()
