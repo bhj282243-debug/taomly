@@ -7,6 +7,12 @@ routers/restaurants.py — Taomly Platform
   - get_restaurant_by_slug: убраны недоступные продукты из публичного ответа
     (is_available фильтр был, оставлен без изменений)
   - Структура ответа сохранена — фронтенд не сломается
+
+Изменения v6 (Badge Patch C-5, C-6):
+  - Добавлены badge-поля в публичный ответ продуктов:
+    is_bestseller, is_new, is_spicy, is_chef_choice, is_popular
+  - is_popular = is_bestseller (алиас для обратной совместимости с index.html)
+  - Фронтенд теперь получает реальные данные из БД вместо #hashtag парсинга
 """
 
 import logging
@@ -33,7 +39,7 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
     Используется фронтендом при загрузке Mini App:
       1. Получает branding (цвета, лого, welcome_text)
       2. Получает restaurant.id для заголовка X-Restaurant-Id
-      3. Получает меню (только доступные продукты)
+      3. Получает меню (только доступные продукты) с badge-полями
 
     Авторизация не требуется — публичный эндпоинт.
     telegram_bot_token_encrypted НЕ включается в ответ — защита токена.
@@ -86,6 +92,15 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
                         "photo_url": p.photo_url,
                         "is_available": p.is_available,
                         "sort_order": p.sort_order,
+                        # Badge-поля из БД (C-6)
+                        # Раньше бейджи кодировались как #hashtag в description —
+                        # теперь это отдельные булевые колонки.
+                        "is_bestseller": p.is_bestseller,
+                        "is_new": p.is_new,
+                        "is_spicy": p.is_spicy,
+                        "is_chef_choice": p.is_chef_choice,
+                        # is_popular — алиас is_bestseller для index.html (C-5)
+                        "is_popular": p.is_bestseller,
                     }
                     for p in sorted(cat.products, key=lambda x: x.sort_order)
                     if p.is_available
