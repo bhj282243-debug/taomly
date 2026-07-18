@@ -67,7 +67,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 /* ══ MAIN TABS ══ */
 .main-tabs{display:flex;background:rgba(5,5,5,0.97);border-bottom:1px solid var(--gl);padding:0 8px;gap:2px;overflow-x:auto;scrollbar-width:none;}
 .main-tabs::-webkit-scrollbar{display:none;}
-.main-tab{flex-shrink:0;padding:14px 14px;font-size:12.5px;font-weight:500;color:var(--iv3);cursor:pointer;border-bottom:1.5px solid transparent;transition:color .18s,border-color .18s;white-space:nowrap;letter-spacing:.3px;}
+.main-tab{flex-shrink:0;padding:14px 14px;font-size:12.5px;font-weight:500;color:var(--iv2);cursor:pointer;border-bottom:1.5px solid transparent;transition:color .18s,border-color .18s;white-space:nowrap;letter-spacing:.3px;}
 .main-tab.active{color:var(--g2);border-bottom-color:var(--g2);}
 .page{display:none;}
 .page.active{display:block;}
@@ -81,7 +81,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 /* ══ ORDER TABS ══ */
 .tabs{display:flex;background:rgba(10,10,9,0.97);border-bottom:1px solid var(--gl);overflow-x:auto;scrollbar-width:none;padding:0 12px;}
 .tabs::-webkit-scrollbar{display:none;}
-.tab{flex-shrink:0;padding:12px 14px;font-size:12px;font-weight:500;color:var(--iv4);cursor:pointer;border-bottom:1.5px solid transparent;white-space:nowrap;transition:color .15s,border-color .15s;letter-spacing:.3px;}
+.tab{flex-shrink:0;padding:12px 14px;font-size:12px;font-weight:500;color:var(--iv2);cursor:pointer;border-bottom:1.5px solid transparent;white-space:nowrap;transition:color .15s,border-color .15s;letter-spacing:.3px;}
 .tab.active{color:var(--ivory);border-bottom-color:var(--g2);}
 .content{padding:16px;max-width:600px;margin:0 auto;}
 
@@ -90,7 +90,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 @keyframes cardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .order-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
 .order-id{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:400;color:var(--ivory);}
-.order-time{font-size:11.5px;color:var(--iv4);margin-top:2px;}
+.order-time{font-size:11.5px;color:#9A9590;margin-top:2px;}
 
 /* STATUS BADGES */
 .status-badge{padding:5px 12px;border-radius:100px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:5px;letter-spacing:.3px;}
@@ -103,23 +103,23 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 .status-completed{background:rgba(74,72,68,0.3);color:var(--iv3);border:1px solid rgba(74,72,68,0.3);}.status-completed::before{background:var(--iv3);}
 .status-cancelled{background:rgba(176,28,28,0.12);color:#EF9A9A;border:1px solid rgba(176,28,28,0.2);}.status-cancelled::before{background:#EF9A9A;}
 
-.order-type{font-size:12px;color:var(--iv4);margin-bottom:10px;display:flex;align-items:center;gap:5px;}
+.order-type{font-size:12px;color:var(--iv2);margin-bottom:10px;display:flex;align-items:center;gap:5px;}
 .order-type .icon{width:12px;height:12px;}
 .client-info{margin-bottom:12px;}
 .client-name{font-size:15px;font-weight:500;color:var(--ivory);}
 .client-phone{font-size:13px;color:var(--g2);margin-top:3px;}
-.client-address{font-size:12.5px;color:var(--iv3);margin-top:2px;}
+.client-address{font-size:12.5px;color:#9A9590;margin-top:2px;}
 .items-list{border-top:1px solid rgba(247,245,240,0.05);padding-top:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:6px;}
 .item-row{display:flex;justify-content:space-between;font-size:12.5px;color:var(--iv2);}
 .item-row span:last-child{color:var(--iv4);}
 .order-total{display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(247,245,240,0.05);padding-top:12px;margin-bottom:14px;}
-.order-total-label{font-size:12px;color:var(--iv3);letter-spacing:.3px;}
+.order-total-label{font-size:12px;color:var(--iv2);letter-spacing:.3px;}
 .order-total-val{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;background:var(--gm);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
 .action-btns{display:flex;gap:8px;margin-bottom:10px;}
 .btn{flex:1;padding:13px;border:none;border-radius:100px;font-size:13px;font-weight:600;cursor:pointer;transition:transform .12s;font-family:'Inter',sans-serif;letter-spacing:.4px;}
 .btn:active{transform:scale(0.97);}
 .btn-accept{background:var(--gs);color:var(--obs);box-shadow:0 1px 0 rgba(244,232,160,0.3) inset,var(--sg);}
-.btn-cancel{background:rgba(247,245,240,0.06);color:var(--iv3);border:1px solid rgba(247,245,240,0.08);}
+.btn-cancel{background:rgba(247,245,240,0.08);color:var(--iv2);border:1px solid rgba(247,245,240,0.18);}
 .btn-delete{width:100%;padding:11px;background:transparent;color:rgba(239,154,154,0.7);border:1px solid rgba(176,28,28,0.2);border-radius:100px;font-size:12.5px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;letter-spacing:.3px;}
 .btn-delete:active{background:rgba(176,28,28,0.1);color:#EF9A9A;border-color:rgba(176,28,28,0.35);}
 
@@ -828,7 +828,15 @@ const NEXT_LABELS={new:'Qabul qilish',accepted:'Tayyorlashni boshlash',preparing
 
 function fmt(p){return Number(p).toLocaleString('uz-UZ')+" so'm";}
 function fmtShort(p){if(p>=1000000)return(p/1000000).toFixed(1)+' mln';if(p>=1000)return(p/1000).toFixed(0)+' ming';return p.toLocaleString('uz-UZ');}
-function timeAgo(dateStr){const diff=Math.floor((Date.now()-new Date(dateStr))/60000);if(diff<1)return'Hozirgina';if(diff<60)return diff+' daqiqa oldin';return Math.floor(diff/60)+' soat oldin';}
+function timeAgo(dateStr){
+  // Сервер хранит UTC, добавляем Z если нет timezone
+  const s=dateStr.endsWith('Z')||dateStr.includes('+')?dateStr:dateStr+'Z';
+  const diff=Math.floor((Date.now()-new Date(s))/60000);
+  if(diff<1)return'Hozirgina';
+  if(diff<60)return diff+' daqiqa oldin';
+  if(diff<1440)return Math.floor(diff/60)+' soat oldin';
+  return Math.floor(diff/1440)+' kun oldin';
+}
 
 function showOrdersSkeleton(){
   document.getElementById('orders-content').innerHTML=[1,2,3].map(()=>`
