@@ -1484,10 +1484,11 @@ function showError(msg){
   document.getElementById('errorScreen').classList.add('active');
 }
 function retryLoad(){
-  document.getElementById('errorScreen').classList.remove('active');
+  const es=document.getElementById('errorScreen');
+  if(es){es.classList.remove('active');es.style.display='none';}
   // Показываем splash снова
   const s=document.getElementById('splash');
-  if(s){s.style.display='flex';s.classList.remove('out');}
+  if(s){s.style.display='flex';s.style.animation='';s.classList.remove('out');s.style.opacity='1';}
   loadMenu();
 }
 
