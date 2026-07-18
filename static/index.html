@@ -1139,21 +1139,25 @@ function renderMenu(){
   });
 }
 
-const BM={bestseller:'Bestseller',chef:"Chef's Choice",new:'New Arrival',spicy:'🌶 Spicy'};
-function xBadge(d){
-  if(!d)return{badge:null,text:''};
-  const m=d.match(/#(bestseller|chef|new|spicy)\b/i);
-  if(!m)return{badge:null,text:d};
-  return{badge:BM[m[1].toLowerCase()],text:d.replace(m[0],'').trim()};
+// Бейджи читаются из реальных полей API (C-5, C-6, C-7).
+// Старый механизм #hashtag в description — удалён.
+// Приоритет: bestseller > chef_choice > new > spicy.
+function getBadge(p){
+  if(p.is_bestseller)return'Bestseller';
+  if(p.is_chef_choice)return"Chef's Choice";
+  if(p.is_new)return'New Arrival';
+  if(p.is_spicy)return'🌶 Spicy';
+  return null;
 }
 
 function makeCard(p){
   const div=document.createElement('div');
   div.id='card-'+p.id;div.style.animationDelay=(_ai++%12)*0.06+'s';
   const qty=cart[p.id]?.qty||0;
-  const{badge,text:dt}=xBadge(p.description);
+  const badge=getBadge(p);
   const bh=badge?`<div class="pphoto-badge">${badge}</div>`:'';
   const bi=badge?`<span class="pbadge">${badge}</span>`:'';
+  const dt=p.description||'';
 
   if(p.photo_url){
     div.className='pcard has-photo';div.onclick=()=>openProductModal(p.id);
@@ -1226,7 +1230,7 @@ let productModalCurrentId=null;
 function openProductModal(id){
   const p=findProduct(id);if(!p)return;
   productModalCurrentId=id;
-  const{badge,text:dt}=xBadge(p.description);
+  const badge=getBadge(p);
   const ph=document.getElementById('productModalPhoto');
   if(p.photo_url){
     ph.className='modal-photo tall';
@@ -1237,7 +1241,7 @@ function openProductModal(id){
   }
   document.getElementById('productModalBadge').innerHTML=badge?`<span>${badge}</span>`:'';
   document.getElementById('productModalName').textContent=p.name;
-  document.getElementById('productModalDesc').textContent=dt||'';
+  document.getElementById('productModalDesc').textContent=p.description||'';
   document.getElementById('productModalPrice').textContent=fmtNum(p.price);
   refreshModalCtrl();
   document.getElementById('productModalOverlay').classList.add('active');
