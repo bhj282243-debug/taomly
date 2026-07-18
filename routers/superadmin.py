@@ -6,10 +6,18 @@ Super Admin Console: управление всей платформой.
   - Dashboard: агентства, рестораны, MRR, статистика
   - Управление агентствами: CRUD, блокировка, просмотр ресторанов, impersonate
   - Управление ресторанами: список всех, поиск, фильтр, заморозка, перенос
+
+Изменения v6 (Security Patch C-1, C-2, C-3):
+  C-1: hmac.compare_digest() вместо != для сравнения пароля суперадмина
+       — устраняет timing attack.
+  C-2: @limiter.limit("5/minute") на /login
+       — brute force теперь ограничен.
+  C-3: SUPERADMIN_EMAIL и SUPERADMIN_PASSWORD читаются из settings
+       — убран прямой os.getenv(), убран import os.
 """
 
+import hmac
 import logging
-import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -21,6 +29,7 @@ from jose import JWTError, jwt
 from auth import create_agency_token, hash_password
 from config import settings
 from database import get_db
+from limiter import limiter
 from models import Agency, Restaurant, Subscription, SubscriptionPlan
 
 logger = logging.getLogger(__name__)
@@ -58,21 +67,33 @@ def get_current_superadmin(request: Request):
 
 
 @router.post("/login")
+@limiter.limit(settings.RATE_LIMIT_SUPERADMIN_LOGIN)
 def superadmin_login(data: dict, request: Request):
     """
     Вход суперадмина.
-    Логин/пароль берётся из env: SUPERADMIN_EMAIL / SUPERADMIN_PASSWORD
+
+    Безопасность:
+      - Пароль сравнивается через hmac.compare_digest() — защита от timing attack (C-1).
+      - Rate limit 5/minute — защита от brute force (C-2).
+      - Credentials читаются из settings (config.py), не из os.getenv (C-3).
     """
-    sa_email = os.getenv("SUPERADMIN_EMAIL", "superadmin@taomly.uz")
-    sa_password = os.getenv("SUPERADMIN_PASSWORD", "")
+    incoming_email = data.get("email", "")
+    incoming_password = data.get("password", "")
 
-    if not sa_password:
-        raise HTTPException(status_code=500, detail="SUPERADMIN_PASSWORD не задан в env")
+    # hmac.compare_digest требует строки одинакового типа.
+    # Всегда сравниваем оба поля — даже если email не совпал,
+    # чтобы не давать информацию по времени ответа.
+    email_ok = hmac.compare_digest(incoming_email, settings.SUPERADMIN_EMAIL)
+    password_ok = hmac.compare_digest(incoming_password, settings.SUPERADMIN_PASSWORD)
 
-    if data.get("email") != sa_email or data.get("password") != sa_password:
-        raise HTTPException(status_code=401, detail="Неверный email или пароль")
+    if not email_ok or not password_ok:
+        logger.warning(
+            "Superadmin login failed: неверные credentials от IP %s",
+            request.client.host if request.client else "unknown",
+        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный email или пароль")
 
-    logger.info("Superadmin вошёл с IP: %s", request.client.host)
+    logger.info("Superadmin вошёл с IP: %s", request.client.host if request.client else "unknown")
     return {"access_token": _create_superadmin_token()}
 
 
