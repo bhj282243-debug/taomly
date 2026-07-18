@@ -231,13 +231,14 @@ def verify_telegram_init_data(init_data: str, bot_token: str) -> dict:
 # DEPENDS — Telegram Mini App клиент
 # ──────────────────────────────────────────
 def get_telegram_user(
-    x_init_data: str = Header(..., alias="X-Telegram-Init-Data"),
+    x_init_data: Optional[str] = Header(None, alias="X-Telegram-Init-Data"),
     x_restaurant_id: int = Header(..., alias="X-Restaurant-Id"),
     db: Session = Depends(get_db),
 ) -> TelegramUser:
     """
     FastAPI-зависимость для клиентских роутеров Mini App.
     Загружает ресторан, расшифровывает токен бота, верифицирует initData.
+    Если initData отсутствует (браузер/PWA) — создаём гостевого пользователя.
     """
     restaurant = db.query(Restaurant).filter(
         Restaurant.id == x_restaurant_id,
@@ -250,16 +251,26 @@ def get_telegram_user(
             detail="Ресторан не найден",
         )
 
-    if not restaurant.telegram_bot_token_encrypted:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Telegram Bot не настроен для этого ресторана",
-        )
+    # Если initData есть — верифицируем через Telegram HMAC
+    if x_init_data:
+        if not restaurant.telegram_bot_token_encrypted:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Telegram Bot не настроен для этого ресторана",
+            )
+        bot_token = decrypt_token(restaurant.telegram_bot_token_encrypted)
+        user_dict = verify_telegram_init_data(x_init_data, bot_token)
+        return TelegramUser.from_dict(user_dict, restaurant)
 
-    bot_token = decrypt_token(restaurant.telegram_bot_token_encrypted)
-    user_dict = verify_telegram_init_data(x_init_data, bot_token)
-
-    return TelegramUser.from_dict(user_dict, restaurant)
+    # Без initData — гостевой пользователь (браузер / PWA)
+    guest_dict = {
+        "id": 0,
+        "first_name": "Guest",
+        "last_name": None,
+        "username": None,
+        "language_code": "uz",
+    }
+    return TelegramUser.from_dict(guest_dict, restaurant)
 
 
 # ──────────────────────────────────────────
