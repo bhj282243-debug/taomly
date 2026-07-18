@@ -695,13 +695,13 @@ async function handlePhotoFile(input){
 
 async function uploadToTelegraph(file){
   const formData=new FormData();
-  formData.append('file',file,'photo'+getExt(file.type));
-  const res=await fetch('https://telegra.ph/upload',{method:'POST',body:formData});
-  if(!res.ok)throw new Error('Telegraph server xatosi');
-  const data=await res.json();
-  if(data.error)throw new Error(data.error);
-  if(!data[0]||!data[0].src)throw new Error("Noto'g'ri javob");
-  return 'https://telegra.ph'+data[0].src;
+  formData.append('reqtype','fileupload');
+  formData.append('fileToUpload',file,'photo'+getExt(file.type));
+  const res=await fetch('https://catbox.moe/user/api.php',{method:'POST',body:formData});
+  if(!res.ok)throw new Error('Catbox server xatosi');
+  const url=await res.text();
+  if(!url||!url.startsWith('https://'))throw new Error('Noto\'g\'ri javob: '+url.slice(0,60));
+  return url.trim();
 }
 
 function getExt(mimeType){
