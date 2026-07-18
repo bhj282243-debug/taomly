@@ -1319,7 +1319,7 @@ async function submitOrder(){
   const payload={client_name:name||null,client_phone:phone||null,order_type:orderType,address:orderType==='delivery'?address:null,table_id:orderType==='dine_in'?tableDbId:null,comment:comment||null,items:cartItems().map(i=>({product_id:i.id,quantity:i.qty}))};
   try{
     const res=await fetch(`${API_BASE}/api/orders/`,{method:'POST',headers:Object.assign({'Content-Type':'application/json','X-Restaurant-Id':String(restaurant.id)},initData?{'X-Telegram-Init-Data':initData}:{}),body:JSON.stringify(payload)});
-    if(!res.ok){const e=await res.json();throw new Error(e.detail||'Xato');}
+    if(!res.ok){const e=await res.json();const msg=Array.isArray(e.detail)?e.detail.map(x=>x.msg||JSON.stringify(x)).join(', '):(typeof e.detail==='string'?e.detail:JSON.stringify(e.detail)||'Xato');throw new Error(msg);}
     const order=await res.json();showSuccess(order.id);
   }catch(e){alert('Xato: '+e.message);btn.disabled=false;btn.textContent='Buyurtma berish';}
 }
