@@ -8,6 +8,10 @@ routers/agency.py — Taomly Platform
 
 Изменения v4 (Stage 3 Sprint 3.1):
   - Rate limiting на /register (5 req/hour per IP)
+
+Изменения v5 (Security):
+  - /logout и /restaurant-logout endpoints добавлены
+  - get_current_restaurant_admin импортирован для /restaurant-logout
 """
 
 import logging
@@ -21,6 +25,7 @@ from auth import (
     create_restaurant_token,
     encrypt_token,
     get_current_agency,
+    get_current_restaurant_admin,
     hash_password,
     verify_password,
 )
@@ -143,12 +148,35 @@ def login_restaurant_admin(
 
 
 # ──────────────────────────────────────────
-# ME
+# ME + LOGOUT
 # ──────────────────────────────────────────
 @router.get("/me", response_model=AgencyResponse)
 def get_agency_me(agency: Agency = Depends(get_current_agency)):
     """Возвращает данные текущего Agency Owner."""
     return agency
+
+
+@router.post("/logout")
+def logout_agency(agency: Agency = Depends(get_current_agency)):
+    """
+    Выход Agency Owner.
+
+    Stateless: клиент должен удалить токен на своей стороне.
+    JWT остаётся технически валидным до истечения (8 часов).
+    При появлении Redis — добавить jti в blacklist.
+    """
+    logger.info("Agency Owner вышел: agency_id=%s", agency.id)
+    return {"ok": True, "message": "Выход выполнен. Удалите токен на клиенте."}
+
+
+@router.post("/restaurant-logout")
+def logout_restaurant_admin(restaurant: Restaurant = Depends(get_current_restaurant_admin)):
+    """
+    Выход ресторанного администратора.
+    Stateless: клиент удаляет токен. Серверная инвалидация — в следующем этапе (Redis).
+    """
+    logger.info("Restaurant Admin вышел: restaurant_id=%s", restaurant.id)
+    return {"ok": True, "message": "Выход выполнен. Удалите токен на клиенте."}
 
 
 # ──────────────────────────────────────────
@@ -347,8 +375,6 @@ def update_restaurant(
             detail="Ошибка при обновлении ресторана",
         )
 
-    webhook_status = None
-    webhook_detail = None
     if token_changed:
         old_bot = handlers._BOT_CACHE.get(restaurant_id)
         if old_bot:
@@ -371,8 +397,6 @@ def update_restaurant(
             webhook_secret=settings.WEBHOOK_SECRET,
             restaurant_name=restaurant.name,
         )
-        webhook_status = "ok" if result.ok else "failed"
-        webhook_detail = result.detail
         if not result.ok:
             logger.warning(
                 "Token changed: webhook не зарегистрирован (restaurant_id=%s): %s",
