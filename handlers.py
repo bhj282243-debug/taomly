@@ -7,6 +7,9 @@ handlers.py — Taomly Platform
   - decrypt_token вызывается только при первом создании бота для ресторана.
   - notify_new_order: улучшен лог — добавлен restaurant.name для читаемости.
   - notify_client_accepted: принимает restaurant вторым аргументом (Multi-Tenant).
+
+Изменения v3 (Security):
+  - BOT_CACHE: задокументировано ограничение multi-worker.
 """
 
 import logging
@@ -31,6 +34,20 @@ platform_bot = telebot.TeleBot(_PLATFORM_BOT_TOKEN) if _PLATFORM_BOT_TOKEN else 
 # При текущем масштабе (Render Free, один воркер) dict достаточен.
 # ──────────────────────────────────────────
 _BOT_CACHE: Dict[int, telebot.TeleBot] = {}
+# ⚠️  АРХИТЕКТУРНОЕ ОГРАНИЧЕНИЕ:
+#     _BOT_CACHE — процесс-локальный dict. Работает корректно только при
+#     одном воркере uvicorn (--workers 1, текущая конфигурация).
+#
+#     При горизонтальном масштабировании (2+ инстансов Render / 2+ воркеров):
+#       - Каждый процесс имеет свой _BOT_CACHE.
+#       - invalidate_bot_cache() на инстансе A не очистит кэш на инстансе B.
+#       - Результат: бот одного ресторана может отправлять через старый токен.
+#
+#     Решение при масштабировании (этап 2):
+#       - Перенести токены в Redis (TTL 1 час).
+#       - Читать из Redis при каждом notify_* вызове (с in-memory LRU как L1).
+#
+#     До масштабирования: держать workers=1 в Dockerfile (текущая конфигурация).
 
 
 def get_restaurant_bot(restaurant) -> telebot.TeleBot:
@@ -87,8 +104,6 @@ def invalidate_bot_cache(restaurant_id: int) -> None:
 # ──────────────────────────────────────────
 # /start ДЛЯ РЕСТОРАННЫХ БОТОВ (Multi-Tenant)
 # ──────────────────────────────────────────
-# Базовый URL Mini App. Каждому ресторану добавляется ?slug=...,
-# поэтому один обработчик подходит для всех ресторанных ботов.
 _APP_BASE_URL = os.getenv("WEBHOOK_URL", "https://taomly.onrender.com").rstrip("/") + "/app"
 
 
@@ -132,14 +147,9 @@ def process_restaurant_webhook_update(restaurant, update_dict: dict) -> None:
     Обрабатывает входящий Telegram Update для конкретного ресторанного бота.
 
     Вызывается из эндпоинта POST /webhook/{slug} в api.py.
-    Каждый ресторан получает свой собственный /start с собственной
-    кнопкой Mini App (ссылка содержит slug этого ресторана).
     """
     bot = get_restaurant_bot(restaurant)
 
-    # Регистрируем хендлеры один раз на конкретный экземпляр TeleBot.
-    # Используем замыкание restaurant — у каждого бота из _BOT_CACHE
-    # свои хендлеры, привязанные к своему ресторану.
     if not getattr(bot, "_taomly_handlers_registered", False):
 
         @bot.message_handler(commands=["start"])
@@ -301,8 +311,7 @@ def notify_client_accepted(order, restaurant) -> None:
     """
     Отправляет клиенту уведомление что заказ принят рестораном.
 
-    Multi-Tenant: использует бот конкретного ресторана — клиент получает
-    сообщение от того же бота, через которого делал заказ.
+    Multi-Tenant: использует бот конкретного ресторана.
     Вызывается через BackgroundTasks — не блокирует HTTP-ответ.
     """
     if not order.client_telegram_id:
