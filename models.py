@@ -13,6 +13,9 @@ SQLAlchemy ORM-модели для Multi-Tenant White Label архитектур
     L-2: без документации следующий разработчик не поймёт единицы измерения
 
   Миграция для существующей БД — MIGRATION_badges.sql
+
+Изменения v4 (Security):
+  - Product: добавлено is_popular (горизонтальный скролл "Популярное")
 """
 
 from sqlalchemy import (
@@ -61,9 +64,6 @@ class Restaurant(Base):
     )
 
     id          = Column(BigInteger, primary_key=True)
-
-    # NOT NULL: ресторан обязан принадлежать агентству.
-    # RESTRICT: нельзя удалить агентство, пока у него есть рестораны.
     agency_id   = Column(
         BigInteger,
         ForeignKey("agencies.id", ondelete="RESTRICT"),
@@ -86,7 +86,6 @@ class Restaurant(Base):
         nullable=False,
     )
 
-    # Аутентификация ресторанного администратора
     admin_password_hash = Column(String(255), nullable=True)
 
     # White Label Branding
@@ -97,8 +96,7 @@ class Restaurant(Base):
     welcome_text    = Column(Text, nullable=True)
     custom_domain   = Column(String(255), nullable=True, unique=True, index=True)
 
-    # Telegram White Label: у каждого ресторана свой бот.
-    # Токен хранится зашифрованным через Fernet.
+    # Telegram White Label
     telegram_bot_token_encrypted = Column(Text, nullable=True)
     telegram_dispatcher_id       = Column(BigInteger, nullable=True)
 
@@ -123,8 +121,6 @@ class User(Base):
             "role IN ('admin','owner','dispatcher','client')",
             name="check_user_role",
         ),
-        # Multi-Tenant: один Telegram-пользователь может быть клиентом
-        # нескольких ресторанов — уникальность только внутри ресторана.
         UniqueConstraint("restaurant_id", "telegram_id", name="uq_user_restaurant_telegram"),
         Index("ix_users_restaurant_role", "restaurant_id", "role"),
     )
@@ -200,25 +196,20 @@ class Product(Base):
 
     # ЦЕНА: хранится в целых сомах (UZS).
     # Например: price=45000 → 45 000 сум.
-    # Отображать: f"{price:,} so'm"
-    # При выходе на международный рынок (Этап 3+) заменить на Numeric(12, 2)
-    # и добавить колонку currency_code.
     price        = Column(Integer, nullable=False)
 
     photo_url    = Column(Text)
     is_available = Column(Boolean, default=True, nullable=False)
     sort_order   = Column(Integer, default=0, nullable=False)
 
-    # ── Badges (M-2) ──────────────────────────────────────────────────
-    # Заменяют #хэштеги в description. Отдельные булевые колонки:
-    #   - быстрый SQL-запрос без LIKE '%#bestseller%'
-    #   - готовы к AI-аналитике Этапа 2 (топ блюд, рекомендации)
-    #   - управляются через PATCH /api/menu/products/{id}
-    # Миграция существующей БД: MIGRATION_badges.sql
-    is_bestseller = Column(Boolean, default=False, nullable=False, server_default="false")
-    is_new        = Column(Boolean, default=False, nullable=False, server_default="false")
-    is_spicy      = Column(Boolean, default=False, nullable=False, server_default="false")
+    # ── Badges ────────────────────────────────────────────────────────
+    is_bestseller  = Column(Boolean, default=False, nullable=False, server_default="false")
+    is_new         = Column(Boolean, default=False, nullable=False, server_default="false")
+    is_spicy       = Column(Boolean, default=False, nullable=False, server_default="false")
     is_chef_choice = Column(Boolean, default=False, nullable=False, server_default="false")
+    # is_popular: горизонтальный скролл "Популярное" на главном экране.
+    # На этапе AI-2 заполняется автоматически из статистики заказов.
+    is_popular     = Column(Boolean, default=False, nullable=False, server_default="false")
 
     updated_at   = Column(
         TIMESTAMP(timezone=True),
@@ -444,20 +435,15 @@ class WaiterCall(Base):
 # BILLING — Subscription Plans
 # ──────────────────────────────────────────
 class SubscriptionPlan(Base):
-    """
-    Тарифные планы платформы.
-    Данные вставляются через MIGRATION_billing.sql (Free, Basic, Pro).
-    Цена хранится в целых единицах выбранной валюты.
-    """
     __tablename__ = "subscription_plans"
 
     id                = Column(Integer, primary_key=True)
-    name              = Column(String(50), unique=True, nullable=False)   # Free / Basic / Pro
-    price             = Column(Integer, nullable=False, default=0)        # 0 / 29 / 79
+    name              = Column(String(50), unique=True, nullable=False)
+    price             = Column(Integer, nullable=False, default=0)
     currency          = Column(String(10), nullable=False, default="USD")
-    orders_per_month  = Column(Integer, nullable=False, default=100)      # -1 = безлимит
-    products_limit    = Column(Integer, nullable=False, default=20)       # -1 = безлимит
-    users_limit       = Column(Integer, nullable=False, default=-1)       # -1 = безлимит (пока)
+    orders_per_month  = Column(Integer, nullable=False, default=100)
+    products_limit    = Column(Integer, nullable=False, default=20)
+    users_limit       = Column(Integer, nullable=False, default=-1)
     description       = Column(Text, nullable=True)
     is_active         = Column(Boolean, default=True, nullable=False)
 
@@ -471,11 +457,6 @@ class SubscriptionPlan(Base):
 # BILLING — Subscriptions
 # ──────────────────────────────────────────
 class Subscription(Base):
-    """
-    Текущая и история подписок ресторана.
-    is_active=True — активная подписка (не более одной на ресторан).
-    expires_at=NULL — подписка бессрочная (Free / тестовый период).
-    """
     __tablename__ = "subscriptions"
     __table_args__ = (
         Index("ix_subscriptions_restaurant_active", "restaurant_id", "is_active"),
@@ -490,7 +471,7 @@ class Subscription(Base):
     )
     plan_id    = Column(Integer, ForeignKey("subscription_plans.id", ondelete="RESTRICT"), nullable=False)
     started_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
-    expires_at = Column(TIMESTAMP(timezone=True), nullable=True)   # NULL = бессрочно
+    expires_at = Column(TIMESTAMP(timezone=True), nullable=True)
     is_active  = Column(Boolean, default=True, nullable=False)
 
     restaurant = relationship("Restaurant", lazy="select")
@@ -504,13 +485,6 @@ class Subscription(Base):
 # BILLING — Usage Events
 # ──────────────────────────────────────────
 class UsageEvent(Base):
-    """
-    Лог использования ресурсов платформы.
-    event_type: 'order_created' | 'product_created' | 'product_deleted'
-    Используется для аудита и будущего billing-by-usage.
-    Текущий подсчёт (usage endpoint) идёт напрямую через SQL COUNT — быстро и точно.
-    UsageEvent — для истории и аудита.
-    """
     __tablename__ = "usage_events"
     __table_args__ = (
         CheckConstraint(
