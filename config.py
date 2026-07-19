@@ -3,23 +3,32 @@ config.py — Taomly Platform
 Единый источник конфигурации. Все env-переменные читаются здесь.
 Импортировать в других модулях: from config import settings
 
-Зачем:
-  - Устраняет дублирование логики WEBHOOK_SECRET в api.py и agency.py
-  - Все переменные проверяются при старте — не в рантайме
-  - Единое место для документирования всех env-переменных
+Изменения v7 (Security Patch C-1):
+  - SUPERADMIN_PASSWORD хранится как bcrypt-хэш в env (SUPERADMIN_PASSWORD_HASH).
+    Для обратной совместимости: если задан SUPERADMIN_PASSWORD (plain) —
+    принимается при старте, но логируется предупреждение о необходимости мигрировать.
+    Рекомендуется: сгенерировать хэш и переложить в SUPERADMIN_PASSWORD_HASH.
 
-Изменения v6 (Security Patch):
-  - SUPERADMIN_EMAIL перенесён из os.getenv в superadmin.py → settings
-  - SUPERADMIN_PASSWORD перенесён сюда как _require() — старт без него невозможен
+    Генерация хэша (выполнить один раз):
+      python -c "from passlib.context import CryptContext; \
+        ctx=CryptContext(schemes=['bcrypt'],deprecated='auto'); \
+        print(ctx.hash('ваш_пароль'))"
+
+    Затем в .env / Render env:
+      SUPERADMIN_PASSWORD_HASH=<результат выше>
+      # SUPERADMIN_PASSWORD= (убрать или оставить пустым)
 """
 
 import hashlib
+import logging
 import os
 
-from cryptography.fernet import Fernet, InvalidToken
+from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 
 def _require(name: str) -> str:
@@ -45,52 +54,83 @@ def _validate_fernet_key(key: str) -> str:
     return key
 
 
+def _load_superadmin_password_hash() -> str:
+    """
+    Загружает bcrypt-хэш пароля суперадмина.
+
+    Порядок поиска:
+      1. SUPERADMIN_PASSWORD_HASH — предпочтительно (bcrypt-хэш).
+      2. SUPERADMIN_PASSWORD — legacy plaintext. Принимается для обратной
+         совместимости, но при старте логируется WARNING с инструкцией миграции.
+
+    Возвращает строку, которую superadmin.py сравнивает через pwd_context.verify().
+    Если задан plaintext — хэшируется прямо здесь (in-memory, не сохраняется).
+    """
+    hash_val = os.getenv("SUPERADMIN_PASSWORD_HASH", "").strip()
+    if hash_val:
+        if not hash_val.startswith("$2b$") and not hash_val.startswith("$2a$"):
+            raise RuntimeError(
+                "SUPERADMIN_PASSWORD_HASH должен быть bcrypt-хэшем "
+                "(начинается с $2b$ или $2a$). "
+                "Сгенерируйте: python -c \"from passlib.context import CryptContext; "
+                "ctx=CryptContext(schemes=['bcrypt'],deprecated='auto'); "
+                "print(ctx.hash('ваш_пароль'))\""
+            )
+        return hash_val
+
+    plain = os.getenv("SUPERADMIN_PASSWORD", "").strip()
+    if plain:
+        from passlib.context import CryptContext
+        _ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        hashed = _ctx.hash(plain)
+        import sys
+        print(
+            "\n[TAOMLY SECURITY WARNING] Используется SUPERADMIN_PASSWORD (plaintext).\n"
+            "Мигрируйте на SUPERADMIN_PASSWORD_HASH:\n"
+            f"  1. Скопируйте хэш: {hashed}\n"
+            "  2. В Render/env: SUPERADMIN_PASSWORD_HASH=<хэш>\n"
+            "  3. Удалите SUPERADMIN_PASSWORD из env.\n",
+            file=sys.stderr,
+        )
+        return hashed
+
+    raise RuntimeError(
+        "Не задан SUPERADMIN_PASSWORD_HASH (рекомендуется) или SUPERADMIN_PASSWORD. "
+        "Установите одну из переменных. "
+        "See README.md → Environment Variables."
+    )
+
+
 class _Settings:
-    # ── Обязательные ──────────────────────────────────────────────────
     DATABASE_URL: str = _require("DATABASE_URL")
     SECRET_KEY: str = _require("SECRET_KEY")
     FERNET_KEY: str = _validate_fernet_key(_require("FERNET_KEY"))
 
-    # SUPERADMIN_PASSWORD обязателен — старт без него невозможен.
-    # Генерация: openssl rand -hex 32
-    SUPERADMIN_PASSWORD: str = _require("SUPERADMIN_PASSWORD")
-
-    # SUPERADMIN_EMAIL: дефолт допустим, но рекомендуется переопределить.
+    SUPERADMIN_PASSWORD_HASH: str = _load_superadmin_password_hash()
     SUPERADMIN_EMAIL: str = os.getenv("SUPERADMIN_EMAIL", "superadmin@taomly.uz")
 
-    # ── Опциональные с дефолтами ───────────────────────────────────────
     WEBHOOK_URL: str = os.getenv("WEBHOOK_URL", "")
     BOT_TOKEN: str = os.getenv("BOT_TOKEN", "")
     SENTRY_DSN: str = os.getenv("SENTRY_DSN", "")
 
-    # JWT
-    ACCESS_TOKEN_EXPIRE_HOURS: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_HOURS", "24"))
+    # JWT: 8 часов — баланс UX и безопасности.
+    ACCESS_TOKEN_EXPIRE_HOURS: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_HOURS", "8"))
 
-    # Telegram initData max age (seconds). Default 24h, set 3600 for higher security.
     MAX_INIT_DATA_AGE_SECONDS: int = int(os.getenv("MAX_INIT_DATA_AGE_SECONDS", "86400"))
 
-    # WEBHOOK_SECRET: либо задан явно, либо деривируется из SECRET_KEY.
-    # Telegram принимает только [A-Za-z0-9_-], длина 1–256.
-    # sha256(SECRET_KEY)[:64] всегда в этом диапазоне.
     WEBHOOK_SECRET: str = os.getenv(
         "WEBHOOK_SECRET",
         hashlib.sha256(SECRET_KEY.encode()).hexdigest()[:64],
     )
 
-    # CORS: comma-separated list of allowed origins.
-    # Example: "https://taomly.uz,https://taomly.onrender.com"
-    # Empty string → allows all origins (development only).
     ALLOWED_ORIGINS: list[str] = [
         o.strip()
         for o in os.getenv("ALLOWED_ORIGINS", "").split(",")
         if o.strip()
     ]
 
-    # Rate limiting (requests per minute for sensitive endpoints)
     RATE_LIMIT_LOGIN: str = os.getenv("RATE_LIMIT_LOGIN", "10/minute")
     RATE_LIMIT_API: str = os.getenv("RATE_LIMIT_API", "120/minute")
-
-    # Rate limiting для суперадмин-логина (жёстче обычного)
     RATE_LIMIT_SUPERADMIN_LOGIN: str = os.getenv("RATE_LIMIT_SUPERADMIN_LOGIN", "5/minute")
 
 
