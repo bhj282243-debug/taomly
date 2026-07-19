@@ -17,14 +17,21 @@ api.py — Taomly Platform
 
 Изменения v5 (Stage 2 Sprint 3):
   - AI роутер подключён (заглушки, AI_ENABLED=false по умолчанию)
+
+Изменения v6 (Security Patch):
+  - GET /sw.js — версионированный Service Worker с инжектированным BUILD_HASH
+  - CORS warning при allow_origins=["*"]
+  - Response импортирован явно
 """
 
 import hmac
 import logging
+import os
 from contextlib import asynccontextmanager
+from datetime import date
 
 import sentry_sdk
-from fastapi import FastAPI, Header, HTTPException, Request, status
+from fastapi import FastAPI, Header, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -157,6 +164,13 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # CORS
 # ──────────────────────────────────────────
 _cors_origins = settings.ALLOWED_ORIGINS if settings.ALLOWED_ORIGINS else ["*"]
+if _cors_origins == ["*"]:
+    import sys
+    print(
+        "\n[TAOMLY CORS WARNING] ALLOWED_ORIGINS не задан — CORS разрешает ВСЕ origins (*).\n"
+        "В production обязательно задайте: ALLOWED_ORIGINS=https://taomly.uz,https://yourdomain.com\n",
+        file=sys.stderr,
+    )
 
 app.add_middleware(
     CORSMiddleware,
@@ -193,7 +207,6 @@ app.include_router(superadmin.router)
 # ──────────────────────────────────────────
 # STATIC
 # ──────────────────────────────────────────
-import os
 if os.path.exists("static"):
     app.mount("/static", StaticFiles(directory="static"), name="static")
 else:
@@ -253,6 +266,37 @@ def serve_favicon():
     if os.path.exists("static/favicon.ico"):
         return FileResponse("static/favicon.ico")
     return FileResponse("static/favicon.svg", media_type="image/svg+xml")
+
+
+@app.get("/sw.js")
+def serve_sw(response: Response):
+    """
+    Service Worker с инжектированной версией кэша.
+
+    Версия = первые 8 символов BUILD_HASH env (задаётся при деплое на Render).
+    Fallback: текущая дата YYYYMMDD — гарантирует сброс кэша раз в сутки.
+
+    Браузер получает SW без кэша (no-cache), чтобы сразу видеть обновления.
+    """
+    build_hash = os.getenv("BUILD_HASH", "")
+    if build_hash:
+        version = build_hash[:8]
+    else:
+        version = date.today().strftime("%Y%m%d")
+
+    with open("static/sw.js", "r", encoding="utf-8") as f:
+        content = f.read()
+
+    content = content.replace("'taomly-dev'", f"'{version}'")
+
+    return Response(
+        content=content,
+        media_type="application/javascript",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+        },
+    )
 
 
 # ──────────────────────────────────────────
