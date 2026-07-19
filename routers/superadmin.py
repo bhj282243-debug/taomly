@@ -7,21 +7,20 @@ Super Admin Console: управление всей платформой.
   - Управление агентствами: CRUD, блокировка, просмотр ресторанов, impersonate
   - Управление ресторанами: список всех, поиск, фильтр, заморозка, перенос
 
-Изменения v6 (Security Patch C-1, C-2, C-3):
-  C-1: hmac.compare_digest() вместо != для сравнения пароля суперадмина
-       — устраняет timing attack.
-  C-2: @limiter.limit("5/minute") на /login
-       — brute force теперь ограничен.
-  C-3: SUPERADMIN_EMAIL и SUPERADMIN_PASSWORD читаются из settings
-       — убран прямой os.getenv(), убран import os.
+Изменения v7 (Security Patch):
+  - Пароль суперадмина верифицируется через bcrypt.verify() (не plaintext compare_digest)
+  - Все endpoints используют Pydantic-схемы вместо data: dict
+  - N+1 устранён в list_agencies и get_dashboard через JOIN
+  - Rate limit 5/minute на /login
 """
 
-import hmac
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from passlib.context import CryptContext
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
@@ -31,6 +30,39 @@ from config import settings
 from database import get_db
 from limiter import limiter
 from models import Agency, Restaurant, Subscription, SubscriptionPlan
+
+_pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+# ──────────────────────────────────────────
+# СХЕМЫ SUPERADMIN (валидация входных данных)
+# ──────────────────────────────────────────
+
+class SuperAdminLogin(BaseModel):
+    email: str = Field(..., min_length=1, max_length=255)
+    password: str = Field(..., min_length=1, max_length=256)
+
+
+class SuperAdminAgencyCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    email: EmailStr
+    password: str = Field(..., min_length=8, max_length=128)
+
+
+class SuperAdminAgencyUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    email: Optional[EmailStr] = None
+    password: Optional[str] = Field(None, min_length=8, max_length=128)
+    is_active: Optional[bool] = None
+
+
+class SuperAdminFreezeRequest(BaseModel):
+    is_active: bool
+
+
+class SuperAdminTransferRequest(BaseModel):
+    agency_id: int = Field(..., gt=0)
+
 
 logger = logging.getLogger(__name__)
 
@@ -68,23 +100,24 @@ def get_current_superadmin(request: Request):
 
 @router.post("/login")
 @limiter.limit(settings.RATE_LIMIT_SUPERADMIN_LOGIN)
-def superadmin_login(data: dict, request: Request):
+def superadmin_login(data: SuperAdminLogin, request: Request):
     """
     Вход суперадмина.
 
     Безопасность:
-      - Пароль сравнивается через hmac.compare_digest() — защита от timing attack (C-1).
-      - Rate limit 5/minute — защита от brute force (C-2).
-      - Credentials читаются из settings (config.py), не из os.getenv (C-3).
+      - Пароль верифицируется через bcrypt.verify() — хэш в env, не plaintext.
+      - Email сравнивается через hmac.compare_digest() — защита от timing attack.
+      - bcrypt.verify всегда выполняется (даже при неверном email) — timing-safe.
+      - Rate limit 5/minute — защита от brute force.
     """
-    incoming_email = data.get("email", "")
-    incoming_password = data.get("password", "")
+    import hmac as _hmac
 
-    # hmac.compare_digest требует строки одинакового типа.
-    # Всегда сравниваем оба поля — даже если email не совпал,
-    # чтобы не давать информацию по времени ответа.
-    email_ok = hmac.compare_digest(incoming_email, settings.SUPERADMIN_EMAIL)
-    password_ok = hmac.compare_digest(incoming_password, settings.SUPERADMIN_PASSWORD)
+    incoming_email = data.email
+    incoming_password = data.password
+
+    email_ok = _hmac.compare_digest(incoming_email, settings.SUPERADMIN_EMAIL)
+    # bcrypt.verify выполняется всегда — даже если email неверен (timing safety)
+    password_ok = _pwd_ctx.verify(incoming_password, settings.SUPERADMIN_PASSWORD_HASH)
 
     if not email_ok or not password_ok:
         logger.warning(
@@ -131,8 +164,11 @@ def get_dashboard(
         .scalar()
     ) or 0
 
-    recent_agencies = (
-        db.query(Agency)
+    # Один JOIN-запрос вместо N+1 (Agency + COUNT ресторанов)
+    recent_agencies_rows = (
+        db.query(Agency, func.count(Restaurant.id).label("restaurant_count"))
+        .outerjoin(Restaurant, Restaurant.agency_id == Agency.id)
+        .group_by(Agency.id)
         .order_by(Agency.created_at.desc())
         .limit(5)
         .all()
@@ -167,11 +203,9 @@ def get_dashboard(
                 "email": a.owner_email,
                 "is_active": a.is_active,
                 "created_at": a.created_at.isoformat(),
-                "restaurant_count": db.query(func.count(Restaurant.id))
-                    .filter(Restaurant.agency_id == a.id)
-                    .scalar(),
+                "restaurant_count": cnt,
             }
-            for a in recent_agencies
+            for a, cnt in recent_agencies_rows
         ],
         "recent_restaurants": [
             {
@@ -210,7 +244,17 @@ def list_agencies(
         q = q.filter(Agency.is_active == is_active)
 
     total = q.count()
-    agencies = q.order_by(Agency.created_at.desc()).offset(skip).limit(limit).all()
+
+    # JOIN вместо N+1: один запрос для всех агентств + их restaurant_count
+    agencies_with_count = (
+        q.outerjoin(Restaurant, Restaurant.agency_id == Agency.id)
+        .with_entities(Agency, func.count(Restaurant.id).label("restaurant_count"))
+        .group_by(Agency.id)
+        .order_by(Agency.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
     return {
         "total": total,
@@ -221,11 +265,9 @@ def list_agencies(
                 "email": a.owner_email,
                 "is_active": a.is_active,
                 "created_at": a.created_at.isoformat(),
-                "restaurant_count": db.query(func.count(Restaurant.id))
-                    .filter(Restaurant.agency_id == a.id)
-                    .scalar(),
+                "restaurant_count": cnt,
             }
-            for a in agencies
+            for a, cnt in agencies_with_count
         ],
     }
 
@@ -263,20 +305,17 @@ def get_agency(
 
 @router.post("/agencies", status_code=201)
 def create_agency(
-    data: dict,
+    data: SuperAdminAgencyCreate,
     _=Depends(get_current_superadmin),
     db: Session = Depends(get_db),
 ):
-    if not data.get("name") or not data.get("email") or not data.get("password"):
-        raise HTTPException(status_code=400, detail="name, email и password обязательны")
-
-    if db.query(Agency).filter(Agency.owner_email == data["email"]).first():
+    if db.query(Agency).filter(Agency.owner_email == data.email).first():
         raise HTTPException(status_code=400, detail="Email уже занят")
 
     agency = Agency(
-        name=data["name"],
-        owner_email=data["email"],
-        owner_password_hash=hash_password(data["password"]),
+        name=data.name,
+        owner_email=str(data.email),
+        owner_password_hash=hash_password(data.password),
     )
     db.add(agency)
     db.commit()
@@ -288,7 +327,7 @@ def create_agency(
 @router.patch("/agencies/{agency_id}")
 def update_agency(
     agency_id: int,
-    data: dict,
+    data: SuperAdminAgencyUpdate,
     _=Depends(get_current_superadmin),
     db: Session = Depends(get_db),
 ):
@@ -296,14 +335,14 @@ def update_agency(
     if not agency:
         raise HTTPException(status_code=404, detail="Агентство не найдено")
 
-    if "name" in data:
-        agency.name = data["name"]
-    if "email" in data:
-        agency.owner_email = data["email"]
-    if "password" in data:
-        agency.owner_password_hash = hash_password(data["password"])
-    if "is_active" in data:
-        agency.is_active = data["is_active"]
+    if data.name is not None:
+        agency.name = data.name
+    if data.email is not None:
+        agency.owner_email = str(data.email)
+    if data.password is not None:
+        agency.owner_password_hash = hash_password(data.password)
+    if data.is_active is not None:
+        agency.is_active = data.is_active
 
     db.commit()
     db.refresh(agency)
@@ -374,7 +413,7 @@ def list_restaurants(
 @router.patch("/restaurants/{restaurant_id}/freeze")
 def freeze_restaurant(
     restaurant_id: int,
-    data: dict,
+    data: SuperAdminFreezeRequest,
     _=Depends(get_current_superadmin),
     db: Session = Depends(get_db),
 ):
@@ -382,7 +421,7 @@ def freeze_restaurant(
     if not restaurant:
         raise HTTPException(status_code=404, detail="Ресторан не найден")
 
-    restaurant.is_active = data.get("is_active", False)
+    restaurant.is_active = data.is_active
     db.commit()
     action = "разморожен" if restaurant.is_active else "заморожен"
     logger.info("Superadmin: ресторан id=%s %s", restaurant_id, action)
@@ -392,7 +431,7 @@ def freeze_restaurant(
 @router.patch("/restaurants/{restaurant_id}/transfer")
 def transfer_restaurant(
     restaurant_id: int,
-    data: dict,
+    data: SuperAdminTransferRequest,
     _=Depends(get_current_superadmin),
     db: Session = Depends(get_db),
 ):
@@ -400,19 +439,15 @@ def transfer_restaurant(
     if not restaurant:
         raise HTTPException(status_code=404, detail="Ресторан не найден")
 
-    new_agency_id = data.get("agency_id")
-    if not new_agency_id:
-        raise HTTPException(status_code=400, detail="agency_id обязателен")
-
-    new_agency = db.query(Agency).filter(Agency.id == new_agency_id).first()
+    new_agency = db.query(Agency).filter(Agency.id == data.agency_id).first()
     if not new_agency:
         raise HTTPException(status_code=404, detail="Агентство не найдено")
 
     old_agency_id = restaurant.agency_id
-    restaurant.agency_id = new_agency_id
+    restaurant.agency_id = data.agency_id
     db.commit()
     logger.info(
         "Superadmin: ресторан id=%s перенесён из agency=%s в agency=%s",
-        restaurant_id, old_agency_id, new_agency_id
+        restaurant_id, old_agency_id, data.agency_id,
     )
-    return {"ok": True, "restaurant_id": restaurant_id, "new_agency_id": new_agency_id}
+    return {"ok": True, "restaurant_id": restaurant_id, "new_agency_id": data.agency_id}
