@@ -4,17 +4,23 @@ routers/orders.py — Taomly Platform
 Изменения v5:
   - Исправлен вызов notify_client_accepted: теперь передаёт restaurant вторым
     аргументом → устранён TypeError
+
+Изменения v6 (Security/Billing):
+  - create_order: проверяет лимит заказов по активной подписке.
+    Ресторан на Free plan (100 заказов/месяц) не сможет создать 101-й.
 """
 
 import logging
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
+from sqlalchemy import text
 from sqlalchemy.orm import Session, joinedload
 
 from auth import TelegramUser, get_current_restaurant_admin, get_telegram_user
 from database import get_db
-from models import Order, OrderItem, Product, Restaurant, RestaurantTable
+from models import Order, OrderItem, Product, Restaurant, RestaurantTable, Subscription, SubscriptionPlan
 from schemas import OrderCreate, OrderResponse, OrderStatusUpdate
 import handlers
 from limiter import limiter
@@ -22,6 +28,77 @@ from limiter import limiter
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+# ──────────────────────────────────────────
+# ХЕЛПЕР — проверка лимита заказов по подписке
+# ──────────────────────────────────────────
+def _check_order_quota(db: Session, restaurant_id: int) -> None:
+    """
+    Проверяет что ресторан не превысил лимит заказов по текущему тарифному плану.
+
+    Алгоритм:
+      1. Загружает активную подписку ресторана.
+      2. Если подписки нет — считает ресторан на Free плане.
+      3. Если orders_per_month == -1 — безлимит, проверка не нужна.
+      4. Считает заказы за текущий месяц (статус != 'cancelled').
+      5. Если лимит превышен — возвращает HTTP 402 с понятным сообщением.
+
+    Вызывается в create_order до любой записи в БД.
+    """
+    sub = (
+        db.query(Subscription)
+        .filter(
+            Subscription.restaurant_id == restaurant_id,
+            Subscription.is_active == True,
+        )
+        .order_by(Subscription.started_at.desc())
+        .first()
+    )
+
+    if sub is None:
+        plan = db.query(SubscriptionPlan).filter(SubscriptionPlan.name == "Free").first()
+        if plan is None:
+            return
+        orders_limit = plan.orders_per_month
+    else:
+        plan = db.query(SubscriptionPlan).filter(SubscriptionPlan.id == sub.plan_id).first()
+        if plan is None:
+            return
+        orders_limit = plan.orders_per_month
+
+    if orders_limit == -1:
+        return
+
+    now = datetime.now(tz=timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    row = db.execute(
+        text(
+            "SELECT COUNT(*) AS cnt FROM orders "
+            "WHERE restaurant_id = :rid "
+            "  AND created_at >= :start "
+            "  AND status != 'cancelled'"
+        ),
+        {"rid": restaurant_id, "start": month_start},
+    ).fetchone()
+
+    orders_used = int(row.cnt) if row else 0
+
+    if orders_used >= orders_limit:
+        logger.warning(
+            "Квота заказов исчерпана: restaurant_id=%s used=%s limit=%s plan=%s",
+            restaurant_id, orders_used, orders_limit, plan.name,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=(
+                f"Достигнут лимит заказов тарифного плана «{plan.name}»: "
+                f"{orders_used}/{orders_limit} в этом месяце. "
+                "Обратитесь к вашему агентству для смены тарифа."
+            ),
+        )
+
 
 VALID_STATUS_TRANSITIONS: dict[str, list[str]] = {
     "new":                ["accepted", "cancelled"],
@@ -38,7 +115,7 @@ VALID_STATUS_TRANSITIONS: dict[str, list[str]] = {
 # POST / — создать заказ (клиент Mini App)
 # ──────────────────────────────────────────
 @router.post("/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
-@limiter.limit("10/minute")  # защита от flood заказов
+@limiter.limit("10/minute")
 def create_order(
     request: Request,
     data: OrderCreate,
@@ -50,15 +127,17 @@ def create_order(
     Создаёт новый заказ.
 
     Источники данных (все верифицированы до роутера):
-      restaurant        → tg_user.restaurant    (загружен в get_telegram_user)
-      restaurant_id     → tg_user.restaurant_id (из X-Restaurant-Id)
-      client_telegram_id → tg_user.id           (из initData, HMAC-SHA256)
-      total_amount      → вычислен из цен БД    (нельзя подменить)
-      quantity          → проверен Pydantic ge=1
+      restaurant         → tg_user.restaurant    (загружен в get_telegram_user)
+      restaurant_id      → tg_user.restaurant_id (из X-Restaurant-Id)
+      client_telegram_id → tg_user.id            (из initData, HMAC-SHA256)
+      total_amount       → вычислен из цен БД    (нельзя подменить)
+      quantity           → проверен Pydantic ge=1
     """
     restaurant = tg_user.restaurant
 
-    # Проверка стола для dine_in
+    # Проверяем квоту заказов по тарифному плану до любой записи в БД
+    _check_order_quota(db, restaurant.id)
+
     if data.order_type == "dine_in":
         if not data.table_id:
             raise HTTPException(
@@ -75,7 +154,6 @@ def create_order(
                 detail="Стол не найден в этом ресторане",
             )
 
-    # Проверяем продукты и считаем сумму на сервере
     total = 0
     order_items_data: list[dict] = []
 
@@ -111,8 +189,6 @@ def create_order(
         client_phone=data.client_phone,
         order_type=data.order_type,
         address=data.address,
-        location_lat=data.location_lat,
-        location_lng=data.location_lng,
         table_id=data.table_id,
         comment=data.comment,
         total_amount=total,
@@ -129,8 +205,7 @@ def create_order(
     except Exception:
         logger.exception(
             "Ошибка при сохранении заказа: restaurant_id=%s tg_user=%s",
-            restaurant.id,
-            tg_user.id,
+            restaurant.id, tg_user.id,
         )
         db.rollback()
         raise HTTPException(
@@ -287,14 +362,12 @@ def update_order_status(
         order_id, old_status, data.status, restaurant.id,
     )
 
-    # Уведомления клиенту при каждой смене статуса.
-    # Все вызовы через BackgroundTasks — не блокируют HTTP-ответ.
     _status_notify = {
-        "accepted":          handlers.notify_client_accepted,
-        "preparing":         handlers.notify_client_preparing,
+        "accepted":           handlers.notify_client_accepted,
+        "preparing":          handlers.notify_client_preparing,
         "ready_for_delivery": handlers.notify_client_ready,
-        "delivering":        handlers.notify_client_delivering,
-        "completed":         handlers.notify_client_completed,
+        "delivering":         handlers.notify_client_delivering,
+        "completed":          handlers.notify_client_completed,
     }
     if data.status in _status_notify:
         background_tasks.add_task(_status_notify[data.status], order, restaurant)
@@ -303,7 +376,7 @@ def update_order_status(
             handlers.notify_client_cancelled,
             order,
             restaurant,
-            data.comment or "",
+            "",
         )
 
     return order
