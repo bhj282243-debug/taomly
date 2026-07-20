@@ -784,6 +784,11 @@ function loadApp(){
   document.getElementById('loginError').style.display='none';
   document.getElementById('mainApp').style.display='block';
   document.getElementById('headerSlug').textContent=RESTAURANT_SLUG;
+  // Загружаем имя ресторана для заголовка
+  fetch(`${API}/api/restaurants/${RESTAURANT_SLUG}`)
+    .then(r=>r.ok?r.json():null)
+    .then(d=>{if(d?.name){document.getElementById('headerTitle').textContent=d.name;}})
+    .catch(()=>{});
   loadOrders();
 }
 
@@ -903,9 +908,9 @@ function renderOrders(){
 
 function makeOrderCard(order){
   const div=document.createElement('div');div.className='order-card';
-  const itemsHtml=(order.items||[]).map(i=>`<div class="item-row"><span>${i.name} × ${i.quantity}</span><span>${fmt(i.price*i.quantity)}</span></div>`).join('');
-  const addressHtml=order.address?`<div class="client-address">${order.address}</div>`:'';
-  const commentHtml=order.comment?`<div class="client-address" style="color:var(--iv3)">${order.comment}</div>`:'';
+  const itemsHtml=(order.items||[]).map(i=>`<div class="item-row"><span>${esc(i.name)} × ${i.quantity}</span><span>${fmt(i.price*i.quantity)}</span></div>`).join('');
+  const addressHtml=order.address?`<div class="client-address">${esc(order.address)}</div>`:'';
+  const commentHtml=order.comment?`<div class="client-address" style="color:var(--iv3)">${esc(order.comment)}</div>`:'';
   const nextStatus=NEXT_STATUS[order.status];
   const actionBtns=nextStatus?`
     <div class="action-btns">
@@ -920,8 +925,8 @@ function makeOrderCard(order){
     </div>
     <div class="order-type">${TYPE_LABELS[order.order_type]||order.order_type}</div>
     <div class="client-info">
-      <div class="client-name">${order.client_name||'—'}</div>
-      <div class="client-phone">${order.client_phone||'—'}</div>
+      <div class="client-name">${esc(order.client_name)||'—'}</div>
+      <div class="client-phone">${esc(order.client_phone)||'—'}</div>
       ${addressHtml}${commentHtml}
     </div>
     <div class="items-list">${itemsHtml}</div>
@@ -989,13 +994,13 @@ function makeProductRow(p){
   const div=document.createElement('div');
   div.className='product-row'+(p.is_available?'':' unavailable');div.id='product-'+p.id;
   const photoHtml=p.photo_url
-    ?`<div class="product-row-photo"><img src="${p.photo_url}" alt="${p.name}" loading="lazy"></div>`
+    ?`<div class="product-row-photo"><img src="${esc(p.photo_url)}" alt="${esc(p.name)}" loading="lazy"></div>`
     :`<div class="product-row-ph"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a4 4 0 0 1 0 8M6 4v16M6 4c0 2.5 2.5 2.5 2.5 5S6 11.5 6 14"/></svg></div>`;
   const popularHtml=p.is_popular?`<span class="popular-badge">★ Mashhur</span>`:'';
   div.innerHTML=`
     ${photoHtml}
     <div class="product-row-info">
-      <div class="product-row-name">${p.name}</div>
+      <div class="product-row-name">${esc(p.name)}</div>
       <div class="product-row-meta">
         <span class="product-row-price">${fmt(p.price)}</span>
         ${popularHtml}
@@ -1335,7 +1340,8 @@ function updateSoundBtn(){
 
 // ── INIT ──
 checkAuth();updateSoundBtn();
-setInterval(()=>{if(AUTH_TOKEN&&RESTAURANT_ID)loadOrders();},30000);
+// Поллинг каждые 15 сек — быстрее для живой кухни
+setInterval(()=>{if(AUTH_TOKEN&&RESTAURANT_ID)loadOrders();},15000);
 </script>
 </body>
 </html>
