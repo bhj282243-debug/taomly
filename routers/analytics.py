@@ -10,6 +10,10 @@ Endpoints:
   GET /api/analytics/order-types     — разбивка по типу заказа
 
 Query param: ?period=today|7d|30d|90d|this_month  (default: 30d)
+
+Изменения v2 (Security):
+  - peak-hours: timezone берётся из restaurant.timezone (getattr fallback).
+    Готово к миграции 0004 когда поле будет добавлено в модель Restaurant.
 """
 
 from __future__ import annotations
@@ -193,12 +197,22 @@ def get_peak_hours(
     restaurant: Restaurant = Depends(get_current_restaurant_admin),
     db: Session = Depends(get_db),
 ) -> List[HourItem]:
-    """Распределение заказов по часам суток (UTC+5 для Узбекистана)."""
-    start, end = _period_to_dates(period)
+    """
+    Распределение заказов по часам суток.
 
-    sql = text("""
+    Timezone: берётся из restaurant.timezone (поле будет добавлено в миграции 0004).
+    Текущий fallback: 'Asia/Tashkent' (UTC+5) для рынка Узбекистана.
+    При выходе на Казахстан (UTC+5/+6) и Кыргызстан (UTC+6) —
+    добавить Column('timezone', String, default='Asia/Tashkent') в модель Restaurant.
+
+    TODO (миграция 0004): SELECT ... AT TIME ZONE restaurant.timezone
+    """
+    start, end = _period_to_dates(period)
+    tz = getattr(restaurant, "timezone", None) or "Asia/Tashkent"
+
+    sql = text(f"""
         SELECT
-            EXTRACT(HOUR FROM created_at AT TIME ZONE 'Asia/Tashkent')::INT AS hour,
+            EXTRACT(HOUR FROM created_at AT TIME ZONE '{tz}')::INT AS hour,
             COUNT(*) AS orders
         FROM orders
         WHERE restaurant_id = :rid
