@@ -788,6 +788,11 @@ function loadApp(){
 }
 
 function doLogout(){
+  // Уведомляем сервер (best-effort: fire-and-forget, не блокируем UI)
+  // Сервер логирует выход. Инвалидация токена — при появлении Redis.
+  if(AUTH_TOKEN){
+    fetch(`${API}/api/agency/restaurant-logout`,{method:'POST',headers:authHeaders()}).catch(()=>{});
+  }
   AUTH_TOKEN=null;RESTAURANT_ID=null;RESTAURANT_SLUG=null;allOrders=[];menuData=null;
   sessionStorage.removeItem(SESSION_KEY);
   document.getElementById('mainApp').style.display='none';
@@ -828,6 +833,8 @@ const NEXT_LABELS={new:'Qabul qilish',accepted:'Tayyorlashni boshlash',preparing
 
 function fmt(p){return Number(p).toLocaleString('uz-UZ')+" so'm";}
 function fmtShort(p){if(p>=1000000)return(p/1000000).toFixed(1)+' mln';if(p>=1000)return(p/1000).toFixed(0)+' ming';return p.toLocaleString('uz-UZ');}
+/* XSS-защита: экранирует HTML-спецсимволы перед вставкой в innerHTML */
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function timeAgo(dateStr){
   // Сервер хранит UTC, добавляем Z если нет timezone
   const s=dateStr.endsWith('Z')||dateStr.includes('+')?dateStr:dateStr+'Z';
@@ -971,7 +978,7 @@ function renderMenu(){
   catBtn.style.display='block';
   menuData.forEach(cat=>{
     const block=document.createElement('div');block.className='category-block';
-    block.innerHTML=`<div class="category-name">${cat.name}</div>`;
+    block.innerHTML=`<div class="category-name">${esc(cat.name)}</div>`;
     if(cat.products&&cat.products.length>0){cat.products.forEach(p=>block.appendChild(makeProductRow(p)));}
     else{const e=document.createElement('div');e.className='empty';e.style.padding='12px 0';e.textContent="Bu kategoriyada taom yo'q";block.appendChild(e);}
     content.appendChild(block);
@@ -1060,7 +1067,7 @@ async function saveNewCategory(){
 function openAddModal(){
   if(!menuData||menuData.length===0){showToast("Avval kategoriya qo'shing",true);return;}
   const select=document.getElementById('newProductCategory');
-  select.innerHTML=menuData.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  select.innerHTML=menuData.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
   document.getElementById('newProductName').value='';
   document.getElementById('newProductPrice').value='';
   document.getElementById('newProductDesc').value='';
