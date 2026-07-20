@@ -792,6 +792,8 @@ function parseParams(){
 
 function fmt(p){return p.toLocaleString('uz-UZ')+" so'm";}
 function fmtNum(p){return p.toLocaleString('uz-UZ');}
+/* XSS-защита: экранирует HTML-спецсимволы перед вставкой в innerHTML */
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
 function applyBrandTheme(r){
   const root=document.documentElement;
@@ -824,7 +826,7 @@ function _dk(h,a){if(!h||h.length<7)return h;return'#'+[parseInt(h.slice(1,3),16
 function showHero(r){
   const L=(r.name||'T')[0].toUpperCase();
   const med=document.getElementById('heroMed');
-  if(r.logo_url){med.innerHTML=`<img src="${r.logo_url}" alt="${r.name}">`;}
+  if(r.logo_url){med.innerHTML=`<img src="${esc(r.logo_url)}" alt="${esc(r.name)}">`;}  
   else{document.getElementById('heroMedL').textContent=L;}
   document.getElementById('heroName').textContent=r.name||'';
   if(r.address){document.getElementById('heroAddrText').textContent=r.address;document.getElementById('heroAddr').style.display='inline-flex';}
@@ -845,7 +847,7 @@ async function loadMenu(){
     applyBrandTheme(restaurant);
     document.getElementById('restaurantName').textContent=restaurant.name;
     const lw=document.getElementById('restaurantLogo');
-    if(restaurant.logo_url){lw.innerHTML=`<img src="${restaurant.logo_url}" alt="${restaurant.name}">`;}
+    if(restaurant.logo_url){lw.innerHTML=`<img src="${esc(restaurant.logo_url)}" alt="${esc(restaurant.name)}">`;}    
     else{const L=(restaurant.name||'T')[0].toUpperCase();lw.innerHTML=`<div class="rest-emb-L">${L}</div>`;}
     if(restaurant.address){document.getElementById('restaurantAddressText').textContent=restaurant.address;document.getElementById('restaurantAddress').style.display='flex';}
     if(restaurant.welcome_text){document.getElementById('welcomeText').textContent=restaurant.welcome_text;document.getElementById('welcomeLine').style.display='block';}
@@ -874,9 +876,9 @@ function renderPopular(){
   items.forEach(p=>{
     const el=document.createElement('div');el.className='pop-item';el.onclick=()=>openProductModal(p.id);
     const img=p.photo_url
-      ?`<img src="${p.photo_url}" alt="${p.name}" loading="lazy" decoding="async">`
+      ?`<img src="${esc(p.photo_url)}" alt="${esc(p.name)}" loading="lazy" decoding="async">`
       :`<div class="pop-ph"><div class="pop-ph-diamond"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a4 4 0 0 1 0 8M6 4v16M6 4c0 2.5 2.5 2.5 2.5 5S6 11.5 6 14"/></svg></div></div>`;
-    el.innerHTML=`<div class="pop-photo">${img}</div><div class="pop-name">${p.name}</div><div class="pop-price">${fmt(p.price)}</div>`;
+    el.innerHTML=`<div class="pop-photo">${img}</div><div class="pop-name">${esc(p.name)}</div><div class="pop-price">${fmt(p.price)}</div>`;
     sc.appendChild(el);
   });
 }
@@ -902,7 +904,7 @@ function renderMenu(){
   (restaurant.categories||[]).forEach(cat=>{
     if(!cat.products||!cat.products.length)return;
     const sec=document.createElement('div');sec.className='cat-sec';sec.id='cat-'+cat.id;
-    sec.innerHTML=`<div class="cat-head"><div class="cat-title">${cat.name}<span class="cat-cnt">${cat.products.length} ta</span></div></div><div class="prod-grid" id="grid-${cat.id}"></div>`;
+    sec.innerHTML=`<div class="cat-head"><div class="cat-title">${esc(cat.name)}<span class="cat-cnt">${cat.products.length} ta</span></div></div><div class="prod-grid" id="grid-${cat.id}"></div>`;
     c.appendChild(sec);
     const grid=sec.querySelector('#grid-'+cat.id);
     cat.products.forEach(p=>grid.appendChild(makeCard(p)));
@@ -929,12 +931,12 @@ function makeCard(p){
     div.className='pcard has-photo';div.onclick=()=>openProductModal(p.id);
     div.innerHTML=`
       <div class="pphoto-wrap">
-        <img src="${p.photo_url}" alt="${p.name}" loading="lazy" decoding="async">
+        <img src="${esc(p.photo_url)}" alt="${esc(p.name)}" loading="lazy" decoding="async">
         <div class="pphoto-overlay"></div>${bh}
         <div class="pphoto-content">
           <div class="pphoto-text">
-            <div class="pname">${p.name}</div>
-            ${dt?`<div class="pdesc-photo">${dt}</div>`:''}
+            <div class="pname">${esc(p.name)}</div>
+            ${dt?`<div class="pdesc-photo">${esc(dt)}</div>`:''}
             <div class="pprice-photo">${fmt(p.price)}</div>
           </div>
           <div class="photo-add" id="ctrl-${p.id}" onclick="event.stopPropagation()">${ctrlHtml(p,qty)}</div>
@@ -953,8 +955,8 @@ function makeCard(p){
         <div class="pphoto-overlay"></div>${bh}
         <div class="pphoto-content">
           <div class="pphoto-text">
-            <div class="pname">${p.name}</div>
-            ${dt?`<div class="pdesc-photo">${dt}</div>`:''}
+            <div class="pname">${esc(p.name)}</div>
+            ${dt?`<div class="pdesc-photo">${esc(dt)}</div>`:''}
             <div class="pprice-photo">${fmt(p.price)}</div>
           </div>
           <div class="photo-add" id="ctrl-${p.id}" onclick="event.stopPropagation()">${ctrlHtml(p,qty)}</div>
@@ -999,7 +1001,7 @@ function openProductModal(id){
   const ph=document.getElementById('productModalPhoto');
   if(p.photo_url){
     ph.className='modal-photo tall';
-    ph.innerHTML=`<img src="${p.photo_url}" alt="${p.name}" loading="lazy" decoding="async"><div class="modal-grad"></div>`;
+    ph.innerHTML=`<img src="${esc(p.photo_url)}" alt="${esc(p.name)}" loading="lazy" decoding="async"><div class="modal-grad"></div>`;
   }else{
     ph.className='modal-photo tall';
     ph.innerHTML=`<div class="modal-ph"><div class="modal-ph-crest"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a4 4 0 0 1 0 8M6 4v16M6 4c0 2.5 2.5 2.5 2.5 5S6 11.5 6 14"/></svg></div></div>`;
@@ -1048,9 +1050,9 @@ function renderCart(){
   cartItems().forEach(item=>{
     const div=document.createElement('div');div.className='cart-item';
     const ph=item.photo
-      ?`<div class="ci-photo"><img src="${item.photo}" alt="${item.name}"></div>`
+      ?`<div class="ci-photo"><img src="${esc(item.photo)}" alt="${esc(item.name)}"></div>`
       :`<div class="ci-ph"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a4 4 0 0 1 0 8M6 4v16M6 4c0 2.5 2.5 2.5 2.5 5S6 11.5 6 14"/></svg></div>`;
-    div.innerHTML=`${ph}<div class="ci-info"><div class="ci-name">${item.name}</div><div class="ci-price">${item.qty} × ${fmt(item.price)}</div></div><div class="qty-unit"><button class="qty-ring" onclick="cartChangeQty(${item.id},-1)"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button><span class="qty-digit">${item.qty}</span><button class="qty-ring" onclick="cartChangeQty(${item.id},1)"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div>`;
+    div.innerHTML=`${ph}<div class="ci-info"><div class="ci-name">${esc(item.name)}</div><div class="ci-price">${item.qty} × ${fmt(item.price)}</div></div><div class="qty-unit"><button class="qty-ring" onclick="cartChangeQty(${item.id},-1)"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button><span class="qty-digit">${item.qty}</span><button class="qty-ring" onclick="cartChangeQty(${item.id},1)"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div>`;
     list.appendChild(div);
   });
   document.getElementById('summaryCount').textContent=cartCount()+' ta taom';
@@ -1123,7 +1125,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   const tg=window.Telegram?.WebApp;if(tg){tg.ready();tg.expand();}
   parseParams();loadMenu();
 });
-if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/static/sw.js').then(r=>console.log('[SW]',r.scope)).catch(e=>console.warn('[SW]',e));});}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').then(r=>console.log('[SW]',r.scope)).catch(e=>console.warn('[SW]',e));});}
 let _dip=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();_dip=e;});
 window.addEventListener('appinstalled',()=>{_dip=null;});
