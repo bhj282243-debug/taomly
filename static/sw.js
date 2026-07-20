@@ -3,8 +3,18 @@
 //   - Статика (CSS, JS, шрифты): Cache First → быстро, офлайн работает
 //   - API-запросы: Network First → актуальные данные, фолбэк на кэш
 //   - Офлайн-страница: если нет сети и нет кэша → показываем offline.html
+//
+// Версионирование кэша:
+//   CACHE_VERSION инжектируется backend'ом через /sw.js endpoint (api.py).
+//   При каждом деплое BUILD_HASH меняется → CACHE_VERSION меняется →
+//   старый кэш автоматически очищается при activate.
+//   Fallback: если placeholder не заменён — используем 'taomly-dev'.
 
-const CACHE_NAME = 'taomly-v1';
+const CACHE_VERSION = (typeof __CACHE_VERSION__ !== 'undefined')
+  ? __CACHE_VERSION__
+  : 'taomly-dev';
+
+const CACHE_NAME = `taomly-${CACHE_VERSION}`;
 const OFFLINE_URL = '/static/offline.html';
 
 // Ресурсы для предварительного кэширования при установке SW
@@ -79,14 +89,12 @@ async function cacheFirst(request) {
 
   try {
     const response = await fetch(request);
-    // Кэшируем только успешные ответы
     if (response.ok) {
       const cache = await caches.open(CACHE_NAME);
       cache.put(request, response.clone());
     }
     return response;
   } catch {
-    // Офлайн и нет кэша — показываем offline страницу
     const offline = await caches.match(OFFLINE_URL);
     return offline || new Response('Нет соединения', {
       status: 503,
