@@ -15,6 +15,9 @@ routers/menu.py — Taomly Platform
   - Все сообщения об ошибках унифицированы на русский язык
   - Логирование через logger.exception с контекстом
   - Дублирующийся код get_active_restaurant вынесен в хелпер
+
+Изменения v2 (Security):
+  - is_popular добавлен в create_product и update_product
 """
 
 import logging
@@ -271,7 +274,6 @@ def create_product(
     из JWT-токена. Нельзя создать продукт в категории чужого ресторана.
     price > 0 проверяется в Pydantic схеме (ProductCreate).
     """
-    # Tenant-изоляция: категория должна принадлежать этому ресторану
     category = db.query(Category).filter(
         Category.id == data.category_id,
         Category.restaurant_id == restaurant.id,
@@ -291,6 +293,11 @@ def create_product(
         photo_url=data.photo_url,
         is_available=data.is_available,
         sort_order=data.sort_order,
+        is_bestseller=data.is_bestseller,
+        is_new=data.is_new,
+        is_spicy=data.is_spicy,
+        is_chef_choice=data.is_chef_choice,
+        is_popular=data.is_popular,
     )
     db.add(product)
 
@@ -342,7 +349,6 @@ def update_product(
             detail="Продукт не найден",
         )
 
-    # Если меняем категорию — она тоже должна принадлежать этому ресторану
     if data.category_id is not None:
         category = db.query(Category).filter(
             Category.id == data.category_id,
@@ -367,6 +373,16 @@ def update_product(
         product.is_available = data.is_available
     if data.sort_order is not None:
         product.sort_order = data.sort_order
+    if data.is_bestseller is not None:
+        product.is_bestseller = data.is_bestseller
+    if data.is_new is not None:
+        product.is_new = data.is_new
+    if data.is_spicy is not None:
+        product.is_spicy = data.is_spicy
+    if data.is_chef_choice is not None:
+        product.is_chef_choice = data.is_chef_choice
+    if data.is_popular is not None:
+        product.is_popular = data.is_popular
 
     try:
         db.commit()
