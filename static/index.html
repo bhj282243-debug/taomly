@@ -591,6 +591,80 @@ svg{display:block;}
 #splash{will-change:opacity;}
 /* Убираем will-change везде кроме критичных мест */
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+
+/* ══════════════ OFFLINE BANNER ══════════════ */
+#offlineBanner{
+  position:fixed;top:0;left:0;right:0;z-index:9998;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 18px;gap:12px;
+  background:rgba(10,10,9,0.98);
+  border-bottom:1px solid rgba(212,175,55,0.22);
+  box-shadow:0 4px 20px rgba(0,0,0,0.6);
+  transform:translateY(-110%);
+  transition:transform .38s var(--es);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+}
+#offlineBanner.visible{transform:translateY(0);}
+.offl-left{display:flex;align-items:center;gap:10px;}
+.offl-dot{width:8px;height:8px;border-radius:50%;background:#E85454;flex-shrink:0;animation:offPulse 1.8s ease-in-out infinite;}
+@keyframes offPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(0.85)}}
+.offl-text{font-size:13px;color:var(--iv2);font-weight:400;line-height:1.3;}
+.offl-sub{font-size:11px;color:var(--iv4);margin-top:1px;}
+.offl-retry{
+  flex-shrink:0;padding:8px 16px;border-radius:100px;
+  background:rgba(212,175,55,0.10);border:1px solid rgba(212,175,55,0.28);
+  font-size:12px;font-weight:500;color:var(--g2);cursor:pointer;
+  letter-spacing:.3px;white-space:nowrap;
+  transition:background var(--tf) ease,transform var(--tf) ease;
+}
+.offl-retry:active{transform:scale(0.95);background:rgba(212,175,55,0.18);}
+.offl-retry.loading{opacity:.5;pointer-events:none;}
+
+/* ══════════════ PWA INSTALL BANNER ══════════════ */
+#pwaInstallBanner{
+  position:fixed;bottom:0;left:0;right:0;z-index:199;
+  background:rgba(8,8,7,0.97);
+  border-top:1px solid rgba(212,175,55,0.18);
+  box-shadow:0 -8px 32px rgba(0,0,0,0.6);
+  padding:16px 20px 28px;
+  transform:translateY(110%);
+  transition:transform .44s var(--es);
+}
+#pwaInstallBanner.visible{transform:translateY(0);}
+.pwa-inner{display:flex;align-items:center;gap:14px;}
+.pwa-icon{
+  width:52px;height:52px;border-radius:14px;flex-shrink:0;
+  background:radial-gradient(circle at 38% 30%,#1E1E1C,#0A0A09);
+  border:1px solid rgba(212,175,55,0.28);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 14px rgba(0,0,0,0.5);
+}
+.pwa-icon-L{
+  font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300;font-style:italic;
+  background:var(--gh);-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;background-size:200% 100%;
+}
+.pwa-texts{flex:1;min-width:0;}
+.pwa-title{font-size:14px;font-weight:500;color:var(--ivory);letter-spacing:.2px;}
+.pwa-sub{font-size:12px;color:var(--iv3);margin-top:2px;line-height:1.4;}
+.pwa-close{
+  width:32px;height:32px;border-radius:50%;flex-shrink:0;
+  border:1px solid rgba(247,245,240,0.08);background:rgba(247,245,240,0.04);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  color:var(--iv4);transition:background var(--tf) ease;
+}
+.pwa-close:active{background:var(--stone);}
+.pwa-close .icon{width:13px;height:13px;}
+.pwa-btn{
+  width:100%;margin-top:14px;padding:15px;
+  background:var(--gs);border:none;border-radius:100px;
+  color:var(--obs);font-family:'Inter',sans-serif;
+  font-size:13px;font-weight:600;letter-spacing:.6px;
+  cursor:pointer;
+  box-shadow:0 1px 0 rgba(244,232,160,0.32) inset,var(--sg);
+  transition:transform var(--tf) ease;
+}
+.pwa-btn:active{transform:scale(0.98);}
 </style>
 </head>
 <body>
@@ -770,6 +844,37 @@ svg{display:block;}
     <span class="cart-tot" id="cartTotalBar">0 so'm</span>
     <div class="cart-arr"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
   </div>
+</div>
+
+<!-- OFFLINE BANNER -->
+<div id="offlineBanner">
+  <div class="offl-left">
+    <div class="offl-dot"></div>
+    <div>
+      <div class="offl-text">Internet yo'q</div>
+      <div class="offl-sub">Keshdan ko'rsatilmoqda</div>
+    </div>
+  </div>
+  <button class="offl-retry" id="offlineRetryBtn" onclick="retryConnection()">
+    Qayta urinish
+  </button>
+</div>
+
+<!-- PWA INSTALL BANNER -->
+<div id="pwaInstallBanner">
+  <div class="pwa-inner">
+    <div class="pwa-icon"><div class="pwa-icon-L" id="pwaInstallLetter">T</div></div>
+    <div class="pwa-texts">
+      <div class="pwa-title" id="pwaInstallTitle">Ilovani o'rnating</div>
+      <div class="pwa-sub">Tezroq kirish uchun telefonga qo'shing</div>
+    </div>
+    <button class="pwa-close" onclick="dismissPwaInstall()">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <button class="pwa-btn" onclick="triggerPwaInstall()">
+    Ilovani o'rnatish
+  </button>
 </div>
 
 <script>
@@ -1121,14 +1226,106 @@ function showToast(msg){
   _tt=setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(12px)';},2800);
 }
 
-window.addEventListener('DOMContentLoaded',()=>{
-  const tg=window.Telegram?.WebApp;if(tg){tg.ready();tg.expand();}
+window.addEventListener('DOMContentLoaded',()=>{\n  const tg=window.Telegram?.WebApp;if(tg){tg.ready();tg.expand();}
   parseParams();loadMenu();
+  initOfflineDetection();
+  schedulePwaInstallBanner();
 });
 if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').then(r=>console.log('[SW]',r.scope)).catch(e=>console.warn('[SW]',e));});}
 let _dip=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();_dip=e;});
-window.addEventListener('appinstalled',()=>{_dip=null;});
+window.addEventListener('appinstalled',()=>{_dip=null;hidePwaInstallBanner();});
+
+/* ══════════════ OFFLINE DETECTION ══════════════ */
+function initOfflineDetection(){
+  function updateOnlineStatus(){
+    const offline=!navigator.onLine;
+    const banner=document.getElementById('offlineBanner');
+    if(!banner)return;
+    if(offline){
+      banner.classList.add('visible');
+    }else{
+      banner.classList.remove('visible');
+      // Если меню не загружено — перезагружаем
+      if(!restaurant)loadMenu();
+    }
+  }
+  window.addEventListener('online',updateOnlineStatus);
+  window.addEventListener('offline',updateOnlineStatus);
+  updateOnlineStatus();
+}
+
+function retryConnection(){
+  const btn=document.getElementById('offlineRetryBtn');
+  if(btn){btn.classList.add('loading');btn.textContent='Tekshirilmoqda…';}
+  // Проверяем реальное соединение через health endpoint
+  fetch('/health',{cache:'no-store'})
+    .then(r=>{
+      if(r.ok){
+        const banner=document.getElementById('offlineBanner');
+        if(banner)banner.classList.remove('visible');
+        if(!restaurant)loadMenu();
+      }else{throw new Error('not ok');}
+    })
+    .catch(()=>{
+      if(btn){btn.classList.remove('loading');btn.textContent='Qayta urinish';}
+      showToast('Hali ham internet yo\'q');
+    });
+}
+
+/* ══════════════ PWA INSTALL BANNER ══════════════ */
+const PWA_DISMISSED_KEY='taomly_pwa_dismissed';
+
+function schedulePwaInstallBanner(){
+  // Не показываем если: уже установлено, уже отклонено, в Telegram WebApp
+  if(window.Telegram?.WebApp?.initData)return;
+  if(window.matchMedia('(display-mode: standalone)').matches)return;
+  if(localStorage.getItem(PWA_DISMISSED_KEY))return;
+  // Показываем через 8 секунд после загрузки (не мешаем первому просмотру)
+  setTimeout(showPwaInstallBanner,8000);
+}
+
+function showPwaInstallBanner(){
+  if(!_dip&&!isIos())return; // нет события и не iOS
+  if(window.matchMedia('(display-mode: standalone)').matches)return;
+  // Обновляем название ресторана в баннере
+  if(restaurant?.name){
+    const t=document.getElementById('pwaInstallTitle');
+    if(t)t.textContent=esc(restaurant.name)+' ilovasini o\'rnating';
+    const l=document.getElementById('pwaInstallLetter');
+    if(l)l.textContent=(restaurant.name[0]||'T').toUpperCase();
+  }
+  const banner=document.getElementById('pwaInstallBanner');
+  if(banner)banner.classList.add('visible');
+}
+
+function hidePwaInstallBanner(){
+  const banner=document.getElementById('pwaInstallBanner');
+  if(banner)banner.classList.remove('visible');
+}
+
+function dismissPwaInstall(){
+  hidePwaInstallBanner();
+  localStorage.setItem(PWA_DISMISSED_KEY,'1');
+}
+
+function isIos(){
+  return /iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.MSStream;
+}
+
+async function triggerPwaInstall(){
+  if(_dip){
+    // Android Chrome / других поддерживаемых браузерах
+    hidePwaInstallBanner();
+    _dip.prompt();
+    const{outcome}=await _dip.userChoice;
+    if(outcome==='accepted'){_dip=null;}
+  }else if(isIos()){
+    // iOS — показываем инструкцию
+    hidePwaInstallBanner();
+    showToast("Safari: «Поделиться» → «На экран «Домой»");
+  }
+}
 </script>
 </body>
 </html>
