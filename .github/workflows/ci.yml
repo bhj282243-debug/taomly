@@ -38,6 +38,8 @@ jobs:
       WEBHOOK_URL: "https://test.taomly.uz"
       BOT_TOKEN: ""
       SENTRY_DSN: ""
+      SUPERADMIN_EMAIL: "superadmin@taomly.uz"
+      # SUPERADMIN_PASSWORD_HASH генерируется динамически в шаге ниже
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -54,6 +56,10 @@ jobs:
         run: |
           FERNET_KEY=$(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
           echo "FERNET_KEY=$FERNET_KEY" >> $GITHUB_ENV
+      - name: Generate SUPERADMIN_PASSWORD_HASH for tests
+        run: |
+          SUPERADMIN_PASSWORD_HASH=$(python -c "from passlib.context import CryptContext; print(CryptContext(schemes=['bcrypt'], deprecated='auto').hash('ci-test-password'))")
+          echo "SUPERADMIN_PASSWORD_HASH=$SUPERADMIN_PASSWORD_HASH" >> $GITHUB_ENV
       - name: Run tests
         run: |
           pytest tests/ --cov=. --cov-report=xml --cov-report=term-missing -v
