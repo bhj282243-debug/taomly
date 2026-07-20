@@ -624,7 +624,12 @@ async function loadAgencyInfo() {
   sessionStorage.setItem('agency_info', JSON.stringify(agencyInfo));
 }
 
-function doLogout() { token=null; agencyInfo=null; sessionStorage.removeItem('agency_info'); showLogin(); }
+function doLogout() {
+  if(token){
+    fetch('/api/agency/logout',{method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'}}).catch(()=>{});
+  }
+  token=null; agencyInfo=null; sessionStorage.removeItem('agency_info'); showLogin();
+}
 
 // NAVIGATION + BACK BUTTON
 function showPage(name, navEl) {
