@@ -57,6 +57,9 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Entrypoint: uvicorn with 2 workers
-# Render sets PORT env var; default 8000
+# Entrypoint: uvicorn с 1 воркером.
+# Синхронный SQLAlchemy несовместим с fork-based multi-worker —
+# при 2+ воркерах возникают конфликты соединений и BOT_CACHE рассинхронизируется.
+# При переходе на async SQLAlchemy + asyncpg — увеличить до 2-4 воркеров.
+# Render sets PORT env var; default 8000.
 CMD ["sh", "-c", "uvicorn api:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --loop uvloop"]
