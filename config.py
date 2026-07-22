@@ -116,7 +116,7 @@ class _Settings:
     # JWT: 8 часов — баланс UX и безопасности.
     ACCESS_TOKEN_EXPIRE_HOURS: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_HOURS", "8"))
 
-    MAX_INIT_DATA_AGE_SECONDS: int = int(os.getenv("MAX_INIT_DATA_AGE_SECONDS", "86400"))
+    MAX_INIT_DATA_AGE_SECONDS: int = int(os.getenv("MAX_INIT_DATA_AGE_SECONDS", "3600"))
 
     WEBHOOK_SECRET: str = os.getenv(
         "WEBHOOK_SECRET",
