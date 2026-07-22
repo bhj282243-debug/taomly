@@ -19,6 +19,7 @@ Query param: ?period=today|7d|30d|90d|this_month  (default: 30d)
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -29,6 +30,9 @@ from typing import List
 from auth import get_current_restaurant_admin
 from database import get_db
 from models import Restaurant
+
+# Только буквы, цифры, /, _, -, + допустимы в имени IANA timezone (защита от SQL-инъекции)
+_SAFE_TZ_RE = re.compile(r'^[A-Za-z/_\-+0-9]{1,50}$')
 from schemas import (
     SummaryResponse,
     DayRevenueItem,
@@ -209,6 +213,8 @@ def get_peak_hours(
     """
     start, end = _period_to_dates(period)
     tz = getattr(restaurant, "timezone", None) or "Asia/Tashkent"
+    if not _SAFE_TZ_RE.match(tz):
+        tz = "Asia/Tashkent"
 
     sql = text(f"""
         SELECT
