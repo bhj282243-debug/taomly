@@ -22,6 +22,9 @@ api.py — Taomly Platform
   - GET /sw.js — версионированный Service Worker с инжектированным BUILD_HASH
   - CORS warning при allow_origins=["*"]
   - Response импортирован явно
+
+Изменения v7 (Security Patch SEC-4):
+  - ProxyHeadersMiddleware: rate limiting теперь работает корректно за Render proxy
 """
 
 import hmac
@@ -38,6 +41,7 @@ from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 import handlers
 import models
@@ -189,6 +193,15 @@ app.add_middleware(
 # SECURITY HEADERS
 # ──────────────────────────────────────────
 app.add_middleware(SecurityHeadersMiddleware)
+
+# ──────────────────────────────────────────
+# PROXY HEADERS (SEC-4)
+# Render и любой reverse proxy передают реальный IP клиента
+# в заголовке X-Forwarded-For. Без этого middleware slowapi
+# видит IP прокси и rate limit применяется ко всем сразу.
+# trusted_hosts="*" безопасно: X-Forwarded-Host не используется.
+# ──────────────────────────────────────────
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 # ──────────────────────────────────────────
 # ROUTERS
