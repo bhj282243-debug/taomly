@@ -14,6 +14,11 @@ Query param: ?period=today|7d|30d|90d|this_month  (default: 30d)
 Изменения v2 (Security):
   - peak-hours: timezone берётся из restaurant.timezone (getattr fallback).
     Готово к миграции 0004 когда поле будет добавлено в модель Restaurant.
+
+Изменения v3 (Security Patch SEC-1):
+  - peak-hours: tz больше не вставляется через f-string в SQL.
+    Используется bound parameter :tz — PostgreSQL подставляет значение безопасно.
+    _SAFE_TZ_RE оставлен как дополнительный defense-in-depth слой.
 """
 
 from __future__ import annotations
@@ -216,9 +221,9 @@ def get_peak_hours(
     if not _SAFE_TZ_RE.match(tz):
         tz = "Asia/Tashkent"
 
-    sql = text(f"""
+    sql = text("""
         SELECT
-            EXTRACT(HOUR FROM created_at AT TIME ZONE '{tz}')::INT AS hour,
+            EXTRACT(HOUR FROM created_at AT TIME ZONE :tz)::INT AS hour,
             COUNT(*) AS orders
         FROM orders
         WHERE restaurant_id = :rid
@@ -227,7 +232,7 @@ def get_peak_hours(
         GROUP BY hour
         ORDER BY hour ASC
     """)
-    rows = db.execute(sql, {"rid": restaurant.id, "start": start, "end": end}).fetchall()
+    rows = db.execute(sql, {"rid": restaurant.id, "start": start, "end": end, "tz": tz}).fetchall()
 
     hour_map = {r.hour: int(r.orders) for r in rows}
     return [HourItem(hour=h, orders=hour_map.get(h, 0)) for h in range(24)]
