@@ -12,6 +12,12 @@ Super Admin Console: управление всей платформой.
   - Все endpoints используют Pydantic-схемы вместо data: dict
   - N+1 устранён в list_agencies и get_dashboard через JOIN
   - Rate limit 5/minute на /login
+
+Изменения v8 (Performance Patch):
+  - get_dashboard: 7 отдельных COUNT/scalar запросов → 2 запроса через CASE WHEN.
+    Агентства: total, active, new_this_month — один SELECT.
+    Рестораны: total, active, new_this_month — один SELECT.
+    Экономия: 5 round-trip к Neon на каждый вызов dashboard.
 """
 
 import logging
@@ -21,7 +27,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import func
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 
@@ -139,24 +145,47 @@ def get_dashboard(
     _=Depends(get_current_superadmin),
     db: Session = Depends(get_db),
 ):
-    """Главные метрики платформы."""
+    """
+    Главные метрики платформы.
+
+    Оптимизация (v8): вместо 7 отдельных COUNT-запросов —
+    2 запроса с CASE WHEN. Каждый возвращает total, active, new_this_month
+    за один round-trip к БД.
+    """
     now = datetime.now(timezone.utc)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-    total_agencies = db.query(func.count(Agency.id)).scalar()
-    active_agencies = db.query(func.count(Agency.id)).filter(Agency.is_active == True).scalar()
+    # ── Запрос 1: все метрики по агентствам за один SELECT ──
+    agency_stats = db.query(
+        func.count(Agency.id).label("total"),
+        func.sum(
+            case((Agency.is_active == True, 1), else_=0)
+        ).label("active"),
+        func.sum(
+            case((Agency.created_at >= month_start, 1), else_=0)
+        ).label("new_this_month"),
+    ).one()
 
-    total_restaurants = db.query(func.count(Restaurant.id)).scalar()
-    active_restaurants = db.query(func.count(Restaurant.id)).filter(Restaurant.is_active == True).scalar()
+    total_agencies      = agency_stats.total or 0
+    active_agencies     = int(agency_stats.active or 0)
+    new_agencies_month  = int(agency_stats.new_this_month or 0)
 
-    new_agencies_month = db.query(func.count(Agency.id)).filter(
-        Agency.created_at >= month_start
-    ).scalar()
+    # ── Запрос 2: все метрики по ресторанам за один SELECT ──
+    restaurant_stats = db.query(
+        func.count(Restaurant.id).label("total"),
+        func.sum(
+            case((Restaurant.is_active == True, 1), else_=0)
+        ).label("active"),
+        func.sum(
+            case((Restaurant.created_at >= month_start, 1), else_=0)
+        ).label("new_this_month"),
+    ).one()
 
-    new_restaurants_month = db.query(func.count(Restaurant.id)).filter(
-        Restaurant.created_at >= month_start
-    ).scalar()
+    total_restaurants      = restaurant_stats.total or 0
+    active_restaurants     = int(restaurant_stats.active or 0)
+    new_restaurants_month  = int(restaurant_stats.new_this_month or 0)
 
+    # ── Запрос 3: MRR через JOIN подписок ──
     mrr_result = (
         db.query(func.sum(SubscriptionPlan.price))
         .join(Subscription, Subscription.plan_id == SubscriptionPlan.id)
@@ -164,7 +193,7 @@ def get_dashboard(
         .scalar()
     ) or 0
 
-    # Один JOIN-запрос вместо N+1 (Agency + COUNT ресторанов)
+    # ── Запрос 4: последние 5 агентств + количество ресторанов (один JOIN) ──
     recent_agencies_rows = (
         db.query(Agency, func.count(Restaurant.id).label("restaurant_count"))
         .outerjoin(Restaurant, Restaurant.agency_id == Agency.id)
@@ -174,6 +203,7 @@ def get_dashboard(
         .all()
     )
 
+    # ── Запрос 5: последние 5 ресторанов ──
     recent_restaurants = (
         db.query(Restaurant)
         .order_by(Restaurant.created_at.desc())
