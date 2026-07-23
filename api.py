@@ -199,9 +199,22 @@ app.add_middleware(SecurityHeadersMiddleware)
 # Render и любой reverse proxy передают реальный IP клиента
 # в заголовке X-Forwarded-For. Без этого middleware slowapi
 # видит IP прокси и rate limit применяется ко всем сразу.
-# trusted_hosts="*" безопасно: X-Forwarded-Host не используется.
+#
+# TRUSTED_PROXY_HOSTS задаётся через env:
+#   "*"         — доверять любому proxy (Render, Railway, аналоги)
+#   "127.0.0.1" — только локальный proxy (собственный сервер с nginx)
+#   "10.0.0.1"  — конкретный IP load balancer
+#
+# Не используйте "*" если приложение доступно напрямую из интернета
+# без proxy — это позволит подделать X-Forwarded-For.
 # ──────────────────────────────────────────
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+_trusted_proxy_hosts = settings.TRUSTED_PROXY_HOSTS
+if _trusted_proxy_hosts == "*":
+    logger.warning(
+        "TRUSTED_PROXY_HOSTS='*' — X-Forwarded-For принимается от любого хоста. "
+        "Допустимо на Render/Railway. Для собственного сервера задайте конкретный IP."
+    )
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=_trusted_proxy_hosts)
 
 # ──────────────────────────────────────────
 # ROUTERS
