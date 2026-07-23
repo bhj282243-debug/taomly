@@ -4,6 +4,30 @@ All notable changes to Taomly are documented here.
 
 ---
 
+## [2.1.1] — 2026-07-23
+
+### Security
+- **SEC-1** `analytics.py`: timezone value now passed as bound parameter `:tz` instead of f-string interpolation in raw SQL
+- **SEC-2** `static/index.html`: added `esc()` HTML-escaping function; applied to server-supplied content rendered via `innerHTML` in the customer menu
+- **SEC-4** `api.py`: added `ProxyHeadersMiddleware` to improve client IP detection behind reverse proxies
+- **SEC-6** `routers/agency.py`: `verify_password()` now executes regardless of whether the agency email exists — reduces timing differences in login response
+- **SEC-7** `config.py`: `MAX_INIT_DATA_AGE_SECONDS` default changed from `86400` to `3600` per Telegram recommendations
+
+### Fixed
+- **BUG-1** `routers/restaurants.py`: `is_popular` field now returns `p.is_popular` — previously returned `p.is_bestseller`, causing the "Popular" section in the Mini App to ignore the restaurant admin's selection
+- **MIGRATION** `alembic/versions/0002_add_badge_columns.py`: corrected `down_revision` from `"0001"` to `"0001_initial"` — fixes `alembic upgrade head` on a fresh database
+
+### Performance
+- **PERF-1** `routers/superadmin.py`: dashboard now uses `CASE WHEN` aggregation — reduces database round-trips during dashboard loading
+
+### DevOps
+- `ci.yml`: added `audit` job that runs `pip-audit` on every push to check dependencies for known CVEs
+
+### Documentation
+- Added `BUYER_GUIDE.md` — step-by-step guide for deploying and taking ownership of the platform
+
+---
+
 ## [1.3.0] — 2026-07-10
 
 ### Added
