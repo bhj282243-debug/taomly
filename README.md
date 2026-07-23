@@ -1,120 +1,153 @@
-# Taomly — White Label Restaurant SaaS Platform
+# Taomly — Product Roadmap
 
-Multi-tenant restaurant ordering system built on Telegram Mini App.
-Each restaurant gets its own Telegram bot, menu, branding and admin panel.
+This document outlines the planned development path for the Taomly platform.
+It is intended for buyers, investors, and technical evaluators.
 
-## Architecture
-
-```
-Agency Owner
-  └── Restaurant A (bot @chinar_bot, slug: chinar)
-  └── Restaurant B (bot @palace_bot, slug: palace)
-        └── Categories → Products
-        └── Orders (delivery / takeaway / dine_in)
-        └── Reservations
-        └── Waiter Calls
-        └── Tables (QR per table)
-```
-
-**Stack:** FastAPI · SQLAlchemy (sync) · Neon PostgreSQL · Render · Telegram Mini App · JWT · Fernet · slowapi · Sentry
-
-**Repo:** `bhj282243-debug/taomly`
-**Live:** `https://taomly.onrender.com`
+Current version: **2.1.1** — Stage 1 complete.
 
 ---
 
-## Environment Variables
+## What is Already Built (Stage 1 — Complete)
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | ✅ | Neon PostgreSQL connection string |
-| `SECRET_KEY` | ✅ | JWT signing key (min 32 chars random string) |
-| `FERNET_KEY` | ✅ | Fernet encryption key for bot tokens. Generate: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
-| `WEBHOOK_URL` | ✅ | Base URL of deployed app, e.g. `https://taomly.onrender.com` |
-| `BOT_TOKEN` | ✅ | Platform Telegram bot token |
-| `SENTRY_DSN` | optional | Sentry DSN for error monitoring |
-| `WEBHOOK_SECRET` | optional | Auto-derived from SECRET_KEY if not set |
-| `ALLOWED_ORIGINS` | optional | Comma-separated CORS origins. Empty = allow all (dev mode) |
-| `ACCESS_TOKEN_EXPIRE_HOURS` | optional | JWT TTL in hours (default: 24) |
-| `MAX_INIT_DATA_AGE_SECONDS` | optional | Telegram initData max age (default: 86400) |
+The platform is fully functional as a white-label multi-tenant restaurant SaaS.
 
----
+**Core:**
+- Agency → Restaurant → Customer three-tier architecture
+- Per-restaurant Telegram Mini App (PWA) with QR-code table ordering
+- Order lifecycle management (new → confirmed → preparing → ready → delivered)
+- Telegram notifications for every order status change
+- Restaurant self-service: menu management, categories, products, photos, prices
 
-## Quick Start (local)
+**Security:**
+- HMAC-SHA256 Telegram initData verification
+- Fernet-encrypted bot tokens in database
+- JWT authentication (agency and restaurant layers)
+- bcrypt password hashing
+- Rate limiting on all auth endpoints
+- SSRF protection on URL inputs
+- Security headers (CSP, X-Frame-Options, Referrer-Policy)
 
-```bash
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+**Admin panels:**
+- SuperAdmin Console: agencies, restaurants, MRR, platform metrics
+- Agency Admin Panel: restaurant creation, management, settings
+- Restaurant Admin Panel: orders, menu, QR codes, statistics, analytics
 
-# Create .env file with required variables (see above)
-cp .env.example .env
-
-uvicorn api:app --reload
-```
-
----
-
-## URL Structure
-
-| URL | Description |
-|-----|-------------|
-| `/app?slug={slug}` | Customer Mini App for restaurant |
-| `/admin` | Restaurant admin panel |
-| `/agency-admin` | Agency owner dashboard |
-| `/api/agency/login` | Agency login |
-| `/api/agency/restaurant-login` | Restaurant admin login |
-| `/api/menu/{restaurant_id}` | Public menu |
-| `/api/orders/` | Create order (Telegram auth) |
-| `/webhook/{slug}` | Per-restaurant Telegram webhook |
-| `/health` | Health check (Render) |
+**Infrastructure:**
+- Multi-stage Docker build, non-root user
+- Alembic migrations
+- Sentry error monitoring
+- GitHub Actions CI (lint, test, security audit, docker build)
+- Render deployment with health checks
 
 ---
 
-## Multi-Tenant Security
+## Stage 2 — Growth (Next Owner's Priority)
 
-- Every request to `/api/orders/`, `/api/menu/`, etc. requires `X-Restaurant-Id` header
-- Telegram `initData` verified with HMAC-SHA256 using **each restaurant's own bot token**
-- JWT contains `restaurant_id` + `agency_id` — all queries filtered by tenant
-- IDOR prevention: resource ownership verified against JWT on every mutating endpoint
-- Rate limiting: 10 req/min on login endpoints, 120 req/min on API
+These features directly increase revenue per restaurant and platform stickiness.
+
+### 2.1 Payments
+- Integrate Click, Payme (Uzbekistan), or Stripe (international)
+- Order payment status tracking
+- Revenue split between agency and platform (configurable %)
+
+### 2.2 Real-time Orders
+- Replace polling with WebSockets or Server-Sent Events
+- Instant order arrival in admin panel without page refresh
+- Kitchen Display System (KDS) view
+
+### 2.3 AI Assistant
+- AI endpoint stubs already exist (`routers/ai.py`, `ai_service.py`)
+- Activate with `AI_ENABLED=true` and OpenRouter/OpenAI API key
+- Dish description generation (UZ/RU)
+- Menu translation
+- Suggested tags and badges
+
+### 2.4 Async SQLAlchemy
+- Replace sync SQLAlchemy with async version
+- Enable multiple Uvicorn workers
+- Required before scaling beyond ~50 concurrent users per restaurant
+
+### 2.5 Redis
+- Session caching
+- Bot token cache (currently in-process dict — breaks with multiple workers)
+- Rate limit storage (currently in-memory — resets on redeploy)
 
 ---
 
-## Database Migrations
+## Stage 3 — Scale
 
-No Alembic (no terminal access on Render free tier).
-New columns added via Neon SQL Editor with `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
+### 3.1 Loyalty & CRM
+- Customer purchase history
+- Loyalty points system
+- Push notifications via Telegram
 
-Migration files:
-- `MIGRATION_badges.sql` — Product badge columns (is_bestseller, is_new, is_spicy, is_chef_choice)
+### 3.2 Analytics Expansion
+- Peak hours dashboard (already built — `routers/analytics.py`)
+- Revenue by category, average check trends
+- Customer return rate
+
+### 3.3 Delivery Integration
+- Courier assignment
+- Delivery zone management
+- Integration with Yandex.Delivery or local courier services
+
+### 3.4 Multi-language
+- UZ / RU / EN menu display
+- Customer language detection from Telegram `language_code`
+- Admin panel localization
+
+### 3.5 Reservations
+- Table reservation flow (endpoint exists — `routers/reservations.py`)
+- Calendar view in admin panel
+- Reminder notifications
 
 ---
 
-## Tech Debt (Stage 2)
+## Stage 4 — Platform
 
-| ID | Description |
-|----|-------------|
-| TD-1 | Sync SQLAlchemy — migrate to AsyncSession before Stage 2 |
-| TD-2 | `_BOT_CACHE` in-process dict — use Redis before scaling to 2+ workers |
-| TD-3 | Webhook accepts raw `dict` — add Pydantic TelegramUpdate schema |
-| TD-6 | Telegram bot messages hardcoded in Uzbek — add i18n |
-| TD-8 | Static `manifest.json` — make dynamic per restaurant branding |
+### 4.1 Marketplace
+- Public restaurant directory
+- Shared loyalty program across restaurants
+- Network effects: one Telegram account — all restaurants
+
+### 4.2 Developer API
+- Public REST API for third-party integrations
+- Webhooks for external systems (accounting, inventory, POS)
+- API key management in admin panel
+
+### 4.3 White Label CIS Expansion
+- Kazakhstan, Kyrgyzstan, Azerbaijan markets
+- Localized payment providers per country
+- Agency partner program with revenue sharing
+
+### 4.4 Taomly Intelligence
+- Platform-wide anonymized data analysis
+- Per-restaurant AI recommendations based on network patterns
+- Demand forecasting, inventory suggestions
 
 ---
 
-## Test Credentials
+## Known Technical Debt (Accepted at Stage 1)
 
-| | |
+Full details in [KNOWN_LIMITATIONS.md](./KNOWN_LIMITATIONS.md).
+
+| Item | When to Address |
 |---|---|
-| Agency | `admin@taomly.uz` / `12345678` |
-| Restaurant chinar | slug: `chinar`, password: `secret` |
-| Restaurant test-2 | slug: `taomly-test-2`, password: `secret` |
-| Dispatcher Telegram ID | `331294063` |
+| Synchronous SQLAlchemy | Stage 2 (before scaling) |
+| In-process bot token cache | Stage 2 (before multi-worker) |
+| Redis for rate limiting | Stage 2 |
+| No payment gateway | Stage 2 |
+| SQLite used in tests (not PostgreSQL) | Stage 2 |
+| Hardcoded Uzbek language in notifications | Stage 3 |
 
 ---
 
-## Price Format
+## Architecture Principle
 
-All prices stored as **integer sums (UZS)**. Example: `45000` = 45 000 so'm.
-Display as: `f"{price:,} so'm"`
+> One engine — different styles.
+
+The platform is designed so that each restaurant can have its own branding, bot, and domain — while sharing the same backend infrastructure. Adding a new restaurant takes under 5 minutes and requires no developer involvement.
+
+---
+
+*Taomly v2.1.1 — Last updated: 2026-07-23*
