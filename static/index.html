@@ -1126,7 +1126,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   const tg=window.Telegram?.WebApp;if(tg){tg.ready();tg.expand();}
   parseParams();loadMenu();
 });
-if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/static/sw.js').then(r=>console.log('[SW]',r.scope)).catch(e=>console.warn('[SW]',e));});}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').then(r=>console.log('[SW]',r.scope)).catch(e=>console.warn('[SW]',e));});}
 let _dip=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();_dip=e;});
 window.addEventListener('appinstalled',()=>{_dip=null;});
