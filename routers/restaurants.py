@@ -11,8 +11,13 @@ routers/restaurants.py — Taomly Platform
 Изменения v6 (Badge Patch C-5, C-6):
   - Добавлены badge-поля в публичный ответ продуктов:
     is_bestseller, is_new, is_spicy, is_chef_choice, is_popular
-  - is_popular = is_bestseller (алиас для обратной совместимости с index.html)
   - Фронтенд теперь получает реальные данные из БД вместо #hashtag парсинга
+
+Изменения v7 (Bugfix):
+  - is_popular: исправлен баг — возвращалось p.is_bestseller вместо p.is_popular.
+    Поле is_popular — отдельная колонка в БД (миграция 0003), управляется
+    из admin.html независимо от is_bestseller. Секция "Популярное" в Mini App
+    теперь корректно отражает выбор ресторана.
 """
 
 import logging
@@ -99,8 +104,10 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
                         "is_new": p.is_new,
                         "is_spicy": p.is_spicy,
                         "is_chef_choice": p.is_chef_choice,
-                        # is_popular — алиас is_bestseller для index.html (C-5)
-                        "is_popular": p.is_bestseller,
+                        # is_popular — отдельная колонка (миграция 0003).
+                        # Управляется в admin.html независимо от is_bestseller.
+                        # Используется в секции "Популярное" на главном экране.
+                        "is_popular": p.is_popular,
                     }
                     for p in sorted(cat.products, key=lambda x: x.sort_order)
                     if p.is_available
