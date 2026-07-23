@@ -133,5 +133,13 @@ class _Settings:
     RATE_LIMIT_API: str = os.getenv("RATE_LIMIT_API", "120/minute")
     RATE_LIMIT_SUPERADMIN_LOGIN: str = os.getenv("RATE_LIMIT_SUPERADMIN_LOGIN", "5/minute")
 
+    # Доверенные proxy-хосты для ProxyHeadersMiddleware.
+    # Задайте IP вашего reverse proxy или load balancer.
+    # "*" принимает X-Forwarded-For от любого хоста — допустимо только
+    # если приложение недоступно напрямую из интернета (только через proxy).
+    # Пример для Render: оставьте "*" — Render изолирует внешний трафик.
+    # Пример для собственного сервера: "127.0.0.1" или конкретный IP.
+    TRUSTED_PROXY_HOSTS: str = os.getenv("TRUSTED_PROXY_HOSTS", "*")
+
 
 settings = _Settings()
