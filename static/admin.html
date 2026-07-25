@@ -1199,7 +1199,18 @@ function renderAnalytics(){if(!RESTAURANT_ID)return;_loadAnalyticsFromServer(ana
 async function _loadAnalyticsFromServer(period){
   const loading=document.getElementById('analytics-loading');
   const kpiGrid=document.getElementById('analytics-kpi');
-  loading.style.display='block';kpiGrid.style.opacity='0.4';
+
+  // Skeleton: KPI-карточки показывают shimmer пока грузятся данные
+  const skelVal='<div class="skel" style="height:22px;width:80px;border-radius:6px;display:inline-block"></div>';
+  ['kpi-revenue','kpi-orders','kpi-avg','kpi-returning'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.innerHTML=skelVal;
+  });
+  ['kpi-revenue-sub','kpi-orders-sub','kpi-returning-sub'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.textContent='';
+  });
+
+  loading.style.display='block';kpiGrid.style.opacity='0.7';
+
   try{
     const headers=authHeaders();const p=encodeURIComponent(period);const base=`${API}/api/analytics`;
     const [summary,byDay,topDishes,peakHours,orderTypes]=await Promise.all([
@@ -1211,7 +1222,15 @@ async function _loadAnalyticsFromServer(period){
     ]);
     _renderSummary(summary);_renderStatusGrid(summary);_renderTopDishes(topDishes);
     _renderOrderTypes(orderTypes,summary.orders_total);_renderPeakHours(peakHours);_renderDailyChart(byDay,period);
-  }catch(e){console.error('Analytics load error:',e);}
+  }catch(e){
+    // Показываем ошибку в UI вместо тихого console.error
+    ['kpi-revenue','kpi-orders','kpi-avg','kpi-returning'].forEach(id=>{
+      const el=document.getElementById(id);if(el)el.textContent='—';
+    });
+    const topEl=document.getElementById('top-dishes-content');
+    if(topEl)topEl.innerHTML=`<div class="empty" style="padding:16px;color:#EF9A9A">Ma'lumotlarni yuklashda xatolik.<br><span style="font-size:11px;color:var(--iv4)">${e.message||'Server bilan bog\'lanib bo\'lmadi'}</span></div>`;
+    console.error('Analytics load error:',e);
+  }
   finally{loading.style.display='none';kpiGrid.style.opacity='1';}
 }
 
