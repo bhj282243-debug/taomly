@@ -282,6 +282,88 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 .error-screen h2{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300;color:var(--ivory);margin-bottom:8px;}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
 
+/* ══ NEW ORDER NOTIFICATION ══ */
+/* Красный пульсирующий dot на вкладке "Buyurtmalar" */
+.main-tab{position:relative;}
+.tab-dot{
+  position:absolute;top:10px;right:6px;
+  width:7px;height:7px;border-radius:50%;
+  background:#E53935;
+  display:none;
+  box-shadow:0 0 0 2px rgba(229,57,53,0.3);
+  animation:dotPulse 1.4s ease infinite;
+}
+.tab-dot.visible{display:block;}
+@keyframes dotPulse{
+  0%,100%{transform:scale(1);opacity:1;}
+  50%{transform:scale(1.5);opacity:.7;}
+}
+
+/* Золотая полоса-флэш вдоль верха экрана */
+#newOrderFlash{
+  position:fixed;top:0;left:0;right:0;height:3px;z-index:9999;
+  background:linear-gradient(90deg,transparent 0%,var(--g2) 30%,var(--g1) 50%,var(--g2) 70%,transparent 100%);
+  opacity:0;pointer-events:none;
+  transition:opacity .15s ease;
+}
+#newOrderFlash.show{opacity:1;animation:flashSweep 1.2s ease forwards;}
+@keyframes flashSweep{
+  0%{opacity:1;transform:scaleX(0.3);}
+  35%{opacity:1;transform:scaleX(1);}
+  100%{opacity:0;transform:scaleX(1);}
+}
+
+/* Toast уведомление о новом заказе — крупнее и с иконкой */
+#newOrderToast{
+  position:fixed;top:80px;left:50%;
+  transform:translateX(-50%) translateY(-12px);
+  z-index:9998;
+  background:rgba(10,10,9,0.97);
+  border:1px solid rgba(212,175,55,0.45);
+  border-radius:20px;
+  padding:14px 22px 14px 16px;
+  display:flex;align-items:center;gap:12px;
+  opacity:0;pointer-events:none;
+  transition:opacity .22s ease,transform .22s ease;
+  box-shadow:0 8px 32px rgba(0,0,0,0.7),var(--sg);
+  white-space:nowrap;
+}
+#newOrderToast.show{
+  opacity:1;
+  transform:translateX(-50%) translateY(0);
+}
+.not-ring{
+  width:36px;height:36px;border-radius:50%;flex-shrink:0;
+  background:rgba(212,175,55,0.12);
+  border:1px solid var(--gl);
+  display:flex;align-items:center;justify-content:center;
+  animation:ringPulse .6s ease infinite alternate;
+}
+@keyframes ringPulse{
+  from{box-shadow:0 0 0 0 rgba(212,175,55,0.4);}
+  to{box-shadow:0 0 0 8px rgba(212,175,55,0);}
+}
+.not-ring .icon{width:16px;height:16px;stroke:var(--g2);stroke-width:1.6;}
+.not-text{display:flex;flex-direction:column;gap:1px;}
+.not-title{font-size:13.5px;font-weight:600;color:var(--ivory);letter-spacing:.2px;}
+.not-sub{font-size:11px;color:var(--iv3);}
+
+/* Счётчик новых заказов в заголовке вкладки */
+.tab-count{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:18px;height:18px;border-radius:9px;
+  background:#E53935;color:#fff;
+  font-size:10px;font-weight:700;
+  margin-left:5px;padding:0 4px;
+  line-height:1;
+  opacity:0;transform:scale(0);
+  transition:opacity .2s ease,transform .2s ease;
+}
+.tab-count.visible{opacity:1;transform:scale(1);}
+
+/* Мигание иконки браузера (title) */
+/* реализовано через JS */
+
 /* ══ PHOTO UPLOAD ══ */
 .photo-upload-wrap{margin-bottom:12px;}
 .photo-preview{width:100%;height:160px;border-radius:14px;overflow:hidden;background:rgba(5,5,5,0.6);border:1px solid rgba(247,245,240,0.08);display:flex;align-items:center;justify-content:center;margin-bottom:8px;position:relative;}
@@ -308,6 +390,14 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 <body>
 
 <div id="toast"></div>
+<div id="newOrderFlash"></div>
+<div id="newOrderToast">
+  <div class="not-ring"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+  <div class="not-text">
+    <div class="not-title" id="notTitle">Yangi buyurtma!</div>
+    <div class="not-sub" id="notSub">Buyurtmalar bo'limiga o'ting</div>
+  </div>
+</div>
 
 <!-- LOGIN -->
 <div class="login-screen" id="loginScreen">
@@ -355,7 +445,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
   </div>
 
   <div class="main-tabs">
-    <div class="main-tab active" id="mtab-orders" onclick="switchPage('orders')">Buyurtmalar</div>
+    <div class="main-tab active" id="mtab-orders" onclick="switchPage('orders')">Buyurtmalar<span class="tab-count" id="newOrderCount"></span><span class="tab-dot" id="ordersDot"></span></div>
     <div class="main-tab" id="mtab-menu" onclick="switchPage('menu')">Menyu</div>
     <div class="main-tab" id="mtab-analytics" onclick="switchPage('analytics')">Analitika</div>
     <div class="main-tab" id="mtab-qr" onclick="switchPage('qr')">QR</div>
@@ -870,7 +960,7 @@ async function loadOrders(){
     if(!res.ok)throw new Error('Xato');
     const freshOrders=await res.json();
     const newCount=freshOrders.filter(o=>o.status==='new').length;
-    if(allOrders.length>0&&newCount>prevNewCount)playNewOrderSound();
+    if(allOrders.length>0&&newCount>prevNewCount)_showNewOrderNotification(newCount);
     prevNewCount=newCount;allOrders=freshOrders;
     if(currentPage==='orders')renderOrders();
   }catch(e){
@@ -912,12 +1002,17 @@ function makeOrderCard(order){
   const addressHtml=order.address?`<div class="client-address">${esc(order.address)}</div>`:'';
   const commentHtml=order.comment?`<div class="client-address" style="color:var(--iv3)">${esc(order.comment)}</div>`:'';
   const nextStatus=NEXT_STATUS[order.status];
+  // Физическое удаление запрещено — заказы это журнал.
+  // Для new: кнопка "Bekor qilish" через существующий PATCH /status.
+  // Для completed/cancelled: никаких деструктивных действий.
+  const cancelBtn=order.status==='new'
+    ?`<button class="btn-delete" onclick="confirmCancelOrder(${order.id})">Buyurtmani bekor qilish</button>`
+    :'';
   const actionBtns=nextStatus?`
     <div class="action-btns">
       <button class="btn btn-accept" onclick="changeStatus(${order.id},'${nextStatus}')">${NEXT_LABELS[order.status]}</button>
-      ${order.status==='new'?`<button class="btn btn-cancel" onclick="changeStatus(${order.id},'cancelled')">Bekor</button>`:''}
     </div>
-    <button class="btn-delete" onclick="confirmDeleteOrder(${order.id})">Buyurtmani o'chirish</button>`:'';
+    ${cancelBtn}`:cancelBtn;
   div.innerHTML=`
     <div class="order-header">
       <div><div class="order-id">#${String(order.id).padStart(4,'0')}</div><div class="order-time">${timeAgo(order.created_at)}</div></div>
@@ -943,21 +1038,14 @@ async function changeStatus(orderId,newStatus){
   }catch(e){showToast('Xato: '+e.message,true);}
 }
 
-function confirmDeleteOrder(orderId){
+// Отмена заказа через существующий PATCH /status → 'cancelled'.
+// Физическое удаление запрещено: заказы — это журнал ресторана.
+function confirmCancelOrder(orderId){
   showConfirm(
     `Buyurtma #${String(orderId).padStart(4,'0')}`,
-    "Bu buyurtmani o'chirishni xohlaysizmi? Bu amalni bekor qilib bo'lmaydi.",
-    ()=>deleteOrder(orderId)
+    "Bu buyurtmani bekor qilishni xohlaysizmi? Buyurtma arxivda saqlanib qoladi.",
+    ()=>changeStatus(orderId,'cancelled')
   );
-}
-
-async function deleteOrder(orderId){
-  try{
-    const res=await apiFetch(`${API}/api/orders/${orderId}`,{method:'DELETE',headers:authHeaders()});
-    if(!res.ok)throw new Error('Xato');
-    showToast("Buyurtma o'chirildi");
-    await loadOrders();
-  }catch(e){showToast('Xato: '+e.message,true);}
 }
 
 // ── MENU ──
@@ -1312,36 +1400,172 @@ function downloadInvoice(){
 }
 
 // ── SOUND ──
+// Web Audio Context — создаём один раз и разблокируем через user interaction
+let _audioCtx=null;
+let _audioUnlocked=false;
+
+function _getAudioCtx(){
+  if(!_audioCtx){
+    try{_audioCtx=new(window.AudioContext||window.webkitAudioContext)();}
+    catch(e){return null;}
+  }
+  return _audioCtx;
+}
+
+// Разблокировка звука — iOS Safari требует user interaction
+function _unlockAudio(){
+  if(_audioUnlocked)return;
+  const ctx=_getAudioCtx();if(!ctx)return;
+  // Играем тихий буфер для разблокировки
+  const buf=ctx.createBuffer(1,1,22050);
+  const src=ctx.createBufferSource();src.buffer=buf;
+  src.connect(ctx.destination);src.start(0);
+  if(ctx.state==='suspended'){ctx.resume().then(()=>{_audioUnlocked=true;});}
+  else{_audioUnlocked=true;}
+}
+
+// Разблокируем при первом касании
+document.addEventListener('touchstart',_unlockAudio,{once:true,passive:true});
+document.addEventListener('click',_unlockAudio,{once:true});
+
 function playNewOrderSound(){
   if(!soundEnabled)return;
-  try{
-    const ctx=new(window.AudioContext||window.webkitAudioContext)();
-    [0,0.18].forEach((delay,i)=>{
-      const osc=ctx.createOscillator();const gain=ctx.createGain();
-      osc.connect(gain);gain.connect(ctx.destination);
-      osc.frequency.value=i===0?880:1100;
-      gain.gain.setValueAtTime(0.08,ctx.currentTime+delay);
-      gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+delay+0.35);
-      osc.start(ctx.currentTime+delay);osc.stop(ctx.currentTime+delay+0.35);
-    });
-  }catch(e){}
+  const ctx=_getAudioCtx();if(!ctx)return;
+  // Если context suspended (iOS) — пробуем resume
+  const play=()=>{
+    try{
+      // Три ноты: ding-dong-ding — классический сигнал ресторана
+      const notes=[880,1100,880];
+      const delays=[0,0.20,0.40];
+      notes.forEach((freq,i)=>{
+        const osc=ctx.createOscillator();
+        const gain=ctx.createGain();
+        osc.connect(gain);gain.connect(ctx.destination);
+        osc.type='sine';
+        osc.frequency.value=freq;
+        const t=ctx.currentTime+delays[i];
+        gain.gain.setValueAtTime(0,t);
+        gain.gain.linearRampToValueAtTime(0.12,t+0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001,t+0.38);
+        osc.start(t);osc.stop(t+0.40);
+      });
+    }catch(e){}
+  };
+  if(ctx.state==='suspended'){ctx.resume().then(play);}
+  else{play();}
 }
+
 function toggleSound(){
-  soundEnabled=!soundEnabled;localStorage.setItem('taomly_sound',soundEnabled);updateSoundBtn();
-  showToast(soundEnabled?'Ovoz yoqildi ✓':'Ovoz o\'chirildi');
+  soundEnabled=!soundEnabled;
+  localStorage.setItem('taomly_sound',soundEnabled);
+  updateSoundBtn();
+  // При включении звука — сразу разблокируем AudioContext
+  if(soundEnabled){_unlockAudio();playNewOrderSound();}
+  showToast(soundEnabled?'Ovoz yoqildi ✓':"Ovoz o'chirildi");
 }
+
 function updateSoundBtn(){
-  const btn=document.getElementById('soundBtn');const icon=document.getElementById('soundIcon');if(!btn||!icon)return;
+  const btn=document.getElementById('soundBtn');
+  const icon=document.getElementById('soundIcon');
+  if(!btn||!icon)return;
   btn.classList.toggle('muted',!soundEnabled);
   icon.innerHTML=soundEnabled
     ?`<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>`
     :`<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>`;
 }
 
+// ── NEW ORDER NOTIFICATION ──
+let _titleFlipInterval=null;
+const _origTitle=document.title||'Taomly Admin';
+
+function _showNewOrderNotification(count){
+  // 1. Золотой flash вдоль верха
+  const flash=document.getElementById('newOrderFlash');
+  if(flash){flash.classList.remove('show');void flash.offsetWidth;flash.classList.add('show');setTimeout(()=>flash.classList.remove('show'),1400);}
+
+  // 2. Toast уведомление
+  const toast=document.getElementById('newOrderToast');
+  const title=document.getElementById('notTitle');
+  const sub=document.getElementById('notSub');
+  if(toast){
+    if(title)title.textContent=count===1?'Yangi buyurtma keldi!':count+' ta yangi buyurtma!';
+    if(sub)sub.textContent="Buyurtmalar bo'limiga o'ting";
+    toast.classList.add('show');
+    clearTimeout(toast._ht);
+    toast._ht=setTimeout(()=>toast.classList.remove('show'),4500);
+  }
+
+  // 3. Красный dot на вкладке
+  const dot=document.getElementById('ordersDot');if(dot)dot.classList.add('visible');
+
+  // 4. Счётчик рядом с вкладкой
+  const cnt=document.getElementById('newOrderCount');
+  if(cnt){cnt.textContent=count;cnt.classList.add('visible');}
+
+  // 5. Мигание заголовка браузера (когда вкладка не в фокусе)
+  if(!document.hasFocus()){
+    if(_titleFlipInterval)clearInterval(_titleFlipInterval);
+    let _flip=false;
+    _titleFlipInterval=setInterval(()=>{
+      document.title=_flip?_origTitle:`🔔 ${count} ta yangi!`;
+      _flip=!_flip;
+    },900);
+  }
+
+  // 6. Звук
+  playNewOrderSound();
+}
+
+function _clearNewOrderIndicators(){
+  const dot=document.getElementById('ordersDot');if(dot)dot.classList.remove('visible');
+  const cnt=document.getElementById('newOrderCount');if(cnt){cnt.textContent='';cnt.classList.remove('visible');}
+  if(_titleFlipInterval){clearInterval(_titleFlipInterval);_titleFlipInterval=null;}
+  document.title=_origTitle;
+}
+
+// Сбрасываем индикаторы когда открывают вкладку заказов
+const _origSwitchPage=switchPage;
+// Патчим switchPage для сброса индикаторов
+const _patchedSwitchPage=function(page){
+  if(page==='orders')_clearNewOrderIndicators();
+  _origSwitchPage(page);
+};
+// Переопределяем глобальную функцию
+window.switchPage=_patchedSwitchPage;
+// Обновляем onclick на вкладках
+document.querySelectorAll('.main-tab').forEach(t=>{
+  const m=t.getAttribute('onclick');
+  if(m)t.onclick=()=>_patchedSwitchPage(m.match(/'(\w+)'/)?.[1]||'orders');
+});
+
 // ── INIT ──
-checkAuth();updateSoundBtn();
-// Поллинг каждые 15 сек — быстрее для живой кухни
-setInterval(()=>{if(AUTH_TOKEN&&RESTAURANT_ID)loadOrders();},15000);
+checkAuth();
+updateSoundBtn();
+
+// Умный polling:
+// — 15 сек пока страница в фокусе (активная работа)
+// — 30 сек когда страница в фоне (экономия ресурсов)
+let _pollInterval=null;
+
+function _startPolling(){
+  if(_pollInterval)clearInterval(_pollInterval);
+  const delay=document.hidden?30000:15000;
+  _pollInterval=setInterval(()=>{
+    if(AUTH_TOKEN&&RESTAURANT_ID)loadOrders();
+  },delay);
+}
+
+document.addEventListener('visibilitychange',()=>{
+  // При возврате на вкладку — сразу обновляем
+  if(!document.hidden&&AUTH_TOKEN&&RESTAURANT_ID){
+    loadOrders();
+    // Сбрасываем мигание title
+    if(_titleFlipInterval){clearInterval(_titleFlipInterval);_titleFlipInterval=null;document.title=_origTitle;}
+  }
+  _startPolling();
+});
+
+_startPolling();
 </script>
 </body>
 </html>
