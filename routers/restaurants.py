@@ -18,19 +18,108 @@ routers/restaurants.py — Taomly Platform
     Поле is_popular — отдельная колонка в БД (миграция 0003), управляется
     из admin.html независимо от is_bestseller. Секция "Популярное" в Mini App
     теперь корректно отражает выбор ресторана.
+
+Изменения v8 (Settings Endpoint):
+  - Добавлен GET /api/restaurants/me/settings — получить настройки ресторана
+  - Добавлен PATCH /api/restaurants/me/settings — сохранить настройки ресторана
+    (working_hours, delivery_fee, min_order_amount)
+  - Оба endpoint требуют роль restaurant_admin
+  - Публичный GET /{slug} теперь возвращает working_hours, delivery_fee,
+    min_order_amount для отображения клиенту
 """
 
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
+from typing import Optional
 
+from auth import get_current_restaurant_admin
 from database import get_db
 from models import Category, Restaurant, RestaurantTable
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/restaurants", tags=["restaurants"])
+
+
+# ──────────────────────────────────────────
+# Pydantic схема для настроек
+# ──────────────────────────────────────────
+class RestaurantSettingsUpdate(BaseModel):
+    working_hours: Optional[str] = None
+    delivery_fee: Optional[int] = None
+    min_order_amount: Optional[int] = None
+
+
+# ──────────────────────────────────────────
+# GET /me/settings — настройки ресторана (только для restaurant_admin)
+# ──────────────────────────────────────────
+@router.get("/me/settings")
+def get_restaurant_settings(
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+):
+    """
+    Возвращает текущие настройки ресторана.
+    Требует авторизацию: restaurant_admin.
+    """
+    return {
+        "working_hours": restaurant.working_hours or "",
+        "delivery_fee": restaurant.delivery_fee or 0,
+        "min_order_amount": restaurant.min_order_amount or 0,
+    }
+
+
+# ──────────────────────────────────────────
+# PATCH /me/settings — сохранить настройки (только для restaurant_admin)
+# ──────────────────────────────────────────
+@router.patch("/me/settings")
+def update_restaurant_settings(
+    data: RestaurantSettingsUpdate,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Сохраняет настройки ресторана: рабочие часы, стоимость доставки,
+    минимальная сумма заказа.
+    Требует авторизацию: restaurant_admin.
+    """
+    if data.working_hours is not None:
+        restaurant.working_hours = data.working_hours.strip()
+    if data.delivery_fee is not None:
+        if data.delivery_fee < 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Стоимость доставки не может быть отрицательной",
+            )
+        restaurant.delivery_fee = data.delivery_fee
+    if data.min_order_amount is not None:
+        if data.min_order_amount < 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Минимальная сумма не может быть отрицательной",
+            )
+        restaurant.min_order_amount = data.min_order_amount
+
+    db.commit()
+    db.refresh(restaurant)
+
+    logger.info(
+        "Restaurant settings updated: slug=%s working_hours=%s "
+        "delivery_fee=%s min_order_amount=%s",
+        restaurant.slug,
+        restaurant.working_hours,
+        restaurant.delivery_fee,
+        restaurant.min_order_amount,
+    )
+
+    return {
+        "ok": True,
+        "working_hours": restaurant.working_hours or "",
+        "delivery_fee": restaurant.delivery_fee or 0,
+        "min_order_amount": restaurant.min_order_amount or 0,
+    }
 
 
 # ──────────────────────────────────────────
@@ -45,6 +134,7 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
       1. Получает branding (цвета, лого, welcome_text)
       2. Получает restaurant.id для заголовка X-Restaurant-Id
       3. Получает меню (только доступные продукты) с badge-полями
+      4. Получает настройки доставки и рабочие часы
 
     Авторизация не требуется — публичный эндпоинт.
     telegram_bot_token_encrypted НЕ включается в ответ — защита токена.
@@ -82,6 +172,10 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
         "secondary_color": restaurant.secondary_color,
         "accent_color": restaurant.accent_color,
         "welcome_text": restaurant.welcome_text,
+        # Настройки доставки и рабочие часы (для клиента)
+        "working_hours": restaurant.working_hours or "",
+        "delivery_fee": restaurant.delivery_fee or 0,
+        "min_order_amount": restaurant.min_order_amount or 0,
         # telegram_bot_token_encrypted намеренно не включён
         "categories": [
             {
@@ -97,16 +191,10 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
                         "photo_url": p.photo_url,
                         "is_available": p.is_available,
                         "sort_order": p.sort_order,
-                        # Badge-поля из БД (C-6)
-                        # Раньше бейджи кодировались как #hashtag в description —
-                        # теперь это отдельные булевые колонки.
                         "is_bestseller": p.is_bestseller,
                         "is_new": p.is_new,
                         "is_spicy": p.is_spicy,
                         "is_chef_choice": p.is_chef_choice,
-                        # is_popular — отдельная колонка (миграция 0003).
-                        # Управляется в admin.html независимо от is_bestseller.
-                        # Используется в секции "Популярное" на главном экране.
                         "is_popular": p.is_popular,
                     }
                     for p in sorted(cat.products, key=lambda x: x.sort_order)
