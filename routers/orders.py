@@ -8,6 +8,13 @@ routers/orders.py — Taomly Platform
 Изменения v6 (Security/Billing):
   - create_order: проверяет лимит заказов по активной подписке.
     Ресторан на Free plan (100 заказов/месяц) не сможет создать 101-й.
+
+Изменения v7 (Client History):
+  - GET /my — история заказов текущего клиента (по client_telegram_id).
+    Требует X-Restaurant-Id + X-Telegram-Init-Data (или гостевой режим).
+    Гостевой пользователь (tg_user.id == 0) получает пустой список.
+  - GET /my/{order_id} — один заказ клиента по ID (live-статус).
+    Используется index.html для polling статуса после оформления заказа.
 """
 
 import logging
@@ -232,6 +239,88 @@ def create_order(
         order_with_items.id, restaurant.id, tg_user.id, total,
     )
     return order_with_items
+
+
+# ──────────────────────────────────────────
+# GET /my — история заказов клиента
+# ──────────────────────────────────────────
+@router.get("/my", response_model=List[OrderResponse])
+@limiter.limit("30/minute")
+def get_my_orders(
+    request: Request,
+    limit: int = Query(20, ge=1, le=50),
+    tg_user: TelegramUser = Depends(get_telegram_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Возвращает историю заказов текущего клиента в данном ресторане.
+
+    Идентификация клиента — по client_telegram_id из верифицированной initData.
+    Гостевой пользователь (tg_user.id == 0, браузер без Telegram) — пустой список.
+
+    Tenant-изоляция: фильтр по restaurant_id из X-Restaurant-Id гарантирует
+    что клиент видит только свои заказы в текущем ресторане.
+    """
+    if tg_user.id == 0:
+        return []
+
+    orders = (
+        db.query(Order)
+        .options(joinedload(Order.items))
+        .filter(
+            Order.restaurant_id == tg_user.restaurant_id,
+            Order.client_telegram_id == tg_user.id,
+        )
+        .order_by(Order.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return orders
+
+
+# ──────────────────────────────────────────
+# GET /my/{order_id} — один заказ клиента (live-статус)
+# ──────────────────────────────────────────
+@router.get("/my/{order_id}", response_model=OrderResponse)
+@limiter.limit("60/minute")
+def get_my_order(
+    request: Request,
+    order_id: int,
+    tg_user: TelegramUser = Depends(get_telegram_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Возвращает один заказ клиента по ID.
+
+    Используется index.html для polling статуса после оформления заказа:
+      каждые 5 секунд GET /api/orders/my/{order_id} → обновляет UI.
+
+    Безопасность:
+      - Гостевой пользователь (id=0) не может видеть чужие заказы → 404.
+      - Фильтр по client_telegram_id + restaurant_id — IDOR невозможен.
+    """
+    if tg_user.id == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Заказ не найден",
+        )
+
+    order = (
+        db.query(Order)
+        .options(joinedload(Order.items))
+        .filter(
+            Order.id == order_id,
+            Order.restaurant_id == tg_user.restaurant_id,
+            Order.client_telegram_id == tg_user.id,
+        )
+        .first()
+    )
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Заказ не найден",
+        )
+    return order
 
 
 # ──────────────────────────────────────────
