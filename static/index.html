@@ -1388,6 +1388,10 @@ svg{display:block;}
           <svg class="icon" viewBox="0 0 24 24"><path d="M12 21s-7-7.5-7-11a7 7 0 1 1 14 0c0 3.5-7 11-7 11z"/><circle cx="12" cy="10" r="2"/></svg>
           <span id="heroAddrText"></span>
         </div>
+        <div class="hero-chip" id="heroHours" style="display:none">
+          <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span id="heroHoursText"></span>
+        </div>
       </div>
     </div>
     <div class="hero-bottom">
@@ -1476,6 +1480,12 @@ svg{display:block;}
   </div>
   <div class="sum-card">
     <div class="sum-row"><span id="summaryCount">0 ta taom</span><span id="summarySubtotal">0 so'm</span></div>
+    <div class="sum-row" id="deliveryFeeRow" style="display:none">
+      <span>Yetkazib berish</span><span id="deliveryFeeVal">0 so'm</span>
+    </div>
+    <div class="sum-row" id="minOrderRow" style="display:none;color:var(--ink4);font-size:12px;">
+      <span id="minOrderText"></span>
+    </div>
     <div class="sum-rule"></div>
     <div class="sum-row total"><span>Jami</span><span class="sum-val" id="summaryTotal">0</span></div>
   </div>
@@ -1584,6 +1594,7 @@ function showHero(r){
   else{document.getElementById('heroMedL').textContent=L;}
   document.getElementById('heroName').textContent=r.name||'';
   if(r.address){document.getElementById('heroAddrText').textContent=r.address;document.getElementById('heroAddr').style.display='inline-flex';}
+  if(r.working_hours){document.getElementById('heroHoursText').textContent=r.working_hours;document.getElementById('heroHours').style.display='inline-flex';}
   document.getElementById('heroScreen').classList.add('active');
 }
 
@@ -1797,6 +1808,42 @@ function selectType(t){
   document.getElementById('typeDelivery').classList.toggle('active',t==='delivery');
   document.getElementById('typeTakeaway').classList.toggle('active',t==='takeaway');
   document.getElementById('clientAddress').style.display=t==='delivery'?'block':'none';
+  // Обновляем строку доставки в итоговой сумме
+  _updateDeliveryRow();
+}
+
+function _updateDeliveryRow(){
+  const fee=restaurant?.delivery_fee||0;
+  const min=restaurant?.min_order_amount||0;
+  const feeRow=document.getElementById('deliveryFeeRow');
+  const minRow=document.getElementById('minOrderRow');
+  const total=cartTotal();
+
+  // Стоимость доставки — только для delivery
+  if(feeRow){
+    if(orderType==='delivery'&&fee>0){
+      document.getElementById('deliveryFeeVal').textContent=fmt(fee);
+      feeRow.style.display='flex';
+    }else{
+      feeRow.style.display='none';
+    }
+  }
+
+  // Минимальная сумма — предупреждение
+  if(minRow){
+    if(min>0&&total<min){
+      document.getElementById('minOrderText').textContent=
+        `Minimal buyurtma: ${fmt(min)} (yana ${fmt(min-total)} qo'shing)`;
+      minRow.style.display='flex';
+    }else{
+      minRow.style.display='none';
+    }
+  }
+
+  // Итого = товары + доставка (если delivery)
+  const grandTotal=total+(orderType==='delivery'?fee:0);
+  const el=document.getElementById('summaryTotal');
+  if(el)el.textContent=fmtNum(grandTotal);
 }
 
 function renderCart(){
@@ -1812,6 +1859,7 @@ function renderCart(){
   document.getElementById('summaryCount').textContent=cartCount()+' ta taom';
   document.getElementById('summarySubtotal').textContent=fmt(cartTotal());
   document.getElementById('summaryTotal').textContent=fmtNum(cartTotal());
+  _updateDeliveryRow();
   if(orderType==='dine_in'){
     document.getElementById('orderTypeSection').style.display='none';
     document.getElementById('clientAddress').style.display='none';
@@ -1838,6 +1886,11 @@ async function submitOrder(){
   const comment=document.getElementById('clientComment').value.trim();
   if(orderType!=='dine_in'){if(!name){showToast('Ismingizni kiriting');return;}if(!phone||phone==='+998'){showToast('Telefon raqamingizni kiriting');return;}}
   if(orderType==='delivery'&&!address){showToast('Manzilni kiriting');return;}
+  // Проверка минимальной суммы заказа
+  const minAmt=restaurant?.min_order_amount||0;
+  if(minAmt>0&&cartTotal()<minAmt){
+    showToast(`Minimal buyurtma summasi: ${fmt(minAmt)}`);return;
+  }
   const tg=window.Telegram?.WebApp;
   const initData=tg?.initData;
   btn.disabled=true;btn.textContent='Yuborilmoqda…';
