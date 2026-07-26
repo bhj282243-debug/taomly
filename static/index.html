@@ -1317,6 +1317,58 @@ svg{display:block;}
 }
 .back-menu-btn:active{transform:scale(0.96);}
 
+/* ── Live Order Status ── */
+.order-status-block{
+  width:100%;max-width:320px;margin-bottom:32px;
+  opacity:0;animation:fadeUp .55s ease .62s both;
+}
+.status-steps{
+  display:flex;flex-direction:column;gap:0;
+  background:var(--bg3);border:1px solid rgba(122,92,16,0.12);
+  border-radius:20px;overflow:hidden;
+}
+.status-step{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 20px;border-bottom:1px solid rgba(122,92,16,0.08);
+  transition:background .3s ease;
+}
+.status-step:last-child{border-bottom:none;}
+.status-step.done{background:rgba(122,92,16,0.05);}
+.status-step.active{background:rgba(122,92,16,0.10);}
+.step-dot{
+  width:10px;height:10px;border-radius:50%;flex-shrink:0;
+  background:var(--ink6);transition:background .4s ease;
+}
+.status-step.done .step-dot{background:var(--g);}
+.status-step.active .step-dot{
+  background:var(--g);
+  box-shadow:0 0 0 4px rgba(122,92,16,0.2);
+  animation:pulse-dot 1.4s ease infinite;
+}
+@keyframes pulse-dot{
+  0%,100%{box-shadow:0 0 0 4px rgba(122,92,16,0.2);}
+  50%{box-shadow:0 0 0 8px rgba(122,92,16,0.08);}
+}
+.step-label{
+  font-size:13px;color:var(--ink3);font-weight:300;flex:1;
+  transition:color .3s ease;
+}
+.status-step.done .step-label{color:var(--ink2);}
+.status-step.active .step-label{color:var(--g);font-weight:500;}
+.status-step.active .step-label::after{
+  content:' …';opacity:.6;
+}
+.step-check{
+  width:16px;height:16px;opacity:0;transition:opacity .3s ease;
+  stroke:var(--g);stroke-width:2;fill:none;
+}
+.status-step.done .step-check{opacity:1;}
+.status-cancelled{
+  padding:14px 20px;
+  font-size:13px;color:#c0392b;text-align:center;
+  background:rgba(192,57,43,0.06);font-weight:400;
+}
+
 /* ── Shared animations ── */
 @keyframes fadeUp{
   from{opacity:0;transform:translateY(10px)}
@@ -1500,6 +1552,9 @@ svg{display:block;}
   <div class="succ-id">
     <div class="succ-id-lbl">Buyurtma raqami</div>
     <div class="succ-id-val" id="successOrderId">#0000</div>
+  </div>
+  <div class="order-status-block" id="orderStatusBlock" style="display:none">
+    <div class="status-steps" id="statusSteps"></div>
   </div>
   <button class="back-menu-btn" onclick="backToMenu()">Menyuga qaytish</button>
 </div>
@@ -1904,6 +1959,66 @@ async function submitOrder(){
   }catch(e){showToast('Xato: '+e.message);btn.disabled=false;btn.textContent='Buyurtma berish';}
 }
 
+// ── Live Order Status ──────────────────────────────────────────────
+const STATUS_STEPS_DELIVERY  = ['new','accepted','preparing','ready_for_delivery','delivering','completed'];
+const STATUS_STEPS_TAKEAWAY  = ['new','accepted','preparing','ready_for_delivery','completed'];
+const STATUS_STEPS_DINE      = ['new','accepted','preparing','ready_for_delivery','completed'];
+const STATUS_LABELS = {
+  new:'Qabul kutilmoqda',
+  accepted:'Qabul qilindi',
+  preparing:'Tayyorlanmoqda',
+  ready_for_delivery:'Tayyor',
+  delivering:'Yetkazilmoqda',
+  completed:'Yetkazildi',
+  cancelled:'Bekor qilindi',
+};
+
+let _pollingTimer=null,_pollingOrderId=null,_pollingHeaders=null;
+
+function _getStepsForType(type){
+  if(type==='delivery')return STATUS_STEPS_DELIVERY;
+  if(type==='takeaway')return STATUS_STEPS_TAKEAWAY;
+  return STATUS_STEPS_DINE;
+}
+
+function _renderStatusSteps(currentStatus,type){
+  const block=document.getElementById('orderStatusBlock');
+  const container=document.getElementById('statusSteps');
+  if(!block||!container)return;
+  if(currentStatus==='cancelled'){
+    container.innerHTML=`<div class="status-cancelled">Buyurtma bekor qilindi</div>`;
+    block.style.display='block';
+    return;
+  }
+  const steps=_getStepsForType(type);
+  const currentIdx=steps.indexOf(currentStatus);
+  let html='';
+  steps.forEach((s,i)=>{
+    let cls='status-step';
+    if(i<currentIdx)cls+=' done';
+    else if(i===currentIdx)cls+=' active';
+    const check=`<svg class="step-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>`;
+    html+=`<div class="${cls}"><div class="step-dot"></div><span class="step-label">${STATUS_LABELS[s]||s}</span>${check}</div>`;
+  });
+  container.innerHTML=html;
+  block.style.display='block';
+}
+
+function _stopPolling(){
+  if(_pollingTimer){clearInterval(_pollingTimer);_pollingTimer=null;}
+}
+
+async function _pollOrderStatus(){
+  if(!_pollingOrderId||!_pollingHeaders)return;
+  try{
+    const res=await fetch(`${API_BASE}/api/orders/my/${_pollingOrderId}`,{headers:_pollingHeaders});
+    if(!res.ok)return;
+    const order=await res.json();
+    _renderStatusSteps(order.status,orderType);
+    if(order.status==='completed'||order.status==='cancelled')_stopPolling();
+  }catch(e){/* молча, не прерываем UI */}
+}
+
 function showSuccess(orderId){
   document.getElementById('successOrderId').textContent='#'+String(orderId).padStart(4,'0');
   const msgs={dine_in:'Buyurtmangiz qabul qilindi! Tez orada stolga yetkaziladi',takeaway:"Tayyor bo'lganda xabar beramiz",delivery:'Tez orada yetkaziladi'};
@@ -1911,8 +2026,24 @@ function showSuccess(orderId){
   document.getElementById('cartScreen').classList.remove('active');
   document.getElementById('successScreen').classList.add('active');
   cart={};updateBar();
+  // Запускаем polling live-статуса
+  const tg=window.Telegram?.WebApp;
+  const initData=tg?.initData;
+  if(initData&&restaurant){
+    _stopPolling();
+    _pollingOrderId=orderId;
+    _pollingHeaders={'X-Restaurant-Id':String(restaurant.id),'X-Telegram-Init-Data':initData};
+    _renderStatusSteps('new',orderType);
+    _pollingTimer=setInterval(_pollOrderStatus,5000);
+  }
 }
-function backToMenu(){document.getElementById('successScreen').classList.remove('active');renderMenu();}
+function backToMenu(){
+  _stopPolling();
+  document.getElementById('successScreen').classList.remove('active');
+  const block=document.getElementById('orderStatusBlock');
+  if(block)block.style.display='none';
+  renderMenu();
+}
 
 let _tt=null;
 function showToast(msg){
