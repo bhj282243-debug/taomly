@@ -16,6 +16,13 @@ SQLAlchemy ORM-модели для Multi-Tenant White Label архитектур
 
 Изменения v4 (Security):
   - Product: добавлено is_popular (горизонтальный скролл "Популярное")
+
+Изменения v5 (Delivery Settings):
+  - Restaurant: добавлены working_hours, delivery_fee, min_order_amount
+    Колонки добавлены миграцией 0004_add_delivery_fields.py.
+    working_hours    — текстовое поле, например "10:00-22:00"
+    delivery_fee     — стоимость доставки в сомах (0 = бесплатно)
+    min_order_amount — минимальная сумма заказа в сомах (0 = без ограничений)
 """
 
 from sqlalchemy import (
@@ -99,6 +106,14 @@ class Restaurant(Base):
     # Telegram White Label
     telegram_bot_token_encrypted = Column(Text, nullable=True)
     telegram_dispatcher_id       = Column(BigInteger, nullable=True)
+
+    # Delivery Settings (миграция 0004_add_delivery_fields)
+    # working_hours    — часы работы, отображаются клиенту на Hero-экране
+    # delivery_fee     — стоимость доставки в сомах; 0 = бесплатно
+    # min_order_amount — минимальная сумма заказа в сомах; 0 = без ограничений
+    working_hours    = Column(String(50), nullable=True)
+    delivery_fee     = Column(Integer, default=0, nullable=False, server_default="0")
+    min_order_amount = Column(Integer, default=0, nullable=False, server_default="0")
 
     agency       = relationship("Agency", back_populates="restaurants", lazy="select")
     categories   = relationship("Category", back_populates="restaurant", lazy="select")
