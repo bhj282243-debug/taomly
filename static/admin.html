@@ -450,6 +450,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
     <div class="main-tab" id="mtab-analytics" onclick="switchPage('analytics')">Analitika</div>
     <div class="main-tab" id="mtab-qr" onclick="switchPage('qr')">QR</div>
     <div class="main-tab" id="mtab-billing" onclick="switchPage('billing')">Tarif</div>
+    <div class="main-tab" id="mtab-settings" onclick="switchPage('settings')">Sozlamalar</div>
   </div>
 
   <!-- ORDERS PAGE -->
@@ -610,6 +611,54 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
       </div>
     </div>
   </div>
+
+  <!-- SETTINGS PAGE -->
+  <div class="page" id="page-settings">
+    <div class="analytics-content">
+
+      <!-- Рабочие часы -->
+      <div class="section-title" style="margin-bottom:10px">Ish vaqti</div>
+      <div class="billing-card">
+        <div style="font-size:12px;color:var(--iv4);margin-bottom:12px;line-height:1.6;">
+          Mijoz menyu ochganida ko'rinadigan ish vaqti.<br>
+          <span style="color:var(--iv3)">Masalan: Dush-Yak 10:00–22:00 · Dam 11:00–23:00</span>
+        </div>
+        <input class="modal-input" type="text" id="settingsWorkingHours"
+          placeholder="09:00–23:00  yoki  Har kuni 10:00–22:00"
+          maxlength="100" style="margin-bottom:0"/>
+      </div>
+
+      <!-- Доставка -->
+      <div class="section-title" style="margin-top:20px;margin-bottom:10px">Yetkazib berish</div>
+      <div class="billing-card">
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--iv3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">Yetkazish narxi (so'm)</div>
+            <div style="font-size:12px;color:var(--iv4);margin-bottom:10px;line-height:1.5;">0 kiritsangiz — yetkazish bepul deb ko'rsatiladi.</div>
+            <input class="modal-input" type="number" id="settingsDeliveryFee"
+              placeholder="0" min="0" step="1000" style="margin-bottom:0"/>
+          </div>
+          <div style="height:1px;background:rgba(247,245,240,0.05);"></div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--iv3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">Minimal buyurtma summasi (so'm)</div>
+            <div style="font-size:12px;color:var(--iv4);margin-bottom:10px;line-height:1.5;">0 kiritsangiz — cheklov yo'q.</div>
+            <input class="modal-input" type="number" id="settingsMinOrder"
+              placeholder="0" min="0" step="1000" style="margin-bottom:0"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- Кнопка сохранить -->
+      <button class="add-product-btn primary" id="settingsSaveBtn"
+        onclick="saveSettings()"
+        style="width:100%;margin-top:24px;border-radius:100px;">
+        <svg class="icon" viewBox="0 0 24 24" style="width:15px;height:15px;stroke-width:2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Saqlash
+      </button>
+
+    </div>
+  </div>
+
 </div>
 
 <!-- ADD CATEGORY MODAL -->
@@ -911,6 +960,7 @@ function switchPage(page){
   if(page==='analytics')renderAnalytics();
   if(page==='qr'&&!qrPageInitialized){qrPageInitialized=true;initQrPage();}
   if(page==='billing')loadBilling();
+  if(page==='settings')loadSettings();
 }
 
 function refreshCurrent(){
@@ -918,6 +968,7 @@ function refreshCurrent(){
   if(currentPage==='menu')loadMenu();
   if(currentPage==='analytics')renderAnalytics();
   if(currentPage==='billing')loadBilling();
+  if(currentPage==='settings')loadSettings();
 }
 
 // ── ORDERS ──
@@ -1296,6 +1347,53 @@ function _renderDailyChart(byDay,period){
     const label=new Date(d.date).toLocaleDateString('uz-UZ',{month:'short',day:'numeric'});
     return`<div class="bar-row"><div class="bar-label wide">${label}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><div class="bar-val">${fmtShort(d.revenue)}</div></div>`;
   }).join('');
+}
+
+// ── SETTINGS ──
+async function loadSettings(){
+  // Данные ресторана уже есть из loadApp — берём из публичного API
+  try{
+    const res=await fetch(`${API}/api/restaurants/${RESTAURANT_SLUG}`);
+    if(!res.ok)throw new Error('Xato');
+    const r=await res.json();
+    document.getElementById('settingsWorkingHours').value=r.working_hours||'';
+    document.getElementById('settingsDeliveryFee').value=r.delivery_fee||0;
+    document.getElementById('settingsMinOrder').value=r.min_order_amount||0;
+  }catch(e){showToast('Sozlamalarni yuklab bo\'lmadi',true);}
+}
+
+async function saveSettings(){
+  const workingHours=document.getElementById('settingsWorkingHours').value.trim()||null;
+  const deliveryFee=parseInt(document.getElementById('settingsDeliveryFee').value)||0;
+  const minOrder=parseInt(document.getElementById('settingsMinOrder').value)||0;
+
+  if(deliveryFee<0||minOrder<0){showToast('Manfiy qiymat kiritib bo\'lmaydi',true);return;}
+
+  const btn=document.getElementById('settingsSaveBtn');
+  btn.disabled=true;btn.textContent='Saqlanmoqda…';
+
+  try{
+    // Агентский PATCH /api/agency/restaurants/{id} принимает working_hours,
+    // delivery_fee, min_order_amount через RestaurantUpdate схему
+    const res=await apiFetch(`${API}/api/agency/restaurants/${RESTAURANT_ID}`,{
+      method:'PATCH',
+      headers:authHeaders(),
+      body:JSON.stringify({
+        working_hours:workingHours,
+        delivery_fee:deliveryFee,
+        min_order_amount:minOrder,
+      }),
+    });
+    if(!res.ok){
+      const err=await res.json().catch(()=>({}));
+      throw new Error(err.detail||`HTTP ${res.status}`);
+    }
+    showToast('Sozlamalar saqlandi ✓');
+  }catch(e){showToast('Xato: '+e.message,true);}
+  finally{
+    btn.disabled=false;
+    btn.innerHTML='<svg class="icon" viewBox="0 0 24 24" style="width:15px;height:15px;stroke-width:2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Saqlash';
+  }
 }
 
 // ── QR ──
