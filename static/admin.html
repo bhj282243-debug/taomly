@@ -1082,7 +1082,7 @@ function makeOrderCard(order){
 async function changeStatus(orderId,newStatus){
   try{
     const res=await apiFetch(`${API}/api/orders/${orderId}/status`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify({status:newStatus})});
-    if(!res.ok)throw new Error('Xato');
+    if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Xato');}
     await loadOrders();
   }catch(e){showToast('Xato: '+e.message,true);}
 }
