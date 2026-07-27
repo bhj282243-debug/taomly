@@ -462,12 +462,8 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
       <div class="stats-bar-card"><div class="stats-bar-val" id="sBarRevenue">—</div><div class="stats-bar-label">Daromad</div></div>
     </div>
     <div class="tabs">
-      <div class="tab active" onclick="filterOrders('new')" id="tab-new">Yangi</div>
-      <div class="tab" onclick="filterOrders('accepted')" id="tab-accepted">Qabul</div>
-      <div class="tab" onclick="filterOrders('preparing')" id="tab-preparing">Tayyorlanmoqda</div>
-      <div class="tab" onclick="filterOrders('ready_for_delivery')" id="tab-ready_for_delivery">Tayyor</div>
-      <div class="tab" onclick="filterOrders('delivering')" id="tab-delivering">Yetkazilmoqda</div>
-      <div class="tab" onclick="filterOrders('completed')" id="tab-completed">Bajarildi</div>
+      <div class="tab active" onclick="filterOrders('active')" id="tab-active">Faol<span class="tab-count" id="activeOrderCount"></span></div>
+      <div class="tab" onclick="filterOrders('done')" id="tab-done">Bajarildi</div>
     </div>
     <div class="content" id="orders-content">
       <div class="loading"><div class="spinner"></div>Yuklanmoqda...</div>
@@ -759,7 +755,7 @@ const API='';
 const SESSION_KEY='taomly_admin_session';
 let AUTH_TOKEN=null,RESTAURANT_ID=null,RESTAURANT_SLUG=null;
 let allOrders=[],prevNewCount=0,soundEnabled=localStorage.getItem('taomly_sound')!=='false';
-let currentFilter='new',currentPage='orders',menuData=null,editingProductId=null,analyticsPeriod='30d';
+let currentFilter='active',currentPage='orders',menuData=null,editingProductId=null,analyticsPeriod='30d';
 
 
 // ── PHOTO UPLOAD via Telegraph ──
@@ -1006,7 +1002,7 @@ async function loadOrders(){
   if(allOrders.length===0)showOrdersSkeleton();
   try{
     const res=await apiFetch(`${API}/api/orders/restaurant/${RESTAURANT_ID}`,{headers:authHeaders()});
-    if(!res.ok)throw new Error('Xato');
+    if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Xato');}
     const freshOrders=await res.json();
     const newCount=freshOrders.filter(o=>o.status==='new').length;
     if(allOrders.length>0&&newCount>prevNewCount)_showNewOrderNotification(newCount);
@@ -1035,10 +1031,15 @@ function updateStatsBar(){
   document.getElementById('sBarToday').textContent=todayOrders.length;
   document.getElementById('sBarRevenue').textContent=todayRevenue>=1000000?(todayRevenue/1000000).toFixed(1)+'M':todayRevenue>=1000?Math.round(todayRevenue/1000)+'K':todayRevenue||0;
 }
+  // Счётчик на вкладке Faol
+  const totalActive=newCount+activeCount;
+  const ac=document.getElementById('activeOrderCount');
+  if(ac){ac.textContent=totalActive>0?totalActive:'';ac.className='tab-count'+(totalActive>0?' visible':'');}
 
 function renderOrders(){
   updateStatsBar();
-  const filtered=allOrders.filter(o=>o.status===currentFilter);
+  const ACTIVE=['new','accepted','preparing','ready_for_delivery','delivering'];
+  const filtered=currentFilter==='active'?allOrders.filter(o=>ACTIVE.includes(o.status)):allOrders.filter(o=>['completed','cancelled'].includes(o.status));
   const content=document.getElementById('orders-content');
   if(filtered.length===0){content.innerHTML=`<div class="empty">Bu bo'limda buyurtmalar yo'q</div>`;return;}
   content.innerHTML='';
@@ -1106,7 +1107,7 @@ async function loadMenu(){
     </div>`).join('');
   try{
     const res=await apiFetch(`${API}/api/menu/${RESTAURANT_ID}/all`,{headers:authHeaders()});
-    if(!res.ok)throw new Error('Xato');
+    if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Xato');}
     menuData=await res.json();renderMenu();
   }catch(e){
     document.getElementById('menu-content').innerHTML=`<div class="empty">${e.message||'Menyu yuklanmadi'}</div>`;
@@ -1153,7 +1154,7 @@ function makeProductRow(p){
 async function toggleProduct(productId,currentAvailable){
   try{
     const res=await apiFetch(`${API}/api/menu/product/${productId}`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify({is_available:!currentAvailable})});
-    if(!res.ok)throw new Error('Xato');
+    if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Xato');}
     await loadMenu();
   }catch(e){showToast('Xato: '+e.message,true);}
 }
@@ -1187,7 +1188,7 @@ async function saveEditProduct(){
   if(!price||price<=0){showToast('Narxni kiriting',true);return;}
   try{
     const res=await apiFetch(`${API}/api/menu/product/${editingProductId}`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify({name,price,description:description||null,photo_url:photo_url||null,is_popular})});
-    if(!res.ok)throw new Error('Xato');
+    if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Xato');}
     closeModal('editProductModal');
     showToast('Saqlandi ✓');
     await loadMenu();
@@ -1225,7 +1226,7 @@ async function saveNewProduct(){
   if(!price||price<=0){showToast('Narxni kiriting',true);return;}
   try{
     const res=await apiFetch(`${API}/api/menu/product/`,{method:'POST',headers:authHeaders(),body:JSON.stringify({category_id:categoryId,name,price,description:description||null,is_available:true})});
-    if(!res.ok)throw new Error('Xato');
+    if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Xato');}
     closeModal('addProductModal');showToast("Taom qo'shildi ✓");await loadMenu();
   }catch(e){showToast('Xato: '+e.message,true);}
 }
@@ -1352,7 +1353,7 @@ async function loadSettings(){
   // Данные ресторана уже есть из loadApp — берём из публичного API
   try{
     const res=await fetch(`${API}/api/restaurants/${RESTAURANT_SLUG}`);
-    if(!res.ok)throw new Error('Xato');
+    if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Xato');}
     const r=await res.json();
     document.getElementById('settingsWorkingHours').value=r.working_hours||'';
     document.getElementById('settingsDeliveryFee').value=r.delivery_fee||0;
@@ -1501,7 +1502,7 @@ async function subscribePlan(planId,planName){
   showConfirm(`"${planName}" tarifi`,`Ushbu tarifga o'tishni xohlaysizmi?`,async()=>{
     try{
       const res=await apiFetch(`${API}/api/billing/subscribe/${planId}`,{method:'POST',headers:authHeaders()});
-      if(!res.ok)throw new Error('Xato');
+      if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Xato');}
       showToast('Tarif yangilandi ✓');loadBilling();
     }catch(e){showToast('Xatolik yuz berdi',true);}
   });
