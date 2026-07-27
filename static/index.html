@@ -1960,16 +1960,13 @@ async function submitOrder(){
 }
 
 // ── Live Order Status ──────────────────────────────────────────────
-const STATUS_STEPS_DELIVERY  = ['new','accepted','preparing','ready_for_delivery','delivering','completed'];
-const STATUS_STEPS_TAKEAWAY  = ['new','accepted','preparing','ready_for_delivery','completed'];
-const STATUS_STEPS_DINE      = ['new','accepted','preparing','ready_for_delivery','completed'];
+const STATUS_STEPS_DELIVERY  = ['new','preparing','completed'];
+const STATUS_STEPS_TAKEAWAY  = ['new','preparing','completed'];
+const STATUS_STEPS_DINE      = ['new','preparing','completed'];
 const STATUS_LABELS = {
-  new:'Qabul kutilmoqda',
-  accepted:'Qabul qilindi',
+  new:'Yangi',
   preparing:'Tayyorlanmoqda',
-  ready_for_delivery:'Tayyor',
-  delivering:'Yetkazilmoqda',
-  completed:'Yetkazildi',
+  completed:'Tayyor',
   cancelled:'Bekor qilindi',
 };
 
@@ -1979,6 +1976,13 @@ function _getStepsForType(type){
   if(type==='delivery')return STATUS_STEPS_DELIVERY;
   if(type==='takeaway')return STATUS_STEPS_TAKEAWAY;
   return STATUS_STEPS_DINE;
+}
+
+function _mapStatus(s){
+  // Промежуточные статусы → ближайший видимый шаг
+  if(s==='accepted')return'preparing';
+  if(s==='ready_for_delivery'||s==='delivering')return'completed';
+  return s;
 }
 
 function _renderStatusSteps(currentStatus,type){
@@ -1991,7 +1995,7 @@ function _renderStatusSteps(currentStatus,type){
     return;
   }
   const steps=_getStepsForType(type);
-  const currentIdx=steps.indexOf(currentStatus);
+  const currentIdx=steps.indexOf(_mapStatus(currentStatus));
   let html='';
   steps.forEach((s,i)=>{
     let cls='status-step';
@@ -2026,14 +2030,15 @@ function showSuccess(orderId){
   document.getElementById('cartScreen').classList.remove('active');
   document.getElementById('successScreen').classList.add('active');
   cart={};updateBar();
-  // Запускаем polling live-статуса
+  // Показываем начальный статус всегда
+  _renderStatusSteps('new',orderType);
+  // Запускаем polling только если есть Telegram initData
   const tg=window.Telegram?.WebApp;
-  const initData=tg?.initData;
+  const initData=tg?.initData||'';
   if(initData&&restaurant){
     _stopPolling();
     _pollingOrderId=orderId;
     _pollingHeaders={'X-Restaurant-Id':String(restaurant.id),'X-Telegram-Init-Data':initData};
-    _renderStatusSteps('new',orderType);
     _pollingTimer=setInterval(_pollOrderStatus,5000);
   }
 }
