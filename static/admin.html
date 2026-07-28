@@ -79,7 +79,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 .stats-bar-label{font-size:10px;color:var(--iv2);font-weight:500;margin-top:4px;letter-spacing:.5px;}
 
 /* ══ ORDER TABS ══ */
-.tabs{display:flex;background:rgba(10,10,9,0.97);border-bottom:1px solid var(--gl);overflow-x:auto;scrollbar-width:none;padding:0 12px;}
+.tabs{display:flex;align-items:flex-end;background:rgba(10,10,9,0.97);border-bottom:1px solid var(--gl);overflow-x:auto;scrollbar-width:none;padding:0 12px;}
 .tabs::-webkit-scrollbar{display:none;}
 .tab{flex-shrink:0;padding:12px 14px;font-size:12px;font-weight:500;color:var(--iv2);cursor:pointer;border-bottom:1.5px solid transparent;white-space:nowrap;transition:color .15s,border-color .15s;letter-spacing:.3px;}
 .tab.active{color:var(--ivory);border-bottom-color:var(--g2);}
@@ -968,8 +968,8 @@ function refreshCurrent(){
 // ── ORDERS ──
 const STATUS_LABELS={new:'Yangi',accepted:'Qabul qilindi',preparing:'Tayyorlanmoqda',ready_for_delivery:'Yetkazishga tayyor',delivering:'Yetkazilmoqda',completed:'Bajarildi',cancelled:'Bekor qilindi'};
 const TYPE_LABELS={delivery:'Yetkazib berish',takeaway:'Olib ketish',dine_in:'Zal'};
-const NEXT_STATUS={new:'accepted',accepted:'preparing',preparing:'ready_for_delivery',ready_for_delivery:'delivering',delivering:'completed'};
-const NEXT_LABELS={new:'Qabul qilish',accepted:'Tayyorlashni boshlash',preparing:'Tayyor',ready_for_delivery:'Yetkazishga berish',delivering:'Bajarildi'};
+const NEXT_STATUS={new:'accepted',accepted:'completed'};
+const NEXT_LABELS={new:'Qabul qilish',accepted:'Bajarildi'};
 
 function fmt(p){return Number(p).toLocaleString('uz-UZ')+" so'm";}
 function fmtShort(p){if(p>=1000000)return(p/1000000).toFixed(1)+' mln';if(p>=1000)return(p/1000).toFixed(0)+' ming';return p.toLocaleString('uz-UZ');}
