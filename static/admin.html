@@ -758,7 +758,7 @@ let allOrders=[],prevNewCount=0,soundEnabled=localStorage.getItem('taomly_sound'
 let currentFilter='active',currentPage='orders',menuData=null,editingProductId=null,analyticsPeriod='30d';
 
 
-// ── PHOTO UPLOAD via Telegraph ──
+// ── PHOTO UPLOAD via Cloudflare R2 ──
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 function triggerPhotoUpload(){
@@ -828,13 +828,20 @@ async function handlePhotoFile(input){
 
 async function uploadToTelegraph(file){
   const formData=new FormData();
-  formData.append('reqtype','fileupload');
-  formData.append('fileToUpload',file,'photo'+getExt(file.type));
-  const res=await fetch('https://catbox.moe/user/api.php',{method:'POST',body:formData});
-  if(!res.ok)throw new Error('Catbox server xatosi');
-  const url=await res.text();
-  if(!url||!url.startsWith('https://'))throw new Error('Noto\'g\'ri javob: '+url.slice(0,60));
-  return url.trim();
+  formData.append('file',file);
+  const res=await fetch('/api/menu/upload-photo',{
+    method:'POST',
+    headers:AUTH_TOKEN?{'Authorization':'Bearer '+AUTH_TOKEN}:{},
+    body:formData
+  });
+  if(!res.ok){
+    let msg='Yuklash xatosi';
+    try{const d=await res.json();msg=d.detail||msg;}catch(e){}
+    throw new Error(msg);
+  }
+  const data=await res.json();
+  if(!data.url)throw new Error('Server URL qaytarmadi');
+  return data.url;
 }
 
 function getExt(mimeType){
