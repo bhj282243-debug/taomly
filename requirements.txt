@@ -34,3 +34,6 @@ httpx==0.28.1
 
 reportlab==4.2.5
 email-validator==2.2.0
+
+# ── Cloud Storage (Cloudflare R2 / S3-compatible) ────────────────────
+boto3==1.35.76
