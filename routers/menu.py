@@ -21,12 +21,16 @@ routers/menu.py — Taomly Platform
 """
 
 import logging
+import uuid
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import boto3
+from botocore.exceptions import BotoCoreError, ClientError
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session, joinedload
 
 from auth import get_current_restaurant_admin
+from config import settings
 from database import get_db
 from models import Category, Product, Restaurant
 from schemas import (
@@ -61,6 +65,105 @@ def _get_active_restaurant(restaurant_id: int, db: Session) -> Restaurant:
             detail="Ресторан не найден",
         )
     return restaurant
+
+
+# ──────────────────────────────────────────
+# POST /upload-photo — загрузка фото блюда в Cloudflare R2
+# ──────────────────────────────────────────
+
+_ALLOWED_MIME = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+_MAX_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
+_MIME_TO_EXT = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "image/gif": ".gif",
+}
+
+
+def _get_s3_client():
+    """
+    Возвращает boto3 S3-клиент для Cloudflare R2.
+    Вызывается при каждом запросе — boto3 сам кэширует соединения внутри.
+    Не делаем module-level singleton чтобы изменения ENV вступали в силу без рестарта.
+    """
+    return boto3.client(
+        "s3",
+        endpoint_url=settings.R2_ENDPOINT_URL,
+        aws_access_key_id=settings.R2_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
+        region_name="auto",
+    )
+
+
+@router.post("/upload-photo")
+async def upload_photo(
+    file: UploadFile = File(...),
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+):
+    """
+    Загружает фото блюда в Cloudflare R2.
+    Возвращает публичный URL загруженного файла.
+
+    Ограничения:
+      - Только JPEG / PNG / WebP / GIF
+      - Максимум 5 MB
+      - Требует JWT-авторизации ресторанного администратора
+    """
+    # Проверяем что R2 настроен
+    if not settings.R2_ACCESS_KEY_ID or not settings.R2_ACCOUNT_ID:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Хранилище фотографий не настроено. Свяжитесь с поддержкой.",
+        )
+
+    # Проверка MIME-типа
+    content_type = file.content_type or ""
+    if content_type not in _ALLOWED_MIME:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Допустимые форматы: JPEG, PNG, WebP, GIF",
+        )
+
+    # Читаем файл и проверяем размер
+    data = await file.read()
+    if len(data) > _MAX_SIZE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Размер файла превышает 5 MB ({len(data) / 1024 / 1024:.1f} MB)",
+        )
+
+    # Генерируем уникальное имя: restaurants/<id>/<uuid>.<ext>
+    ext = _MIME_TO_EXT[content_type]
+    object_key = f"restaurants/{restaurant.id}/{uuid.uuid4().hex}{ext}"
+
+    # Загружаем в R2
+    try:
+        s3 = _get_s3_client()
+        s3.put_object(
+            Bucket=settings.R2_BUCKET_NAME,
+            Key=object_key,
+            Body=data,
+            ContentType=content_type,
+        )
+    except (BotoCoreError, ClientError) as exc:
+        logger.exception(
+            "Ошибка загрузки фото в R2: restaurant_id=%s key=%s",
+            restaurant.id, object_key,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Ошибка загрузки файла. Попробуйте ещё раз.",
+        ) from exc
+
+    public_url = f"{settings.R2_PUBLIC_URL.rstrip('/')}/{object_key}"
+
+    logger.info(
+        "Фото загружено: restaurant_id=%s key=%s url=%s",
+        restaurant.id, object_key, public_url,
+    )
+
+    return {"url": public_url}
 
 
 # ──────────────────────────────────────────
