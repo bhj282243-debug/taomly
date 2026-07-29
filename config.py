@@ -129,6 +129,24 @@ class _Settings:
         if o.strip()
     ]
 
+    # Cloudflare R2 (S3-compatible object storage для фото блюд)
+    R2_ACCESS_KEY_ID: str = os.getenv("R2_ACCESS_KEY_ID", "")
+    R2_SECRET_ACCESS_KEY: str = os.getenv("R2_SECRET_ACCESS_KEY", "")
+    R2_BUCKET_NAME: str = os.getenv("R2_BUCKET_NAME", "taomly-photos")
+    R2_ACCOUNT_ID: str = os.getenv("R2_ACCOUNT_ID", "")
+
+    @property
+    def R2_ENDPOINT_URL(self) -> str:
+        return f"https://{self.R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+    @property
+    def R2_PUBLIC_URL(self) -> str:
+        """Публичный URL для отдачи файлов. Настройте Custom Domain в R2 Dashboard."""
+        return os.getenv(
+            "R2_PUBLIC_URL",
+            f"https://{self.R2_BUCKET_NAME}.{self.R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
+        )
+
     RATE_LIMIT_LOGIN: str = os.getenv("RATE_LIMIT_LOGIN", "10/minute")
     RATE_LIMIT_API: str = os.getenv("RATE_LIMIT_API", "120/minute")
     RATE_LIMIT_SUPERADMIN_LOGIN: str = os.getenv("RATE_LIMIT_SUPERADMIN_LOGIN", "5/minute")
