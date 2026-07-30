@@ -1,15 +1,13 @@
 """
 ВРЕМЕННЫЙ диагностический роутер.
 УДАЛИТЬ после завершения диагностики.
-
-Endpoint: GET /api/debug/db-check?secret=taomly_debug_2026
 """
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import text
 
 from database import get_db
-from models import Category
+from models import Category, Restaurant
 
 router = APIRouter(prefix="/api/debug", tags=["debug"])
 
@@ -24,12 +22,12 @@ def db_check(
     if secret != _SECRET:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    # 1. Прямой SQL — эталон
+    # 1. Прямой SQL
     raw = db.execute(text(
         "SELECT id, name, photo_url FROM products WHERE id = 15"
     )).mappings().first()
 
-    # 2. ORM через joinedload — точно так же как GET /api/restaurants/chinar
+    # 2. ORM joinedload
     categories = (
         db.query(Category)
         .filter(Category.restaurant_id == 1)
@@ -45,18 +43,44 @@ def db_check(
                     "name": p.name,
                     "photo_url": p.photo_url,
                 }
-                break
 
-    # 3. Мета
-    meta = db.execute(text("""
-        SELECT current_database() AS db_name, now()::text AS server_time
-    """)).mappings().one()
+    # 3. Точная копия кода из GET /api/restaurants/chinar
+    restaurant = db.query(Restaurant).filter(
+        Restaurant.slug == "chinar",
+        Restaurant.is_active == True,
+    ).first()
+
+    slug_categories = (
+        db.query(Category)
+        .filter(Category.restaurant_id == restaurant.id)
+        .options(joinedload(Category.products))
+        .order_by(Category.sort_order)
+        .all()
+    ) if restaurant else []
+
+    slug_product = None
+    all_products_in_cat1 = []
+    for cat in slug_categories:
+        for p in sorted(cat.products, key=lambda x: x.sort_order):
+            if cat.id == 1:
+                all_products_in_cat1.append({
+                    "id": p.id,
+                    "name": p.name,
+                    "photo_url": p.photo_url,
+                    "is_available": p.is_available,
+                })
+            if p.id == 15:
+                slug_product = {
+                    "id": p.id,
+                    "name": p.name,
+                    "photo_url": p.photo_url,
+                    "is_available": p.is_available,
+                    "category_id": cat.id,
+                }
 
     return {
-        "connection": {
-            "db_name": meta["db_name"],
-            "server_time": meta["server_time"],
-        },
         "raw_sql": dict(raw) if raw else None,
         "orm_joinedload": orm_product,
+        "slug_endpoint_product": slug_product,
+        "all_products_in_category_1": all_products_in_cat1,
     }
