@@ -92,24 +92,28 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Permissions-Policy"] = (
             "geolocation=(self), camera=(), microphone=(), payment=()"
         )
-        response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' "
-            "  https://cdn.jsdelivr.net "
-            "  https://cdnjs.cloudflare.com "
-            "  https://telegram.org; "
-            "style-src 'self' 'unsafe-inline' "
-            "  https://fonts.googleapis.com "
-            "  https://cdnjs.cloudflare.com "
-            "  https://cdn.jsdelivr.net; "
-            "font-src 'self' "
-            "  https://fonts.gstatic.com "
-            "  https://cdnjs.cloudflare.com; "
-            "img-src 'self' data: https: blob:; "
-            "connect-src 'self' https://api.telegram.org; "
-            "worker-src 'self'; "
-            "manifest-src 'self';"
-        )
+        # Не перезаписываем CSP если роутер уже установил свой (например debug endpoint)
+        if "Content-Security-Policy" not in response.headers:
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline' "
+                "  https://cdn.jsdelivr.net "
+                "  https://cdnjs.cloudflare.com "
+                "  https://telegram.org; "
+                "style-src 'self' 'unsafe-inline' "
+                "  https://fonts.googleapis.com "
+                "  https://cdnjs.cloudflare.com "
+                "  https://cdn.jsdelivr.net; "
+                "font-src 'self' "
+                "  https://fonts.gstatic.com "
+                "  https://cdnjs.cloudflare.com; "
+                "img-src 'self' data: https: blob:; "
+                "connect-src 'self' "
+                "  https://api.telegram.org "
+                "  https://*.r2.dev; "
+                "worker-src 'self'; "
+                "manifest-src 'self';"
+            )
         return response
 
 
