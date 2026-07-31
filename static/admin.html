@@ -528,16 +528,16 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
   <div class="page" id="page-qr">
     <div class="qr-content">
       <div class="qr-type-tabs">
-        <button class="qr-type-btn active" id="qrtab-tables" onclick="switchQrTab('tables')">Stollar</button>
-        <button class="qr-type-btn" id="qrtab-takeaway" onclick="switchQrTab('takeaway')">Olib ketish</button>
-        <button class="qr-type-btn" id="qrtab-delivery" onclick="switchQrTab('delivery')">Yetkazib berish</button>
+        <button class="qr-type-btn active" id="qrtab-tables">Stollar</button>
+        <button class="qr-type-btn" id="qrtab-takeaway">Olib ketish</button>
+        <button class="qr-type-btn" id="qrtab-delivery">Yetkazib berish</button>
       </div>
       <div class="qr-tab-panel active" id="qrpanel-tables">
         <div class="section-title" style="padding:16px 16px 0">Stol QR-kodlari</div>
         <div class="qr-hint">Har bir stol uchun QR-kod yarating.</div>
         <div class="qr-add-row">
           <input class="qr-input" type="text" id="newTableNumber" placeholder="Stol raqami (1, 2, VIP...)" maxlength="20"/>
-          <button class="qr-gen-btn" onclick="generateTableQR()">Yaratish</button>
+          <button class="qr-gen-btn" id="qrGenBtn">Yaratish</button>
         </div>
         <div id="qr-tables-list" class="qr-list"></div>
       </div>
@@ -970,6 +970,7 @@ function refreshCurrent(){
   if(currentPage==='analytics')renderAnalytics();
   if(currentPage==='billing')loadBilling();
   if(currentPage==='settings')loadSettings();
+  if(currentPage==='qr'){qrPageInitialized=false;qrTables=[];document.getElementById('qr-tables-list').innerHTML='';initQrPage();}
 }
 
 // ── ORDERS ──
@@ -1443,7 +1444,7 @@ function generateTableQR(){
     <div class="qr-url-text">${url}</div>
     <button class="qr-download-btn" onclick="downloadQR('${canvasId}','stol-${num}')">↓ PNG yuklab olish</button>`;
   document.getElementById('qr-tables-list').prepend(card);
-  setTimeout(()=>makeQR(document.getElementById(canvasId),url),0);
+  setTimeout(function(){makeQR(document.getElementById(canvasId),url);},0);
   qrTables.push({number:num});input.value='';input.focus();
 }
 function removeTableQR(num){
@@ -1451,6 +1452,21 @@ function removeTableQR(num){
   const card=document.getElementById(`qr-table-card-${num}`);if(card)card.remove();
 }
 function initQrPage(){
+  // Навешиваем слушатели здесь — страница уже в DOM
+  const genBtn=document.getElementById('qrGenBtn');
+  if(genBtn&&!genBtn._bound){
+    genBtn.addEventListener('click',generateTableQR);
+    genBtn._bound=true;
+  }
+  const input=document.getElementById('newTableNumber');
+  if(input&&!input._bound){
+    input.addEventListener('keydown',function(e){if(e.key==='Enter')generateTableQR();});
+    input._bound=true;
+  }
+  document.getElementById('qrtab-tables').addEventListener('click',function(){switchQrTab('tables');});
+  document.getElementById('qrtab-takeaway').addEventListener('click',function(){switchQrTab('takeaway');});
+  document.getElementById('qrtab-delivery').addEventListener('click',function(){switchQrTab('delivery');});
+
   const takeawayUrl=buildQrUrl('takeaway');document.getElementById('qr-takeaway-url').textContent=takeawayUrl;makeQR(document.getElementById('qr-takeaway-canvas'),takeawayUrl);
   const deliveryUrl=buildQrUrl('delivery');document.getElementById('qr-delivery-url').textContent=deliveryUrl;makeQR(document.getElementById('qr-delivery-canvas'),deliveryUrl);
 }
