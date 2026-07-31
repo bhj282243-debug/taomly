@@ -106,4 +106,7 @@ def img_test(secret: str = Query(...)):
 <p id="r1" style="color:gray">загружается...</p>
 </body>
 </html>"""
-    return HTMLResponse(content=html)
+    response = HTMLResponse(content=html)
+    # Переопределяем CSP middleware для этого endpoint
+    response.headers["Content-Security-Policy"] = "img-src * data: blob:; default-src * 'unsafe-inline'"
+    return response
