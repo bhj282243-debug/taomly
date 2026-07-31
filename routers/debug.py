@@ -91,18 +91,19 @@ def img_test(secret: str = Query(...)):
     if secret != _SECRET:
         raise HTTPException(status_code=403, detail="Forbidden")
     from fastapi.responses import HTMLResponse
-    return HTMLResponse(content="""
-<!DOCTYPE html>
+    html = """<!DOCTYPE html>
 <html>
+<head>
+<meta http-equiv="Content-Security-Policy" content="img-src *; default-src * 'unsafe-inline'">
+</head>
 <body style="background:#fff;padding:20px">
 <h3>IMG Test</h3>
-<p>Если фото ниже загружается — R2 работает:</p>
-<img src="https://pub-c0be929a95b747a8afca1075f2a80505.r2.dev/restaurants/1/31ad38f794b242ffabd137915df8dd72.png" 
-     style="max-width:100%;border:1px solid red"
-     onerror="this.nextSibling.style.display='block'"
->
-<p style="display:none;color:red">❌ ОШИБКА загрузки фото</p>
-<p style="color:green">✅ Если видите фото выше — R2 работает</p>
+<p>Test 1 — прямой URL:</p>
+<img id="img1" src="https://pub-c0be929a95b747a8afca1075f2a80505.r2.dev/restaurants/1/31ad38f794b242ffabd137915df8dd72.png" 
+     style="max-width:300px;border:2px solid red"
+     onload="document.getElementById('r1').textContent='✅ ЗАГРУЗИЛОСЬ'"
+     onerror="document.getElementById('r1').textContent='❌ ОШИБКА'">
+<p id="r1" style="color:gray">загружается...</p>
 </body>
-</html>
-""")
+</html>"""
+    return HTMLResponse(content=html)
