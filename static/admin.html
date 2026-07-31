@@ -749,13 +749,14 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="/static/js/qrcode.min.js"></script>
 <script>
 const API='';
 const SESSION_KEY='taomly_admin_session';
 let AUTH_TOKEN=null,RESTAURANT_ID=null,RESTAURANT_SLUG=null;
 let allOrders=[],prevNewCount=0,soundEnabled=localStorage.getItem('taomly_sound')!=='false';
 let currentFilter='active',currentPage='orders',menuData=null,editingProductId=null,analyticsPeriod='30d';
+let qrTables=[],qrCurrentTab='tables',qrPageInitialized=false;
 
 
 // ── PHOTO UPLOAD via Cloudflare R2 ──
@@ -1403,13 +1404,14 @@ async function saveSettings(){
 }
 
 // ── QR ──
-let qrTables=[],qrCurrentTab='tables',qrPageInitialized=false;
 function switchQrTab(tab){
   qrCurrentTab=tab;
   document.querySelectorAll('.qr-type-btn').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.qr-tab-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('qrtab-'+tab).classList.add('active');
   document.getElementById('qrpanel-'+tab).classList.add('active');
+  if(tab==='takeaway'&&!_qrTakeawayDone){_qrTakeawayDone=true;setTimeout(function(){makeQR(document.getElementById('qr-takeaway-canvas'),buildQrUrl('takeaway'));},50);}
+  if(tab==='delivery'&&!_qrDeliveryDone){_qrDeliveryDone=true;setTimeout(function(){makeQR(document.getElementById('qr-delivery-canvas'),buildQrUrl('delivery'));},50);}
 }
 function buildQrUrl(type,tableNumber){
   const base=`${window.location.origin}/app`;const slug=RESTAURANT_SLUG||'';
@@ -1450,9 +1452,11 @@ function removeTableQR(num){
   qrTables=qrTables.filter(t=>t.number!==num);
   const card=document.getElementById(`qr-table-card-${num}`);if(card)card.remove();
 }
+let _qrTakeawayDone=false,_qrDeliveryDone=false;
 function initQrPage(){
-  const takeawayUrl=buildQrUrl('takeaway');document.getElementById('qr-takeaway-url').textContent=takeawayUrl;makeQR(document.getElementById('qr-takeaway-canvas'),takeawayUrl);
-  const deliveryUrl=buildQrUrl('delivery');document.getElementById('qr-delivery-url').textContent=deliveryUrl;makeQR(document.getElementById('qr-delivery-canvas'),deliveryUrl);
+  _qrTakeawayDone=false;_qrDeliveryDone=false;
+  document.getElementById('qr-takeaway-url').textContent=buildQrUrl('takeaway');
+  document.getElementById('qr-delivery-url').textContent=buildQrUrl('delivery');
 }
 
 // ── BILLING ──
@@ -1689,16 +1693,6 @@ document.addEventListener('visibilitychange',()=>{
 });
 
 _startPolling();
-</script>
-<div id="_dbg" style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:200px;overflow-y:auto;background:#1a0000;color:#ff6b6b;font-size:11px;font-family:monospace;padding:8px;z-index:99999;border-top:1px solid #ff0000;"></div>
-<script>
-(function(){
-  var box=document.getElementById('_dbg');
-  function log(msg){box.style.display='block';var d=document.createElement('div');d.textContent=new Date().toLocaleTimeString()+' '+msg;box.appendChild(d);box.scrollTop=box.scrollHeight;}
-  window.onerror=function(msg,src,line,col,err){log('ERROR: '+msg+' | '+src+':'+line+':'+col+(err&&err.stack?' | '+err.stack:''));return false;};
-  window.onunhandledrejection=function(e){log('PROMISE: '+(e.reason&&e.reason.stack?e.reason.stack:e.reason));};
-  window._log=log;
-})();
 </script>
 </body>
 </html>
