@@ -1443,7 +1443,7 @@ function generateTableQR(){
     <div class="qr-url-text">${url}</div>
     <button class="qr-download-btn" onclick="downloadQR('${canvasId}','stol-${num}')">↓ PNG yuklab olish</button>`;
   document.getElementById('qr-tables-list').prepend(card);
-  makeQR(document.getElementById(canvasId),url);
+  setTimeout(()=>makeQR(document.getElementById(canvasId),url),0);
   qrTables.push({number:num});input.value='';input.focus();
 }
 function removeTableQR(num){
