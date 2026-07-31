@@ -96,6 +96,34 @@ def _get_s3_client():
     )
 
 
+def _delete_r2_photo(photo_url: str) -> None:
+    """
+    Удаляет объект из R2 по публичному URL.
+
+    Удаляет только файлы из собственного R2-бакета (URL начинается с R2_PUBLIC_URL).
+    Внешние URL (например, старые Telegraph-ссылки) игнорируются без ошибки.
+    Ошибки удаления логируются, но не пробрасываются — БД уже обновлена.
+    """
+    if not photo_url:
+        return
+
+    public_base = settings.R2_PUBLIC_URL.rstrip("/")
+    if not photo_url.startswith(public_base + "/"):
+        logger.info("_delete_r2_photo: URL не из нашего R2, пропускаем: %s", photo_url)
+        return
+
+    object_key = photo_url[len(public_base) + 1:]
+    if not object_key:
+        return
+
+    try:
+        s3 = _get_s3_client()
+        s3.delete_object(Bucket=settings.R2_BUCKET_NAME, Key=object_key)
+        logger.info("R2 объект удалён: key=%s", object_key)
+    except (BotoCoreError, ClientError):
+        logger.exception("Не удалось удалить R2 объект: key=%s", object_key)
+
+
 @router.post("/upload-photo")
 async def upload_photo(
     file: UploadFile = File(...),
@@ -471,7 +499,10 @@ def update_product(
     if data.description is not None:
         product.description = data.description
     if data.photo_url is not None:
+        old_photo_url = product.photo_url  # запоминаем до изменения
         product.photo_url = data.photo_url
+    else:
+        old_photo_url = None
     if data.is_available is not None:
         product.is_available = data.is_available
     if data.sort_order is not None:
@@ -504,6 +535,12 @@ def update_product(
         "Продукт обновлён: product_id=%s restaurant_id=%s",
         product_id, restaurant.id,
     )
+
+    # Удаляем старое фото из R2 после успешного commit
+    # Удаляем только если фото реально сменилось и старый URL отличается от нового
+    if old_photo_url and old_photo_url != product.photo_url:
+        _delete_r2_photo(old_photo_url)
+
     return product
 
 
@@ -530,6 +567,8 @@ def delete_product(
             detail="Продукт не найден",
         )
 
+    photo_url = product.photo_url  # запоминаем до удаления
+
     try:
         db.delete(product)
         db.commit()
@@ -547,3 +586,7 @@ def delete_product(
         "Продукт удалён: product_id=%s restaurant_id=%s",
         product_id, restaurant.id,
     )
+
+    # Удаляем фото из R2 после успешного commit
+    if photo_url:
+        _delete_r2_photo(photo_url)
