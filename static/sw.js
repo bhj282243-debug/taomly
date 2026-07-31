@@ -69,6 +69,10 @@ self.addEventListener('fetch', (event) => {
   // Не кэшируем webhook и Telegram API
   if (url.pathname.startsWith('/webhook') || url.hostname === 'api.telegram.org') return;
 
+  // Не перехватываем запросы к внешним доменам (R2, CDN, шрифты и т.д.)
+  // Браузер обрабатывает их напрямую без SW
+  if (url.hostname !== self.location.hostname) return;
+
   // API-запросы: Network First
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(networkFirst(request));
