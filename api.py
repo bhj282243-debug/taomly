@@ -49,7 +49,6 @@ import telebot
 from config import settings
 from database import SessionLocal, engine
 from routers import agency, analytics, billing, menu, orders, reservations, restaurants, waiter_calls, ai, superadmin
-from routers import debug  # ВРЕМЕННО — удалить после диагностики
 
 # ──────────────────────────────────────────
 # LOGGING
@@ -234,7 +233,6 @@ app.include_router(restaurants.router)
 app.include_router(agency.router)
 app.include_router(ai.router)
 app.include_router(superadmin.router)
-app.include_router(debug.router)  # ВРЕМЕННО — удалить после диагностики
 
 # ──────────────────────────────────────────
 # STATIC
