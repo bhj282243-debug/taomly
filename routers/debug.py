@@ -84,3 +84,25 @@ def db_check(
         "slug_endpoint_product": slug_product,
         "all_products_in_category_1": all_products_in_cat1,
     }
+
+
+@router.get("/img-test")
+def img_test(secret: str = Query(...)):
+    if secret != _SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(content="""
+<!DOCTYPE html>
+<html>
+<body style="background:#fff;padding:20px">
+<h3>IMG Test</h3>
+<p>Если фото ниже загружается — R2 работает:</p>
+<img src="https://pub-c0be929a95b747a8afca1075f2a80505.r2.dev/restaurants/1/31ad38f794b242ffabd137915df8dd72.png" 
+     style="max-width:100%;border:1px solid red"
+     onerror="this.nextSibling.style.display='block'"
+>
+<p style="display:none;color:red">❌ ОШИБКА загрузки фото</p>
+<p style="color:green">✅ Если видите фото выше — R2 работает</p>
+</body>
+</html>
+""")
