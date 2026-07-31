@@ -1410,15 +1410,6 @@ function switchQrTab(tab){
   document.querySelectorAll('.qr-tab-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('qrtab-'+tab).classList.add('active');
   document.getElementById('qrpanel-'+tab).classList.add('active');
-  // Генерируем QR только после того как панель стала видимой
-  if(tab==='takeaway'&&!_qrTakeawayDone){
-    _qrTakeawayDone=true;
-    setTimeout(function(){makeQR(document.getElementById('qr-takeaway-canvas'),buildQrUrl('takeaway'));},50);
-  }
-  if(tab==='delivery'&&!_qrDeliveryDone){
-    _qrDeliveryDone=true;
-    setTimeout(function(){makeQR(document.getElementById('qr-delivery-canvas'),buildQrUrl('delivery'));},50);
-  }
 }
 function buildQrUrl(type,tableNumber){
   const base=`${window.location.origin}/app`;const slug=RESTAURANT_SLUG||'';
@@ -1459,13 +1450,16 @@ function removeTableQR(num){
   qrTables=qrTables.filter(t=>t.number!==num);
   const card=document.getElementById(`qr-table-card-${num}`);if(card)card.remove();
 }
-let _qrTakeawayDone=false,_qrDeliveryDone=false;
 function initQrPage(){
-  // Только прописываем URL — makeQR вызывается lazy в switchQrTab
-  // чтобы не крашить QRCode на display:none элементах
-  _qrTakeawayDone=false;_qrDeliveryDone=false;
   document.getElementById('qr-takeaway-url').textContent=buildQrUrl('takeaway');
   document.getElementById('qr-delivery-url').textContent=buildQrUrl('delivery');
+}
+let _qrTakeawayDone=false,_qrDeliveryDone=false;
+const _origSwitchQrTab=switchQrTab;
+function switchQrTab(tab){
+  _origSwitchQrTab(tab);
+  if(tab==='takeaway'&&!_qrTakeawayDone){_qrTakeawayDone=true;setTimeout(function(){makeQR(document.getElementById('qr-takeaway-canvas'),buildQrUrl('takeaway'));},50);}
+  if(tab==='delivery'&&!_qrDeliveryDone){_qrDeliveryDone=true;setTimeout(function(){makeQR(document.getElementById('qr-delivery-canvas'),buildQrUrl('delivery'));},50);}
 }
 
 // ── BILLING ──
