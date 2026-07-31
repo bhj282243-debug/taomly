@@ -749,7 +749,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="/static/js/qrcode.min.js"></script>
 <script>
 const API='';
 const SESSION_KEY='taomly_admin_session';
@@ -970,6 +970,7 @@ function refreshCurrent(){
   if(currentPage==='analytics')renderAnalytics();
   if(currentPage==='billing')loadBilling();
   if(currentPage==='settings')loadSettings();
+  if(currentPage==='qr'){qrPageInitialized=false;qrTables=[];document.getElementById('qr-tables-list').innerHTML='';initQrPage();}
 }
 
 // ── ORDERS ──
@@ -1450,11 +1451,12 @@ function removeTableQR(num){
   qrTables=qrTables.filter(t=>t.number!==num);
   const card=document.getElementById(`qr-table-card-${num}`);if(card)card.remove();
 }
+let _qrTakeawayDone=false,_qrDeliveryDone=false;
 function initQrPage(){
+  _qrTakeawayDone=false;_qrDeliveryDone=false;
   document.getElementById('qr-takeaway-url').textContent=buildQrUrl('takeaway');
   document.getElementById('qr-delivery-url').textContent=buildQrUrl('delivery');
 }
-let _qrTakeawayDone=false,_qrDeliveryDone=false;
 const _origSwitchQrTab=switchQrTab;
 function switchQrTab(tab){
   _origSwitchQrTab(tab);
