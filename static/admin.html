@@ -1385,7 +1385,7 @@ async function saveSettings(){
   try{
     // Агентский PATCH /api/agency/restaurants/{id} принимает working_hours,
     // delivery_fee, min_order_amount через RestaurantUpdate схему
-    const res=await apiFetch(`${API}/api/agency/restaurants/${RESTAURANT_ID}`,{
+    const res=await apiFetch(`${API}/api/restaurants/me/settings`,{
       method:'PATCH',
       headers:authHeaders(),
       body:JSON.stringify({
