@@ -1943,7 +1943,7 @@ async function submitOrder(){
   const tg=window.Telegram?.WebApp;
   const initData=tg?.initData;
   btn.disabled=true;btn.textContent='Yuborilmoqda…';
-  const payload={client_name:name||null,client_phone:phone||null,order_type:orderType,address:orderType==='delivery'?address:null,table_id:orderType==='dine_in'?tableDbId:null,comment:comment||null,items:cartItems().map(i=>({product_id:i.id,quantity:i.qty}))};
+  const payload={client_name:name||null,client_phone:orderType==='dine_in'?null:(phone||null),order_type:orderType,address:orderType==='delivery'?address:null,table_id:orderType==='dine_in'?tableDbId:null,comment:comment||null,items:cartItems().map(i=>({product_id:i.id,quantity:i.qty}))};
   try{
     const headers={'Content-Type':'application/json','X-Restaurant-Id':String(restaurant.id)};
     if(initData)headers['X-Telegram-Init-Data']=initData;
