@@ -1593,8 +1593,8 @@ let restaurant=null,cart={},orderType='delivery',tableNumber=null,tableDbId=null
 
 function parseParams(){
   const u=new URLSearchParams(window.location.search);
-  const sp=u.get('slug'),tp=u.get('table');
-  if(sp){restaurantSlug=sp;if(tp){tableNumber=tp;orderType='dine_in';}return;}
+  const sp=u.get('slug'),tp=u.get('table'),typ=u.get('type');
+  if(sp){restaurantSlug=sp;if(tp){tableNumber=tp;orderType='dine_in';}else if(typ){orderType=typ;}return;}
   const tg=window.Telegram?.WebApp;
   const s=tg?.initDataUnsafe?.start_param||'';
   if(s){
