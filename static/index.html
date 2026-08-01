@@ -1746,15 +1746,15 @@ function makeCard(p){
     div.innerHTML=`
       <div class="pphoto-wrap">
         <img src="${esc(p.photo_url)}" alt="${esc(p.name)}" loading="lazy" decoding="async">
-        <div class="pphoto-overlay"></div>${bh}
-        <div class="pphoto-content">
-          <div class="pphoto-text">
-            <div class="pname">${esc(p.name)}</div>
-            ${dt?`<div class="pdesc-photo">${esc(dt)}</div>`:''}
-            <div class="pprice-photo">${fmt(p.price)}</div>
-          </div>
-          <div class="photo-add" id="ctrl-${p.id}" onclick="event.stopPropagation()">${ctrlHtml(p,qty)}</div>
+        ${bh}
+      </div>
+      <div class="pphoto-content">
+        <div class="pphoto-text">
+          <div class="pname">${esc(p.name)}</div>
+          ${dt?`<div class="pdesc-photo">${esc(dt)}</div>`:''}
+          <div class="pprice-photo">${fmt(p.price)}</div>
         </div>
+        <div class="photo-add" id="ctrl-${p.id}" onclick="event.stopPropagation()">${ctrlHtml(p,qty)}</div>
       </div>`;
   }else{
     div.className='pcard no-photo';div.onclick=()=>openProductModal(p.id);
