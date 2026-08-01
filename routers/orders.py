@@ -199,7 +199,7 @@ def create_order(
         table_id=data.table_id,
         comment=data.comment,
         total_amount=total,
-        status="new",
+        status="accepted",
     )
     db.add(order)
     db.flush()
@@ -231,6 +231,11 @@ def create_order(
         handlers.notify_new_order,
         order_with_items,
         order_with_items.items,
+        restaurant,
+    )
+    background_tasks.add_task(
+        handlers.notify_client_accepted,
+        order_with_items,
         restaurant,
     )
 
