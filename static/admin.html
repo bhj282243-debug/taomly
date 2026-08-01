@@ -619,7 +619,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
           Mijoz menyu ochganida ko'rinadigan ish vaqti.<br>
           <span style="color:var(--iv3)">Masalan: Dush-Yak 10:00–22:00 · Dam 11:00–23:00</span>
         </div>
-        <input class="modal-input" type="text" id="settingsWorkingHours" placeholder="09:00-23:00" autocomplete="off" inputmode="text" style="margin-bottom:0"/>
+        <input class="modal-input" type="text" id="settingsWorkingHours" placeholder="09:00-23:00" autocomplete="off" style="margin-bottom:0"/>
       </div>
 
       <!-- Доставка -->
@@ -976,8 +976,17 @@ function refreshCurrent(){
 // ── ORDERS ──
 const STATUS_LABELS={new:'Yangi',accepted:'Qabul qilindi',preparing:'Tayyorlanmoqda',ready_for_delivery:'Yetkazishga tayyor',delivering:'Yetkazilmoqda',completed:'Bajarildi',cancelled:'Bekor qilindi'};
 const TYPE_LABELS={delivery:'Yetkazib berish',takeaway:'Olib ketish',dine_in:'Zal'};
-const NEXT_STATUS={new:'accepted',accepted:'completed'};
-const NEXT_LABELS={new:'Qabul qilish',accepted:'Bajarildi'};
+// Цепочка статусов зависит от типа заказа
+function getNextStatus(status, orderType){
+  const chain = orderType === 'delivery'
+    ? {accepted:'preparing', preparing:'delivering', delivering:'completed'}
+    : {accepted:'preparing', preparing:'completed'};
+  return chain[status] || null;
+}
+function getNextLabel(status){
+  const labels = {accepted:'Tayyorlashni boshlash', preparing:'Bajarildi', delivering:'Yetkazildi'};
+  return labels[status] || null;
+}
 
 function fmt(p){return Number(p).toLocaleString('uz-UZ')+" so'm";}
 function fmtShort(p){if(p>=1000000)return(p/1000000).toFixed(1)+' mln';if(p>=1000)return(p/1000).toFixed(0)+' ming';return p.toLocaleString('uz-UZ');}
@@ -1059,7 +1068,7 @@ function makeOrderCard(order){
   const itemsHtml=(order.items||[]).map(i=>`<div class="item-row"><span>${esc(i.name)} × ${i.quantity}</span><span>${fmt(i.price*i.quantity)}</span></div>`).join('');
   const addressHtml=order.address?`<div class="client-address">${esc(order.address)}</div>`:'';
   const commentHtml=order.comment?`<div class="client-address" style="color:var(--iv3)">${esc(order.comment)}</div>`:'';
-  const nextStatus=NEXT_STATUS[order.status];
+  const nextStatus=getNextStatus(order.status, order.order_type);
   // Физическое удаление запрещено — заказы это журнал.
   // Для new: кнопка "Bekor qilish" через существующий PATCH /status.
   // Для completed/cancelled: никаких деструктивных действий.
@@ -1068,7 +1077,7 @@ function makeOrderCard(order){
     :'';
   const actionBtns=nextStatus?`
     <div class="action-btns">
-      <button class="btn btn-accept" onclick="changeStatus(${order.id},'${nextStatus}')">${NEXT_LABELS[order.status]}</button>
+      <button class="btn btn-accept" onclick="changeStatus(${order.id},'${nextStatus}')">${getNextLabel(order.status)}</button>
     </div>
     ${cancelBtn}`:cancelBtn;
   div.innerHTML=`
@@ -1367,9 +1376,6 @@ async function loadSettings(){
     document.getElementById('settingsDeliveryFee').value=r.delivery_fee||0;
     document.getElementById('settingsMinOrder').value=r.min_order_amount||0;
   }catch(e){showToast('Sozlamalarni yuklab bo\'lmadi',true);}
-  // Android fix: поле Ish vaqti не получает фокус без явного вызова focus() на touchend
-  const whInput=document.getElementById('settingsWorkingHours');
-  whInput.addEventListener('touchend',function(){setTimeout(()=>this.focus(),50)},{once:false});
 }
 
 async function saveSettings(){
@@ -1385,7 +1391,7 @@ async function saveSettings(){
   try{
     // Агентский PATCH /api/agency/restaurants/{id} принимает working_hours,
     // delivery_fee, min_order_amount через RestaurantUpdate схему
-    const res=await apiFetch(`${API}/api/restaurants/me/settings`,{
+    const res=await apiFetch(`${API}/api/agency/restaurants/${RESTAURANT_ID}`,{
       method:'PATCH',
       headers:authHeaders(),
       body:JSON.stringify({
