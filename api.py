@@ -273,14 +273,7 @@ def serve_app():
 
 @app.get("/admin")
 def serve_admin():
-    return FileResponse(
-        "static/admin.html",
-        headers={
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            "Pragma": "no-cache",
-            "Expires": "0",
-        },
-    )
+    return FileResponse("static/admin.html")
 
 
 @app.get("/agency-admin")
