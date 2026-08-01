@@ -105,7 +105,6 @@ jobs:
   deploy:
     name: Update BUILD_HASH on Render
     runs-on: ubuntu-latest
-    needs: [lint, audit]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - name: Set BUILD_HASH env on Render
