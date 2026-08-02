@@ -177,6 +177,17 @@ def subscribe(
     if not plan:
         raise HTTPException(status_code=404, detail="Тарифный план не найден")
 
+    # Платные тарифы недоступны до интеграции платёжной системы (Stage 3).
+    # Разрешаем только бесплатный план (price == 0).
+    if plan.price > 0:
+        raise HTTPException(
+            status_code=402,
+            detail=(
+                f"Тариф '{plan.name}' платный ({plan.price} {plan.currency}/мес). "
+                "Оплата через платёжную систему будет доступна в следующей версии платформы."
+            ),
+        )
+
     now = datetime.now(tz=timezone.utc)
 
     db.query(Subscription).filter(
