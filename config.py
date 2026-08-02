@@ -113,6 +113,10 @@ class _Settings:
     BOT_TOKEN: str = os.getenv("BOT_TOKEN", "")
     SENTRY_DSN: str = os.getenv("SENTRY_DSN", "")
 
+    # Окружение: "production" или "development" (дефолт).
+    # В Render Dashboard → Environment задать: ENVIRONMENT=production
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+
     # JWT: 8 часов — баланс UX и безопасности.
     ACCESS_TOKEN_EXPIRE_HOURS: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_HOURS", "8"))
 
