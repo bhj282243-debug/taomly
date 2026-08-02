@@ -19,18 +19,17 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Добавляем badge-колонки
-    op.add_column("products", sa.Column("is_bestseller",  sa.Boolean(), nullable=False, server_default=sa.false()))
-    op.add_column("products", sa.Column("is_new",         sa.Boolean(), nullable=False, server_default=sa.false()))
-    op.add_column("products", sa.Column("is_spicy",       sa.Boolean(), nullable=False, server_default=sa.false()))
-    op.add_column("products", sa.Column("is_chef_choice", sa.Boolean(), nullable=False, server_default=sa.false()))
+    # Добавляем badge-колонки идемпотентно (IF NOT EXISTS)
+    op.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS is_bestseller  BOOLEAN NOT NULL DEFAULT FALSE")
+    op.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS is_new         BOOLEAN NOT NULL DEFAULT FALSE")
+    op.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS is_spicy       BOOLEAN NOT NULL DEFAULT FALSE")
+    op.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS is_chef_choice BOOLEAN NOT NULL DEFAULT FALSE")
 
     # Индекс для быстрого поиска хитов продаж по ресторану
-    op.create_index(
-        "ix_products_bestseller",
-        "products",
-        ["restaurant_id", "is_bestseller"],
-        postgresql_where=sa.text("is_bestseller = TRUE"),
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_products_bestseller "
+        "ON products (restaurant_id, is_bestseller) "
+        "WHERE is_bestseller = TRUE"
     )
 
 
