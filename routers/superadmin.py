@@ -84,8 +84,9 @@ SUPERADMIN_ROLE = "superadmin"
 
 def _create_superadmin_token() -> str:
     payload = {
+        "sub":  settings.SUPERADMIN_EMAIL,
         "role": SUPERADMIN_ROLE,
-        "exp": datetime.now(timezone.utc) + timedelta(hours=12),
+        "exp":  datetime.now(timezone.utc) + timedelta(hours=12),
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
 
@@ -383,7 +384,7 @@ def update_agency(
 @router.post("/agencies/{agency_id}/impersonate")
 def impersonate_agency(
     agency_id: int,
-    _=Depends(get_current_superadmin),
+    superadmin=Depends(get_current_superadmin),
     db: Session = Depends(get_db),
 ):
     agency = db.query(Agency).filter(Agency.id == agency_id).first()
@@ -391,7 +392,12 @@ def impersonate_agency(
         raise HTTPException(status_code=404, detail="Агентство не найдено")
 
     token = create_agency_token(agency)
-    logger.warning("Superadmin impersonate agency_id=%s", agency_id)
+    logger.warning(
+        "Superadmin impersonate: superadmin=%s → agency_id=%s agency_email=%s",
+        superadmin.get("sub", "unknown"),
+        agency_id,
+        agency.owner_email,
+    )
     return {"access_token": token, "agency_name": agency.name}
 
 
