@@ -189,6 +189,21 @@ def create_order(
             "quantity":   item.quantity,
         })
 
+    # Проверка минимальной суммы заказа для доставки
+    if (
+        data.order_type == "delivery"
+        and restaurant.min_order_amount
+        and total < restaurant.min_order_amount
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Минимальная сумма заказа для доставки: "
+                f"{restaurant.min_order_amount:,} so'm. "
+                f"Ваш заказ: {total:,} so'm."
+            ),
+        )
+
     order = Order(
         restaurant_id=restaurant.id,
         client_telegram_id=tg_user.id,
