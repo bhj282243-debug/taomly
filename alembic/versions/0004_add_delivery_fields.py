@@ -32,28 +32,10 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "restaurants",
-        sa.Column("working_hours", sa.String(50), nullable=True),
-    )
-    op.add_column(
-        "restaurants",
-        sa.Column(
-            "delivery_fee",
-            sa.Integer(),
-            nullable=False,
-            server_default="0",
-        ),
-    )
-    op.add_column(
-        "restaurants",
-        sa.Column(
-            "min_order_amount",
-            sa.Integer(),
-            nullable=False,
-            server_default="0",
-        ),
-    )
+    # Добавляем delivery-колонки идемпотентно (IF NOT EXISTS)
+    op.execute("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS working_hours    VARCHAR(50)  DEFAULT NULL")
+    op.execute("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS delivery_fee     INTEGER      NOT NULL DEFAULT 0")
+    op.execute("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS min_order_amount INTEGER      NOT NULL DEFAULT 0")
 
 
 def downgrade() -> None:
