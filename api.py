@@ -171,14 +171,24 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # ──────────────────────────────────────────
 # CORS
 # ──────────────────────────────────────────
-_cors_origins = settings.ALLOWED_ORIGINS if settings.ALLOWED_ORIGINS else ["*"]
-if _cors_origins == ["*"]:
+if settings.ALLOWED_ORIGINS:
+    _cors_origins = settings.ALLOWED_ORIGINS
+else:
+    if settings.ENVIRONMENT == "production":
+        raise RuntimeError(
+            "[TAOMLY] КРИТИЧЕСКАЯ ОШИБКА ЗАПУСКА: "
+            "ENVIRONMENT=production, но ALLOWED_ORIGINS не задан. "
+            "Задайте в Render Dashboard → Environment: "
+            "ALLOWED_ORIGINS=https://taomly.onrender.com "
+            "(плюс остальные ваши домены через запятую)."
+        )
     import sys
     print(
         "\n[TAOMLY CORS WARNING] ALLOWED_ORIGINS не задан — CORS разрешает ВСЕ origins (*).\n"
-        "В production обязательно задайте: ALLOWED_ORIGINS=https://taomly.uz,https://yourdomain.com\n",
+        "В production обязательно задайте: ALLOWED_ORIGINS=https://taomly.onrender.com\n",
         file=sys.stderr,
     )
+    _cors_origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
