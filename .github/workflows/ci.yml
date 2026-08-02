@@ -101,16 +101,3 @@ jobs:
           tags: taomly:ci-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-  deploy:
-    name: Update BUILD_HASH on Render
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - name: Set BUILD_HASH env on Render
-        run: |
-          curl -s -X PUT \
-            "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/env-vars" \
-            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '[{"key":"BUILD_HASH","value":"'"${GITHUB_SHA::8}"'"}]'
