@@ -69,39 +69,58 @@ def test_generate_seo_ai_disabled(client: TestClient, restaurant_token: str):
 
 # ──────────────────────────────────────────
 # БЕЗ АВТОРИЗАЦИИ
+# Используем отдельный "сырой" клиент без auth-override,
+# иначе dependency_overrides из fixture client маскирует 401/403.
 # ──────────────────────────────────────────
 
-def test_generate_description_no_auth(client: TestClient):
+def _raw_client(db):
+    """TestClient без auth-override — только get_db замокирован."""
+    from api import app
+    from auth import get_db
+    app.dependency_overrides = {get_db: lambda: db}
+    client = TestClient(app, raise_server_exceptions=False)
+    return client
+
+
+def test_generate_description_no_auth(db):
     """Без токена → 401/403."""
-    response = client.post(
+    raw = _raw_client(db)
+    response = raw.post(
         "/api/ai/generate-description",
         json={"dish_name": "Плов"},
     )
+    app.dependency_overrides.clear()
     assert response.status_code in (401, 403)
 
 
-def test_translate_menu_no_auth(client: TestClient):
+def test_translate_menu_no_auth(db):
     """Без токена → 401/403."""
-    response = client.post(
+    raw = _raw_client(db)
+    response = raw.post(
         "/api/ai/translate-menu",
         json={"items": [], "target_language": "uz"},
     )
+    app.dependency_overrides.clear()
     assert response.status_code in (401, 403)
 
 
-def test_suggest_tags_no_auth(client: TestClient):
+def test_suggest_tags_no_auth(db):
     """Без токена → 401/403."""
-    response = client.post(
+    raw = _raw_client(db)
+    response = raw.post(
         "/api/ai/suggest-tags",
         json={"dish_name": "Лагман"},
     )
+    app.dependency_overrides.clear()
     assert response.status_code in (401, 403)
 
 
-def test_generate_seo_no_auth(client: TestClient):
+def test_generate_seo_no_auth(db):
     """Без токена → 401/403."""
-    response = client.post(
+    raw = _raw_client(db)
+    response = raw.post(
         "/api/ai/generate-seo",
         json={"restaurant_name": "Чинор"},
     )
+    app.dependency_overrides.clear()
     assert response.status_code in (401, 403)
