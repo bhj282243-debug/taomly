@@ -37,6 +37,20 @@ from config import settings
 from database import get_db
 from limiter import limiter
 from models import Agency, Restaurant, Subscription, SubscriptionPlan
+from schemas import (
+    SAAgencyCreateResponse,
+    SAAgencyDetailResponse,
+    SAAgencyDetailRestaurant,
+    SAAgencyItem,
+    SAAgencyListResponse,
+    SAAgencyUpdateResponse,
+    SADashboardResponse,
+    SAFreezeResponse,
+    SAImpersonateResponse,
+    SARestaurantItem,
+    SARestaurantListResponse,
+    SATransferResponse,
+)
 
 _pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -142,7 +156,7 @@ def superadmin_login(data: SuperAdminLogin, request: Request):
 # DASHBOARD
 # ──────────────────────────────────────────
 
-@router.get("/dashboard")
+@router.get("/dashboard", response_model=SADashboardResponse)
 def get_dashboard(
     _=Depends(get_current_superadmin),
     db: Session = Depends(get_db),
@@ -257,7 +271,7 @@ def get_dashboard(
 # АГЕНТСТВА
 # ──────────────────────────────────────────
 
-@router.get("/agencies")
+@router.get("/agencies", response_model=SAAgencyListResponse)
 def list_agencies(
     search: Optional[str] = Query(None),
     is_active: Optional[bool] = Query(None),
@@ -304,7 +318,7 @@ def list_agencies(
     }
 
 
-@router.get("/agencies/{agency_id}")
+@router.get("/agencies/{agency_id}", response_model=SAAgencyDetailResponse)
 def get_agency(
     agency_id: int,
     _=Depends(get_current_superadmin),
@@ -335,7 +349,7 @@ def get_agency(
     }
 
 
-@router.post("/agencies", status_code=201)
+@router.post("/agencies", status_code=201, response_model=SAAgencyCreateResponse)
 def create_agency(
     data: SuperAdminAgencyCreate,
     _=Depends(get_current_superadmin),
@@ -364,7 +378,7 @@ def create_agency(
     return {"id": agency.id, "name": agency.name, "email": agency.owner_email}
 
 
-@router.patch("/agencies/{agency_id}")
+@router.patch("/agencies/{agency_id}", response_model=SAAgencyUpdateResponse)
 def update_agency(
     agency_id: int,
     data: SuperAdminAgencyUpdate,
@@ -398,7 +412,7 @@ def update_agency(
     return {"ok": True, "id": agency.id, "is_active": agency.is_active}
 
 
-@router.post("/agencies/{agency_id}/impersonate")
+@router.post("/agencies/{agency_id}/impersonate", response_model=SAImpersonateResponse)
 def impersonate_agency(
     agency_id: int,
     superadmin=Depends(get_current_superadmin),
@@ -422,7 +436,7 @@ def impersonate_agency(
 # РЕСТОРАНЫ
 # ──────────────────────────────────────────
 
-@router.get("/restaurants")
+@router.get("/restaurants", response_model=SARestaurantListResponse)
 def list_restaurants(
     search: Optional[str] = Query(None),
     is_active: Optional[bool] = Query(None),
@@ -463,7 +477,7 @@ def list_restaurants(
     }
 
 
-@router.patch("/restaurants/{restaurant_id}/freeze")
+@router.patch("/restaurants/{restaurant_id}/freeze", response_model=SAFreezeResponse)
 def freeze_restaurant(
     restaurant_id: int,
     data: SuperAdminFreezeRequest,
@@ -481,7 +495,7 @@ def freeze_restaurant(
     return {"ok": True, "is_active": restaurant.is_active}
 
 
-@router.patch("/restaurants/{restaurant_id}/transfer")
+@router.patch("/restaurants/{restaurant_id}/transfer", response_model=SATransferResponse)
 def transfer_restaurant(
     restaurant_id: int,
     data: SuperAdminTransferRequest,
