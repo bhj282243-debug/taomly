@@ -13,8 +13,9 @@ handlers.py — Taomly Platform
 """
 
 import logging
-import os
 from typing import Dict
+
+from config import settings
 
 import telebot
 
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 # ──────────────────────────────────────────
 # ПЛАТФОРМЕННЫЙ БОТ (Agency / onboarding)
 # ──────────────────────────────────────────
-_PLATFORM_BOT_TOKEN = os.getenv("BOT_TOKEN")
+_PLATFORM_BOT_TOKEN = settings.BOT_TOKEN or None
 platform_bot = telebot.TeleBot(_PLATFORM_BOT_TOKEN) if _PLATFORM_BOT_TOKEN else None
 
 # ──────────────────────────────────────────
@@ -104,7 +105,7 @@ def invalidate_bot_cache(restaurant_id: int) -> None:
 # ──────────────────────────────────────────
 # /start ДЛЯ РЕСТОРАННЫХ БОТОВ (Multi-Tenant)
 # ──────────────────────────────────────────
-_APP_BASE_URL = os.getenv("WEBHOOK_URL", "https://taomly.onrender.com").rstrip("/") + "/app"
+_APP_BASE_URL = (settings.WEBHOOK_URL or "https://taomly.onrender.com").rstrip("/") + "/app"
 
 
 def _send_restaurant_welcome(bot: telebot.TeleBot, chat_id: int, restaurant) -> None:
