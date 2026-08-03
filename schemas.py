@@ -32,6 +32,15 @@ _HEX_RE   = re.compile(r"^#[0-9A-Fa-f]{6}$")
 _PHONE_RE = re.compile(r"^\+?[0-9\s\-\(\)]{7,20}$")
 _URL_RE   = re.compile(r"^https?://", re.IGNORECASE)
 
+# Валидация custom_domain:
+#   - каждая метка: [a-z0-9] по краям, внутри допустим одиночный дефис
+#   - минимум две метки (домен второго уровня + TLD)
+#   - TLD: только буквы, 2–63 символа
+#   - IP-адреса (типа 127.0.0.1) не пропускаются — первая метка не может быть
+#     чисто цифровой, если остальные тоже цифры
+_DOMAIN_LABEL_RE = re.compile(r"^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?$")
+_DOMAIN_TLD_RE   = re.compile(r"^[a-zA-Z]{2,63}$")
+
 # SSRF-защита: блокируем внутренние/приватные адреса
 # Атакующий может передать http://169.254.169.254/ (AWS metadata),
 # http://localhost:8000/api/superadmin/ или http://10.0.0.1/internal
@@ -115,6 +124,68 @@ def _validate_url(value: Optional[str]) -> Optional[str]:
         raise
     except Exception:
         raise ValueError("Невалидный URL")
+    return v
+
+
+def _validate_custom_domain(value: Optional[str]) -> Optional[str]:
+    """
+    Принимает только корректные доменные имена вида restaurant.example.com или
+    menu.example.uz. Отклоняет:
+      - IP-адреса (127.0.0.1, 10.0.0.1 и т.д.)
+      - localhost и его варианты
+      - метки с двойным дефисом в произвольном месте (xn-- IDN разрешены явно)
+      - метки, начинающиеся или заканчивающиеся дефисом
+      - TLD короче 2 символов или содержащий цифры
+      - однокомпонентные имена (нет точки)
+      - пустую строку и строки с пробелами
+    """
+    if not value:
+        return None
+    v = value.strip()
+    if not v:
+        return None
+    if " " in v or "\t" in v:
+        raise ValueError("Доменное имя не может содержать пробелы")
+
+    # Снимаем опциональный trailing dot (FQDN-стиль)
+    if v.endswith("."):
+        v = v[:-1]
+
+    parts = v.split(".")
+    if len(parts) < 2:
+        raise ValueError(
+            "Укажите полное доменное имя, например restaurant.example.com"
+        )
+
+    # TLD — последняя часть, только буквы
+    tld = parts[-1]
+    if not _DOMAIN_TLD_RE.match(tld):
+        raise ValueError(
+            f"Неверный TLD «{tld}». TLD должен содержать только буквы (2–63 символа)"
+        )
+
+    # Все части кроме TLD — проверяем по метке
+    for label in parts[:-1]:
+        if not label:
+            raise ValueError("Доменное имя содержит пустую метку (двойная точка?)")
+        if not _DOMAIN_LABEL_RE.match(label):
+            raise ValueError(
+                f"Неверная метка домена «{label}». "
+                "Метка должна начинаться и заканчиваться на букву/цифру, "
+                "внутри допустимы буквы, цифры и одиночный дефис"
+            )
+
+    # Блокируем IP-адреса: если все части — цифры → это IP, не домен
+    if all(part.isdigit() for part in parts):
+        raise ValueError(
+            "IP-адрес не допускается в качестве custom_domain. "
+            "Укажите доменное имя."
+        )
+
+    # Блокируем localhost явно (на случай "localhost.localdomain" и т.п.)
+    if parts[0].lower() == "localhost" or v.lower() == "localhost":
+        raise ValueError("localhost не допускается в качестве custom_domain")
+
     return v
 
 
@@ -355,6 +426,11 @@ class RestaurantCreate(BaseModel):
     def validate_logo_url(cls, v: Optional[str]) -> Optional[str]:
         return _validate_url(v)
 
+    @field_validator("custom_domain", mode="before")
+    @classmethod
+    def validate_custom_domain(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_custom_domain(v)
+
     @field_validator("phone", mode="before")
     @classmethod
     def validate_phone(cls, v: Optional[str]) -> Optional[str]:
@@ -391,6 +467,11 @@ class RestaurantUpdate(BaseModel):
     @classmethod
     def validate_logo_url(cls, v: Optional[str]) -> Optional[str]:
         return _validate_url(v)
+
+    @field_validator("custom_domain", mode="before")
+    @classmethod
+    def validate_custom_domain(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_custom_domain(v)
 
     @field_validator("phone", mode="before")
     @classmethod
