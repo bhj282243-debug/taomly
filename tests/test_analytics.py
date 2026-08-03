@@ -135,6 +135,9 @@ class TestSummary:
 # REVENUE BY DAY
 # ──────────────────────────────────────────
 
+# Requires PostgreSQL: uses DATE(created_at AT TIME ZONE 'UTC') — not supported in SQLite.
+# These tests are skipped automatically on SQLite and run in CI with PostgreSQL.
+@pytest.mark.postgres
 class TestRevenueByDay:
     def test_revenue_by_day_empty(self, client, auth_headers_restaurant):
         r = client.get("/api/analytics/revenue-by-day?period=7d", headers=auth_headers_restaurant)
@@ -245,6 +248,9 @@ class TestTopDishes:
 # PEAK HOURS
 # ──────────────────────────────────────────
 
+# Requires PostgreSQL: uses EXTRACT(HOUR FROM ... AT TIME ZONE :tz)::INT — not supported in SQLite.
+# These tests are skipped automatically on SQLite and run in CI with PostgreSQL.
+@pytest.mark.postgres
 class TestPeakHours:
     def test_peak_hours_returns_24(self, client, auth_headers_restaurant):
         """Всегда возвращает 24 элемента (один на каждый час)."""
