@@ -39,7 +39,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
       - name: Install pip-audit
-        run: pip install pip-audit==2.7.3
+        run: pip install -r requirements-dev.txt
       - name: Audit dependencies for known CVEs
         run: pip-audit -r requirements.txt --progress-spinner off
 
@@ -66,7 +66,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-cov
+          pip install -r requirements-dev.txt
       - name: Generate FERNET_KEY for tests
         run: |
           FERNET_KEY=$(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
