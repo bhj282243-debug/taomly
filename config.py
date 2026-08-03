@@ -155,6 +155,15 @@ class _Settings:
     RATE_LIMIT_API: str = os.getenv("RATE_LIMIT_API", "120/minute")
     RATE_LIMIT_SUPERADMIN_LOGIN: str = os.getenv("RATE_LIMIT_SUPERADMIN_LOGIN", "5/minute")
 
+    # AI-интеграция (OpenRouter / OpenAI / Anthropic / Gemini)
+    # Активировать: AI_ENABLED=true + AI_API_KEY=<ключ провайдера>
+    # Пока AI_ENABLED=false — все AI-эндпоинты возвращают feature_not_available.
+    # AI_API_KEY не логируется и не передаётся клиенту ни в каком ответе API.
+    AI_ENABLED:  bool = os.getenv("AI_ENABLED", "false").lower() == "true"
+    AI_PROVIDER: str  = os.getenv("AI_PROVIDER", "openrouter")  # openrouter | openai | anthropic | gemini
+    AI_API_KEY:  str  = os.getenv("AI_API_KEY", "")
+    AI_MODEL:    str  = os.getenv("AI_MODEL", "mistralai/mistral-7b-instruct")
+
     # Доверенные proxy-хосты для ProxyHeadersMiddleware.
     # Задайте IP вашего reverse proxy или load balancer.
     # "*" принимает X-Forwarded-For от любого хоста — допустимо только
