@@ -20,6 +20,7 @@ routers/menu.py — Taomly Platform
   - is_popular добавлен в create_product и update_product
 """
 
+import io
 import logging
 import uuid
 from typing import List, Optional
@@ -159,6 +160,21 @@ async def upload_photo(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Размер файла превышает 5 MB ({len(data) / 1024 / 1024:.1f} MB)",
+        )
+
+    # Проверяем реальный формат файла по magic bytes через Pillow.
+    # Content-Type из HTTP-заголовка клиент может подделать — здесь мы убеждаемся,
+    # что байты действительно являются изображением поддерживаемого формата.
+    # .verify() деструктивен (после него объект Image нельзя использовать),
+    # но нам нужна только проверка, не дальнейшая обработка.
+    try:
+        from PIL import Image, UnidentifiedImageError
+        img = Image.open(io.BytesIO(data))
+        img.verify()
+    except (UnidentifiedImageError, Exception):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Файл не является изображением или повреждён. Допустимые форматы: JPEG, PNG, WebP, GIF",
         )
 
     # Генерируем уникальное имя: restaurants/<id>/<uuid>.<ext>
