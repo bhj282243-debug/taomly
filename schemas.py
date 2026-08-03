@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 from typing import List, Literal, Optional
 from urllib.parse import urlparse
 
-from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 
 # ──────────────────────────────────────────
@@ -648,3 +648,198 @@ class SubscribeResponse(BaseModel):
     plan_id: int
     plan_name: str
     message: str
+
+
+# ──────────────────────────────────────────
+# RESTAURANT PUBLIC API — response models
+# ──────────────────────────────────────────
+
+class RestaurantSettingsResponse(BaseModel):
+    working_hours:    str = ""
+    delivery_fee:     int = 0
+    min_order_amount: int = 0
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RestaurantSettingsUpdateResponse(RestaurantSettingsResponse):
+    ok: bool = True
+
+
+class ProductPublicResponse(BaseModel):
+    id:            int
+    name:          str
+    description:   Optional[str] = None
+    price:         int
+    photo_url:     Optional[str] = None
+    is_available:  bool
+    sort_order:    int
+    is_bestseller: bool
+    is_new:        bool
+    is_spicy:      bool
+    is_chef_choice: bool
+    is_popular:    bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CategoryPublicResponse(BaseModel):
+    id:         int
+    name:       str
+    sort_order: int
+    products:   List[ProductPublicResponse]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RestaurantPublicResponse(BaseModel):
+    id:                     int
+    name:                   str
+    slug:                   str
+    description:            Optional[str] = None
+    phone:                  Optional[str] = None
+    address:                Optional[str] = None
+    is_waiter_call_enabled: bool
+    # White Label branding
+    logo_url:               Optional[str] = None
+    primary_color:          str
+    secondary_color:        str
+    accent_color:           str
+    welcome_text:           Optional[str] = None
+    # Delivery settings
+    working_hours:          str = ""
+    delivery_fee:           int = 0
+    min_order_amount:       int = 0
+    # Menu (only available products, grouped by category)
+    categories:             List[CategoryPublicResponse]
+    # telegram_bot_token_encrypted намеренно отсутствует — защита токена
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TableResponse(BaseModel):
+    restaurant_id:   int
+    restaurant_name: str
+    slug:            str
+    table_id:        int
+    table_number:    str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ──────────────────────────────────────────
+# SUPERADMIN — response models
+# ──────────────────────────────────────────
+
+class SAAgencyItem(BaseModel):
+    id:               int
+    name:             str
+    email:            str
+    is_active:        bool
+    created_at:       str
+    restaurant_count: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SAAgencyListResponse(BaseModel):
+    total: int
+    items: List[SAAgencyItem]
+
+
+class SAAgencyDetailRestaurant(BaseModel):
+    id:         int
+    name:       str
+    slug:       str
+    is_active:  bool
+    created_at: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SAAgencyDetailResponse(BaseModel):
+    id:          int
+    name:        str
+    email:       str
+    is_active:   bool
+    created_at:  str
+    restaurants: List[SAAgencyDetailRestaurant]
+
+
+class SAAgencyCreateResponse(BaseModel):
+    id:    int
+    name:  str
+    email: str
+
+
+class SAAgencyUpdateResponse(BaseModel):
+    ok:        bool
+    id:        int
+    is_active: bool
+
+
+class SAImpersonateResponse(BaseModel):
+    access_token: str
+    agency_name:  str
+
+
+class SARestaurantItem(BaseModel):
+    id:         int
+    name:       str
+    slug:       str
+    address:    Optional[str] = None
+    is_active:  bool
+    agency_id:  int
+    created_at: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SARestaurantListResponse(BaseModel):
+    total: int
+    items: List[SARestaurantItem]
+
+
+class SAFreezeResponse(BaseModel):
+    ok:        bool
+    is_active: bool
+
+
+class SATransferResponse(BaseModel):
+    ok:            bool
+    restaurant_id: int
+    new_agency_id: int
+
+
+class SARecentAgencyItem(BaseModel):
+    id:               int
+    name:             str
+    email:            str
+    is_active:        bool
+    created_at:       str
+    restaurant_count: int
+
+
+class SARecentRestaurantItem(BaseModel):
+    id:         int
+    name:       str
+    slug:       str
+    is_active:  bool
+    agency_id:  int
+    created_at: str
+
+
+class SADashboardCounters(BaseModel):
+    total:          int
+    active:         int
+    inactive:       int
+    new_this_month: int
+
+
+class SADashboardResponse(BaseModel):
+    agencies:            SADashboardCounters
+    restaurants:         SADashboardCounters
+    mrr:                 int
+    arr:                 int
+    recent_agencies:     List[SARecentAgencyItem]
+    recent_restaurants:  List[SARecentRestaurantItem]
