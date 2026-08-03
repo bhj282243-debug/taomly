@@ -38,6 +38,14 @@ from typing import Optional
 from auth import get_current_restaurant_admin
 from database import get_db
 from models import Category, Restaurant, RestaurantTable
+from schemas import (
+    CategoryPublicResponse,
+    ProductPublicResponse,
+    RestaurantPublicResponse,
+    RestaurantSettingsResponse,
+    RestaurantSettingsUpdateResponse,
+    TableResponse,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +64,7 @@ class RestaurantSettingsUpdate(BaseModel):
 # ──────────────────────────────────────────
 # GET /me/settings — настройки ресторана (только для restaurant_admin)
 # ──────────────────────────────────────────
-@router.get("/me/settings")
+@router.get("/me/settings", response_model=RestaurantSettingsResponse)
 def get_restaurant_settings(
     restaurant: Restaurant = Depends(get_current_restaurant_admin),
 ):
@@ -64,17 +72,17 @@ def get_restaurant_settings(
     Возвращает текущие настройки ресторана.
     Требует авторизацию: restaurant_admin.
     """
-    return {
-        "working_hours": restaurant.working_hours or "",
-        "delivery_fee": restaurant.delivery_fee or 0,
-        "min_order_amount": restaurant.min_order_amount or 0,
-    }
+    return RestaurantSettingsResponse(
+        working_hours=restaurant.working_hours or "",
+        delivery_fee=restaurant.delivery_fee or 0,
+        min_order_amount=restaurant.min_order_amount or 0,
+    )
 
 
 # ──────────────────────────────────────────
 # PATCH /me/settings — сохранить настройки (только для restaurant_admin)
 # ──────────────────────────────────────────
-@router.patch("/me/settings")
+@router.patch("/me/settings", response_model=RestaurantSettingsUpdateResponse)
 def update_restaurant_settings(
     data: RestaurantSettingsUpdate,
     restaurant: Restaurant = Depends(get_current_restaurant_admin),
@@ -114,18 +122,18 @@ def update_restaurant_settings(
         restaurant.min_order_amount,
     )
 
-    return {
-        "ok": True,
-        "working_hours": restaurant.working_hours or "",
-        "delivery_fee": restaurant.delivery_fee or 0,
-        "min_order_amount": restaurant.min_order_amount or 0,
-    }
+    return RestaurantSettingsUpdateResponse(
+        ok=True,
+        working_hours=restaurant.working_hours or "",
+        delivery_fee=restaurant.delivery_fee or 0,
+        min_order_amount=restaurant.min_order_amount or 0,
+    )
 
 
 # ──────────────────────────────────────────
 # GET /{slug} — публичная информация о ресторане
 # ──────────────────────────────────────────
-@router.get("/{slug}")
+@router.get("/{slug}", response_model=RestaurantPublicResponse)
 def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
     """
     Возвращает публичную информацию о ресторане по slug.
@@ -210,7 +218,7 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
 # ──────────────────────────────────────────
 # GET /{slug}/table/{table_number} — получить стол по номеру
 # ──────────────────────────────────────────
-@router.get("/{slug}/table/{table_number}")
+@router.get("/{slug}/table/{table_number}", response_model=TableResponse)
 def get_table_by_number(slug: str, table_number: str, db: Session = Depends(get_db)):
     """
     Возвращает данные стола по slug ресторана и номеру стола.
