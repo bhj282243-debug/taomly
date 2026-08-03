@@ -190,6 +190,7 @@ class Category(Base):
 class Product(Base):
     __tablename__ = "products"
     __table_args__ = (
+        CheckConstraint("price >= 0", name="ck_products_price_nonnegative"),
         Index("ix_products_restaurant_available_sort", "restaurant_id", "is_available", "sort_order"),
         Index("ix_products_category", "category_id"),
     )
@@ -279,6 +280,7 @@ class Order(Base):
             "status IN ('new','accepted','preparing','ready_for_delivery','delivering','completed','cancelled')",
             name="check_order_status",
         ),
+        CheckConstraint("total_amount >= 0", name="ck_orders_total_amount_nonnegative"),
         Index("ix_orders_restaurant_status_created", "restaurant_id", "status", "created_at"),
         Index("ix_orders_client_telegram", "client_telegram_id"),
     )
@@ -338,6 +340,7 @@ class OrderItem(Base):
     __tablename__ = "order_items"
     __table_args__ = (
         CheckConstraint("quantity > 0", name="check_order_item_quantity"),
+        CheckConstraint("price >= 0", name="ck_order_items_price_nonnegative"),
     )
 
     id         = Column(BigInteger, primary_key=True)
@@ -461,6 +464,10 @@ class SubscriptionPlan(Base):
     users_limit       = Column(Integer, nullable=False, default=-1)
     description       = Column(Text, nullable=True)
     is_active         = Column(Boolean, default=True, nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("price >= 0", name="ck_subscription_plans_price_nonnegative"),
+    )
 
     subscriptions = relationship("Subscription", back_populates="plan", lazy="select")
 
