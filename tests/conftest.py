@@ -319,3 +319,33 @@ def auth_headers_agency(agency_token) -> dict:
 @pytest.fixture
 def auth_headers_restaurant(restaurant_token) -> dict:
     return {"Authorization": f"Bearer {restaurant_token}"}
+
+
+# ──────────────────────────────────────────
+# POSTGRES MARKER — автоматический skip на SQLite
+# ──────────────────────────────────────────
+def _is_sqlite() -> bool:
+    """True если тестовый движок — SQLite (не PostgreSQL)."""
+    return "sqlite" in SQLALCHEMY_TEST_URL
+
+
+def pytest_collection_modifyitems(items):
+    """
+    Автоматически пропускает тесты с маркером @pytest.mark.postgres
+    при запуске на SQLite.
+
+    Чтобы запустить эти тесты, настройте CI с PostgreSQL и выполните:
+        DATABASE_URL=postgresql://... pytest -m postgres
+    """
+    if not _is_sqlite():
+        return  # PostgreSQL доступен — запускаем всё
+
+    skip_marker = pytest.mark.skip(
+        reason=(
+            "Requires PostgreSQL (uses AT TIME ZONE, EXTRACT::INT). "
+            "Run with a real PostgreSQL: DATABASE_URL=postgresql://... pytest -m postgres"
+        )
+    )
+    for item in items:
+        if item.get_closest_marker("postgres"):
+            item.add_marker(skip_marker)
