@@ -190,6 +190,57 @@ class TestTopDishes:
         assert len(r.json()) <= 3
 
 
+    def test_top_dishes_revenue_only_completed(
+        self, client, db, restaurant, auth_headers_restaurant
+    ):
+        """
+        REGRESSION: top-dishes revenue считает только status=completed.
+
+        Если это условие будет заменено на status != cancelled,
+        тест станет красным — заказы preparing/delivering/new
+        не должны попадать в выручку.
+        """
+        # completed — должен войти в выручку
+        o_completed = _make_order(db, restaurant, status="completed", total=10000, days_ago=1)
+        item_c = OrderItem(order_id=o_completed.id, name="Плов", price=10000, quantity=1)
+        db.add(item_c)
+
+        # preparing — НЕ должен войти в выручку
+        o_preparing = _make_order(db, restaurant, status="preparing", total=20000, days_ago=1)
+        item_p = OrderItem(order_id=o_preparing.id, name="Плов", price=20000, quantity=1)
+        db.add(item_p)
+
+        # delivering — НЕ должен войти в выручку
+        o_delivering = _make_order(db, restaurant, status="delivering", total=30000, days_ago=1)
+        item_d = OrderItem(order_id=o_delivering.id, name="Плов", price=30000, quantity=1)
+        db.add(item_d)
+
+        # cancelled — НЕ должен войти в выручку
+        o_cancelled = _make_order(db, restaurant, status="cancelled", total=40000, days_ago=1)
+        item_x = OrderItem(order_id=o_cancelled.id, name="Плов", price=40000, quantity=1)
+        db.add(item_x)
+
+        db.flush()
+
+        r = client.get("/api/analytics/top-dishes?period=30d", headers=auth_headers_restaurant)
+        assert r.status_code == 200
+        data = r.json()
+
+        assert len(data) == 1, (
+            f"Ожидали 1 блюдо (только из completed-заказа), получили {len(data)}"
+        )
+        dish = data[0]
+        assert dish["name"] == "Плов"
+        # qty=1 (только из completed), не 4 (из всех статусов)
+        assert dish["qty"] == 1, (
+            f"qty должен быть 1 (только completed), получили {dish['qty']}"
+        )
+        # revenue=10000 (только из completed), не 100000 (сумма всех)
+        assert dish["revenue"] == 10000, (
+            f"revenue должен быть 10000 (только completed), получили {dish['revenue']}"
+        )
+
+
 # ──────────────────────────────────────────
 # PEAK HOURS
 # ──────────────────────────────────────────
