@@ -14,7 +14,15 @@ Create Date: 2026-07-19
 Для существующих БД:
   alembic upgrade 0003
   — или вручную: ALTER TABLE products ADD COLUMN IF NOT EXISTS is_popular BOOLEAN NOT NULL DEFAULT false;
+
+Индекс ix_products_popular:
+  Partial index (WHERE is_popular = TRUE) — по аналогии с ix_products_bestseller.
+  Если миграция уже применялась, выполни вручную в Neon SQL Editor:
+    DROP INDEX IF EXISTS ix_products_popular;
+    CREATE INDEX IF NOT EXISTS ix_products_popular
+      ON products (restaurant_id) WHERE is_popular = TRUE;
 """
+
 
 from alembic import op
 import sqlalchemy as sa
@@ -35,10 +43,14 @@ def upgrade() -> None:
             server_default=sa.false(),
         ),
     )
-    op.create_index(
-        "ix_products_popular",
-        "products",
-        ["restaurant_id", "is_popular"],
+    # Partial index: индексирует только строки WHERE is_popular = TRUE.
+    # Аналогично ix_products_bestseller в миграции 0002.
+    # Меньше размером, быстрее обновляется, эффективнее для
+    # запросов вида WHERE is_popular = TRUE (горизонтальный скролл Mini App).
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_products_popular "
+        "ON products (restaurant_id) "
+        "WHERE is_popular = TRUE"
     )
 
 
