@@ -40,6 +40,23 @@ router = APIRouter(prefix="/api/billing", tags=["billing"])
 
 
 # ──────────────────────────────────────────
+# HELPER — PostgreSQL advisory lock
+# ──────────────────────────────────────────
+def _pg_advisory_lock(db: Session, lock_key: int) -> bool:
+    # Tries to acquire pg_try_advisory_xact_lock for lock_key.
+    # Returns True if acquired (or on SQLite/other engines).
+    # Returns False if already held by another concurrent request.
+    try:
+        row = db.execute(
+            text("SELECT pg_try_advisory_xact_lock(:key)"),
+            {"key": lock_key},
+        ).fetchone()
+        return bool(row[0]) if row else True
+    except Exception:
+        return True
+
+
+# ──────────────────────────────────────────
 # HELPERS
 # ──────────────────────────────────────────
 
@@ -190,6 +207,14 @@ def subscribe(
 
     now = datetime.now(tz=timezone.utc)
 
+    # Advisory lock: deactivate-old + insert-new is atomic per restaurant.
+    # Namespace: restaurant_id + 1_000_000_000 — does not clash with orders lock.
+    if not _pg_advisory_lock(db, restaurant.id + 1_000_000_000):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Слишком много одновременных запросов. Попробуйте ещё раз.",
+        )
+
     db.query(Subscription).filter(
         Subscription.restaurant_id == restaurant.id,
         Subscription.is_active == True,
@@ -203,7 +228,15 @@ def subscribe(
         is_active=True,
     )
     db.add(new_sub)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        logger.exception("Ошибка при смене тарифа: restaurant_id=%s plan_id=%s", restaurant.id, plan.id)
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при смене тарифа. Попробуйте ещё раз.",
+        )
 
     logger.info("Restaurant %d subscribed to plan '%s'", restaurant.id, plan.name)
 
