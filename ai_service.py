@@ -22,6 +22,16 @@ FEATURE_NOT_AVAILABLE = {
     "ai_enabled": False
 }
 
+# Максимум символов суммарного промпта перед отправкой в AI-провайдер.
+# ~3000 символов ≈ 750 токенов — достаточно для описания блюда или перевода меню.
+# Синхронизировать с _MAX_FIELD_CHARS_* в routers/ai.py.
+MAX_PROMPT_CHARS = 3000
+
+
+def _estimate_prompt_chars(*parts: str) -> int:
+    """Считает суммарную длину всех частей промпта в символах."""
+    return sum(len(p) for p in parts if p)
+
 
 def _check_enabled() -> dict | None:
     """Возвращает заглушку если AI отключён."""
@@ -50,6 +60,14 @@ async def generate_dish_description(
     stub = _check_enabled()
     if stub:
         return stub
+
+    # Защита от дорогих промптов: проверяем суммарный размер до вызова провайдера
+    if _estimate_prompt_chars(dish_name, ingredients) > MAX_PROMPT_CHARS:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=400,
+            detail=f"Суммарный размер запроса превышает {MAX_PROMPT_CHARS} символов.",
+        )
 
     # TODO: вызов реального AI провайдера
     # Пример для OpenRouter:
