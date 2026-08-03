@@ -38,7 +38,25 @@ router = APIRouter()
 
 
 # ──────────────────────────────────────────
-# ХЕЛПЕР — проверка лимита заказов по подписке
+# HELPER — PostgreSQL advisory lock
+# ──────────────────────────────────────────
+def _pg_advisory_lock(db: Session, lock_key: int) -> bool:
+    # Tries to acquire a pg_try_advisory_xact_lock for lock_key.
+    # Returns True if acquired (or on SQLite/other engines — always True).
+    # Returns False if already held by another concurrent request.
+    try:
+        row = db.execute(
+            text("SELECT pg_try_advisory_xact_lock(:key)"),
+            {"key": lock_key},
+        ).fetchone()
+        return bool(row[0]) if row else True
+    except Exception:
+        # SQLite or other engine without advisory locks — skip gracefully
+        return True
+
+
+# ──────────────────────────────────────────
+# HELPER — check order quota
 # ──────────────────────────────────────────
 def _check_order_quota(db: Session, restaurant_id: int) -> None:
     """
@@ -76,6 +94,15 @@ def _check_order_quota(db: Session, restaurant_id: int) -> None:
 
     if orders_limit == -1:
         return
+
+    # Advisory lock: quota check+insert is atomic per restaurant.
+    # Two concurrent create_order calls for the same restaurant cannot
+    # both pass the quota check. Namespace: restaurant_id directly.
+    if not _pg_advisory_lock(db, restaurant_id):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Слишком много одновременных запросов. Попробуйте ещё раз.",
+        )
 
     now = datetime.now(tz=timezone.utc)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
