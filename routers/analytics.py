@@ -174,7 +174,7 @@ def get_top_dishes(
     restaurant: Restaurant = Depends(get_current_restaurant_admin),
     db: Session = Depends(get_db),
 ) -> List[DishItem]:
-    """Топ-N блюд по количеству продаж (исключая отменённые заказы)."""
+    """Топ-N блюд по количеству продаж (только завершённые заказы — status=completed)."""
     start, end = _period_to_dates(period)
 
     sql = text("""
@@ -187,7 +187,7 @@ def get_top_dishes(
         WHERE o.restaurant_id = :rid
           AND o.created_at   >= :start
           AND o.created_at   <  :end
-          AND o.status       != 'cancelled'
+          AND o.status       = 'completed'
         GROUP BY oi.name
         ORDER BY qty DESC
         LIMIT :limit
