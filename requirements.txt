@@ -37,3 +37,6 @@ email-validator==2.2.0
 
 # ── Cloud Storage (Cloudflare R2 / S3-compatible) ────────────────────
 boto3==1.35.76
+
+# ── Image Processing ─────────────────────────────────────────────────
+Pillow>=10.0.0
