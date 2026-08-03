@@ -1,0 +1,22 @@
+# Taomly — зависимости для разработки и тестирования
+#
+# Установка:
+#   pip install -r requirements.txt
+#   pip install -r requirements-dev.txt
+#
+# Версии синхронизированы с .github/workflows/ci.yml и pyproject.toml.
+# При обновлении — менять версию здесь И в ci.yml одновременно.
+
+# ── Testing ───────────────────────────────────────────────────────────
+pytest>=8.3,<9
+pytest-cov>=5.0,<6
+
+# ── Linting & Formatting ─────────────────────────────────────────────
+# ruff: версия зафиксирована точно — совпадает с ci.yml (pip install ruff==0.8.4)
+ruff==0.8.4
+# black используется только локально (ruff format покрывает CI)
+black>=24.0,<26
+
+# ── Security Audit ────────────────────────────────────────────────────
+# pip-audit: версия зафиксирована точно — совпадает с ci.yml
+pip-audit==2.7.3
