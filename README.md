@@ -41,6 +41,65 @@ The platform is fully functional as a white-label multi-tenant restaurant SaaS.
 
 ---
 
+---
+
+## Local Development
+
+### Requirements
+
+- Python 3.11+
+- PostgreSQL (or SQLite for unit tests)
+
+### Setup
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/bhj282243-debug/taomly.git
+cd taomly
+
+# 2. Create and activate a virtual environment
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+
+# 3. Install production dependencies
+pip install -r requirements.txt
+
+# 4. Install development dependencies (testing, linting, security audit)
+pip install -r requirements-dev.txt
+
+# 5. Copy environment variables and fill in your values
+cp .env.example .env
+```
+
+### Running tests
+
+```bash
+# Run all tests (SQLite, fast)
+pytest
+
+# Run only unit tests
+pytest -m unit
+
+# Run PostgreSQL-specific tests (requires a real PostgreSQL connection)
+DATABASE_URL=postgresql://user:pass@localhost/taomly_test pytest -m postgres
+```
+
+### Linting
+
+```bash
+ruff check .        # lint
+ruff format .       # format
+black .             # alternative formatter (optional)
+```
+
+### Security audit
+
+```bash
+pip-audit -r requirements.txt
+```
+
+---
+
 ## Stage 2 — Growth (Next Owner's Priority)
 
 These features directly increase revenue per restaurant and platform stickiness.
