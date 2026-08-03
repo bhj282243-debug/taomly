@@ -88,6 +88,7 @@ markers = [
     "unit: pure unit tests, no DB",
     "integration: tests that require DB",
     "security: security-focused tests",
+    "postgres: tests that require PostgreSQL (AT TIME ZONE, EXTRACT::INT, etc.). Skip on SQLite. Run in CI with: pytest -m postgres",
 ]
 
 # ──────────────────────────────────────────
