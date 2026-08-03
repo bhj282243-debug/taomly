@@ -28,6 +28,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import case, func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 
@@ -349,8 +350,16 @@ def create_agency(
         owner_password_hash=hash_password(data.password),
     )
     db.add(agency)
-    db.commit()
-    db.refresh(agency)
+    try:
+        db.commit()
+        db.refresh(agency)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Email уже занят")
+    except Exception:
+        logger.exception("Ошибка при создании агентства superadmin: email=%s", data.email)
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Ошибка при создании агентства")
     logger.info("Superadmin создал агентство id=%s", agency.id)
     return {"id": agency.id, "name": agency.name, "email": agency.owner_email}
 
@@ -375,8 +384,16 @@ def update_agency(
     if data.is_active is not None:
         agency.is_active = data.is_active
 
-    db.commit()
-    db.refresh(agency)
+    try:
+        db.commit()
+        db.refresh(agency)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Email уже занят другим агентством")
+    except Exception:
+        logger.exception("Ошибка при обновлении агентства superadmin: agency_id=%s", agency_id)
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Ошибка при обновлении агентства")
     logger.info("Superadmin обновил агентство id=%s", agency_id)
     return {"ok": True, "id": agency.id, "is_active": agency.is_active}
 
