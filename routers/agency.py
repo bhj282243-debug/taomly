@@ -17,6 +17,7 @@ routers/agency.py — Taomly Platform
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from limiter import limiter
@@ -78,6 +79,12 @@ def register_agency(request: Request, data: AgencyRegister, db: Session = Depend
     try:
         db.commit()
         db.refresh(agency)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email уже зарегистрирован",
+        )
     except Exception:
         logger.exception("Ошибка при регистрации агентства: email=%s", data.email)
         db.rollback()
@@ -235,6 +242,12 @@ def create_restaurant(
     try:
         db.commit()
         db.refresh(restaurant)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Slug или домен уже заняты",
+        )
     except Exception:
         logger.exception(
             "Ошибка при создании ресторана: agency_id=%s slug=%s",
@@ -365,6 +378,12 @@ def update_restaurant(
     try:
         db.commit()
         db.refresh(restaurant)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Slug или домен уже заняты",
+        )
     except Exception:
         logger.exception(
             "Ошибка при обновлении ресторана: restaurant_id=%s", restaurant_id
