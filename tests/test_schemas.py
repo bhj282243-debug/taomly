@@ -177,3 +177,63 @@ def test_agency_register_valid():
         password="securepassword123",
     )
     assert a.email == "admin@agency.uz"
+
+
+# ──────────────────────────────────────────
+# TEST 28: custom_domain validation
+# ──────────────────────────────────────────
+@pytest.mark.unit
+@pytest.mark.parametrize("domain", [
+    "restaurant.example.com",
+    "menu.example.uz",
+    "my-cafe.domain.ru",
+    "sub.sub.example.co.uk",
+    None,   # поле опциональное — None должен проходить
+])
+def test_custom_domain_valid(domain):
+    r = RestaurantCreate(
+        name="Test",
+        slug="test-rest",
+        admin_password="password123",
+        custom_domain=domain,
+    )
+    # None остаётся None, корректный домен сохраняется
+    if domain is None:
+        assert r.custom_domain is None
+    else:
+        assert r.custom_domain == domain
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("domain, expected_fragment", [
+    # localhost — нет точки, не проходит проверку полного имени
+    ("localhost",          "полное"),
+    # IP-адреса — «1» как TLD не проходит TLD-проверку
+    ("127.0.0.1",          "tld"),
+    ("10.0.0.1",           "tld"),
+    ("192.168.1.1",        "tld"),
+    # двойная точка → пустая метка
+    ("example..com",       "пустую метку"),
+    # дефис в начале/конце метки
+    ("-example.com",       "метка"),
+    ("example-.com",       "метка"),
+    # TLD короче 2 символов
+    ("example.c",          "tld"),
+    # TLD — цифры
+    ("example.123",        "tld"),
+    # нет точки → не домен
+    ("nodot",              "полное"),
+    # пробел в доменном имени
+    ("has space.com",      "пробелы"),
+    # SQL-инъекция — тоже содержит пробел, блокируется первым
+    ("; DROP TABLE restaurants; --", "пробелы"),
+])
+def test_custom_domain_invalid(domain, expected_fragment):
+    with pytest.raises(ValidationError) as exc_info:
+        RestaurantCreate(
+            name="Test",
+            slug="test-rest",
+            admin_password="password123",
+            custom_domain=domain,
+        )
+    assert expected_fragment.lower() in str(exc_info.value).lower()
