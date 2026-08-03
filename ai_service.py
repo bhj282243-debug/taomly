@@ -5,16 +5,18 @@ AI Service Layer for Taomly
 Провайдеры: OpenRouter, OpenAI, Anthropic, Gemini, локальная модель.
 """
 
-import os
 import logging
+
+from config import settings
 
 logger = logging.getLogger(__name__)
 
-# ── Конфигурация из .env ──
-AI_ENABLED = os.getenv("AI_ENABLED", "false").lower() == "true"
-AI_PROVIDER = os.getenv("AI_PROVIDER", "openrouter")  # openrouter | openai | anthropic | gemini
-AI_API_KEY = os.getenv("AI_API_KEY", "")
-AI_MODEL = os.getenv("AI_MODEL", "mistralai/mistral-7b-instruct")
+# Конфигурация читается через единственный источник — config.settings.
+# Локальные алиасы для читаемости внутри модуля.
+AI_ENABLED  = settings.AI_ENABLED
+AI_PROVIDER = settings.AI_PROVIDER
+AI_API_KEY  = settings.AI_API_KEY
+AI_MODEL    = settings.AI_MODEL
 
 FEATURE_NOT_AVAILABLE = {
     "status": "feature_not_available",
