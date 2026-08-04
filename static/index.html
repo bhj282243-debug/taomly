@@ -18,11 +18,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-/* ═══════════════════════════════════════════════════════════════════
-   TAOMLY — Presidential Sovereign Edition
-   Inspired by: Aman Resorts · Ritz-Carlton · Four Seasons · White Palace
-   Rule: Only CSS changed. All JS, IDs, API — untouched.
-   ═══════════════════════════════════════════════════════════════════ */
+/* Taomly — index.html */
 
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 
@@ -204,9 +200,7 @@ svg{display:block;}
   to{opacity:1;transform:translateY(0)}
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   HERO — Presidential Reception Hall
-   ═══════════════════════════════════════════════════════════════════ */
+/* HERO */
 #heroScreen{display:none;position:fixed;inset:0;z-index:500;}
 #heroScreen.active{display:flex;flex-direction:column;}
 
@@ -266,7 +260,7 @@ svg{display:block;}
 }
 .hero-wing.right{transform:scaleX(-1);}
 
-/* Presidential Medallion */
+/* Hero medallion */
 .hero-med{
   width:108px;height:108px;border-radius:50%;
   background:linear-gradient(150deg,#FFFFFF 0%,#F7F4EE 45%,#EDE8DC 100%);
@@ -1896,7 +1890,7 @@ function _updateDeliveryRow(){
   // Итого = товары + доставка (если delivery)
   const grandTotal=total+(orderType==='delivery'?fee:0);
   const el=document.getElementById('summaryTotal');
-  if(el)el.textContent=fmtNum(grandTotal);
+  if(el)el.textContent=fmt(grandTotal);
 }
 
 function renderCart(){
@@ -1937,7 +1931,7 @@ function renderCart(){
   });
   document.getElementById('summaryCount').textContent=cartCount()+' ta taom';
   document.getElementById('summarySubtotal').textContent=fmt(cartTotal());
-  document.getElementById('summaryTotal').textContent=fmtNum(cartTotal());
+  document.getElementById('summaryTotal').textContent=fmt(cartTotal());
   _updateDeliveryRow();
   if(orderType==='dine_in'){
     document.getElementById('orderTypeSection').style.display='none';
