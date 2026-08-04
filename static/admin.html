@@ -754,7 +754,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 const API='';
 const SESSION_KEY='taomly_admin_session';
 let AUTH_TOKEN=null,RESTAURANT_ID=null,RESTAURANT_SLUG=null;
-let allOrders=[],prevNewCount=0,soundEnabled=localStorage.getItem('taomly_sound')!=='false';
+let allOrders=[],prevNewCount=0,soundEnabled=localStorage.getItem('taomly_sound')==='true';
 let currentFilter='active',currentPage='orders',menuData=null,editingProductId=null,analyticsPeriod='30d';
 let qrTables=[],qrCurrentTab='tables',qrPageInitialized=false;
 
