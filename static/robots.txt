@@ -12,4 +12,4 @@ Disallow: /static/agency_admin.html
 Allow: /app
 Allow: /static/index.html
 
-Sitemap: https://taomly.uz/sitemap.xml
+
