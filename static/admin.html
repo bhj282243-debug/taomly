@@ -952,6 +952,7 @@ document.getElementById('slugInput').addEventListener('keydown',e=>{if(e.key==='
 
 // ── NAVIGATION ──
 function switchPage(page){
+  if(page==='orders')_clearNewOrderIndicators();
   currentPage=page;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.main-tab').forEach(t=>t.classList.remove('active'));
@@ -1658,21 +1659,6 @@ function _clearNewOrderIndicators(){
   if(_titleFlipInterval){clearInterval(_titleFlipInterval);_titleFlipInterval=null;}
   document.title=_origTitle;
 }
-
-// Сбрасываем индикаторы когда открывают вкладку заказов
-const _origSwitchPage=switchPage;
-// Патчим switchPage для сброса индикаторов
-const _patchedSwitchPage=function(page){
-  if(page==='orders')_clearNewOrderIndicators();
-  _origSwitchPage(page);
-};
-// Переопределяем глобальную функцию
-window.switchPage=_patchedSwitchPage;
-// Обновляем onclick на вкладках
-document.querySelectorAll('.main-tab').forEach(t=>{
-  const m=t.getAttribute('onclick');
-  if(m)t.onclick=()=>_patchedSwitchPage(m.match(/'(\w+)'/)?.[1]||'orders');
-});
 
 // ── INIT ──
 checkAuth();
