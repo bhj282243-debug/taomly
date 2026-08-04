@@ -1687,10 +1687,28 @@ function renderPopular(){
   sec.style.display='block';sc.innerHTML='';
   items.forEach(p=>{
     const el=document.createElement('div');el.className='pop-item';el.onclick=()=>openProductModal(p.id);
-    const img=p.photo_url
-      ?`<img src="${p.photo_url}" alt="${p.name}" loading="lazy" decoding="async">`
-      :`<div class="pop-ph"><div class="pop-ph-diamond"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a4 4 0 0 1 0 8M6 4v16M6 4c0 2.5 2.5 2.5 2.5 5S6 11.5 6 14"/></svg></div></div>`;
-    el.innerHTML=`<div class="pop-photo">${img}</div><div class="pop-name">${esc(p.name)}</div><div class="pop-price">${fmt(p.price)}</div>`;
+
+    // Фото — DOM API, p.photo_url и p.name не попадают в innerHTML
+    const photoWrap=document.createElement('div');photoWrap.className='pop-photo';
+    if(p.photo_url){
+      const img=document.createElement('img');
+      img.src=p.photo_url;
+      img.alt=p.name;
+      img.loading='lazy';
+      img.decoding='async';
+      photoWrap.appendChild(img);
+    }else{
+      photoWrap.innerHTML='<div class="pop-ph"><div class="pop-ph-diamond"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a4 4 0 0 1 0 8M6 4v16M6 4c0 2.5 2.5 2.5 2.5 5S6 11.5 6 14"/></svg></div></div>';
+    }
+    el.appendChild(photoWrap);
+
+    // Название и цена — textContent, никакого innerHTML
+    const name=document.createElement('div');name.className='pop-name';
+    name.textContent=p.name;
+    const price=document.createElement('div');price.className='pop-price';
+    price.textContent=fmt(p.price);
+
+    el.appendChild(name);el.appendChild(price);
     sc.appendChild(el);
   });
 }
