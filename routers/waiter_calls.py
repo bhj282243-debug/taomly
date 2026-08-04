@@ -13,12 +13,13 @@ routers/waiter_calls.py — Taomly Platform
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from auth import TelegramUser, get_current_restaurant_admin, get_telegram_user
 from database import get_db
+from limiter import limiter
 from models import Restaurant, RestaurantTable, WaiterCall
 from schemas import WaiterCallCreate, WaiterCallResponse, WaiterCallStatusUpdate
 
@@ -38,7 +39,9 @@ VALID_STATUS_TRANSITIONS: dict[str, list[str]] = {
 # POST / — создать вызов официанта (клиент Mini App)
 # ──────────────────────────────────────────
 @router.post("/", response_model=WaiterCallResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
 def create_waiter_call(
+    request: Request,
     data: WaiterCallCreate,
     tg_user: TelegramUser = Depends(get_telegram_user),
     db: Session = Depends(get_db),
