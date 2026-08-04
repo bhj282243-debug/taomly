@@ -13,11 +13,12 @@ routers/reservations.py — Taomly Platform
 import logging
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from auth import TelegramUser, get_current_restaurant_admin, get_telegram_user
 from database import get_db
+from limiter import limiter
 from models import Reservation, Restaurant
 from schemas import ReservationCreate, ReservationResponse, ReservationStatusUpdate
 
@@ -37,7 +38,9 @@ VALID_STATUS_TRANSITIONS: dict[str, list[str]] = {
 # POST / — создать бронь (клиент Mini App)
 # ──────────────────────────────────────────
 @router.post("/", response_model=ReservationResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
 def create_reservation(
+    request: Request,
     data: ReservationCreate,
     tg_user: TelegramUser = Depends(get_telegram_user),
     db: Session = Depends(get_db),
