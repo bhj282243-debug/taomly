@@ -21,6 +21,9 @@ const OFFLINE_URL = '/static/offline.html';
 const PRECACHE_URLS = [
   '/app',
   '/static/manifest.json',
+  '/static/icon-192.png',
+  '/static/icon-512.png',
+  '/static/favicon.svg',
   OFFLINE_URL,
 ];
 
