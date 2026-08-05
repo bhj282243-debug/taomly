@@ -1,88 +1,103 @@
 # Known Limitations
 
-This document lists intentionally deferred improvements — not forgotten bugs.
-Each item describes the current state, the reason for deferral, and the planned solution.
+This document honestly describes the current limitations of the Taomly platform.
+It is intended to help the buyer make an informed decision.
 
 ---
 
-## 1. PWA Screenshots
+## Payments
 
-**Status:** Planned
-
-**Reason:**
-The Web App Manifest does not include the `screenshots` field because production screenshots have not yet been created. Without real screenshots, adding placeholder paths would result in broken references in the manifest.
-
-**Planned solution:**
-1. Capture real application screens (menu view, cart view) on a 390×844 viewport.
-2. Save as `/static/screenshot-menu.png` and `/static/screenshot-cart.png`.
-3. Add the `screenshots` array to `manifest.json`:
-   ```json
-   "screenshots": [
-     {
-       "src": "/static/screenshot-menu.png",
-       "sizes": "390x844",
-       "type": "image/png",
-       "form_factor": "narrow",
-       "label": "Taomly — menyu va buyurtma"
-     },
-     {
-       "src": "/static/screenshot-cart.png",
-       "sizes": "390x844",
-       "type": "image/png",
-       "form_factor": "narrow",
-       "label": "Taomly — savat va to'lov"
-     }
-   ]
-   ```
-
-**Impact:** Chrome 119+ shows screenshots in the PWA install prompt. Without them, the install banner appears with no preview. The app remains fully installable via the browser's native UI.
+- No payment gateway is integrated (no Stripe, Payme, Click, or similar)
+- The billing module demonstrates subscription plans and usage tracking,
+  but does not process real transactions
+- Payment integration must be implemented by the buyer
 
 ---
 
-## 2. xBadge Backward Compatibility
+## AI Features
 
-**Status:** Intentional backward compatibility
-
-**Reason:**
-The frontend derives product badges (`Bestseller`, `Chef's Choice`, `New Arrival`, `Spicy`) from product descriptions using `xBadge()`, which parses hashtag syntax — e.g. `#bestseller` — embedded in the description field.
-
-The backend already exposes dedicated boolean fields (`is_bestseller`, `is_new`, `is_spicy`, `is_chef_choice`) in the product model, but the frontend continues using `xBadge()` to remain compatible with existing restaurant data that was entered using the hashtag convention.
-
-**Future work:**
-1. Migrate existing product descriptions to remove embedded hashtags.
-2. Switch `makeCard()` and `renderCart()` in `index.html` to read boolean flags directly from the API response.
-3. Remove `xBadge()` and the `BM` constant.
-
-**Impact:** No functional regression. Restaurants using the hashtag convention continue to see badges correctly.
+- AI endpoints are architecture-ready but require a third-party API key to function
+- Supported providers: OpenRouter, OpenAI, Anthropic, Gemini
+- AI is disabled by default (`AI_ENABLED=false`)
+- No AI features work out of the box without configuration
 
 ---
 
-## 3. PWA Install Banner
+## Database
 
-**Status:** Deferred
-
-**Reason:**
-The `beforeinstallprompt` event is captured and stored in `_dip` as a deliberate placeholder. The browser's default install prompt is suppressed, but no custom UI has been built to trigger it.
-
-The application remains fully installable via the browser's native install flow (address bar install button, browser menu).
-
-**Future work:**
-1. Design an in-app install prompt (e.g. a bottom sheet or sticky banner).
-2. Show it after the user has viewed the menu at least once.
-3. Call `_dip.prompt()` on user confirmation.
-4. Track install outcome via `_dip.userChoice`.
-
-**Impact:** Users on Android Chrome do not see a custom "Add to Home Screen" prompt. Install rates may be lower than with an explicit in-app banner.
+- SQLAlchemy is synchronous (not async)
+- Suitable for current load; migration to AsyncSession is recommended
+  before scaling beyond ~50 concurrent users
+- No production data is included — the buyer receives an empty database schema
 
 ---
 
-## 4. async SQLAlchemy Migration
+## Infrastructure
 
-**Status:** Deferred — requires explicit approval before starting
+- Designed and tested on Render (free tier) + Neon (free tier)
+- No Redis, Celery, or background task queue (Telegram notifications
+  use FastAPI `BackgroundTasks` — suitable for low-to-medium load)
+- No automatic database backups configured (must be set up by the buyer)
 
-**Reason:**
-The backend currently uses synchronous SQLAlchemy with a thread pool. Migrating to `asyncpg` + async SQLAlchemy would improve throughput under concurrent load but requires rewriting all database access layers, service functions, and tests.
+---
 
-**Planned sprint:** Separate dedicated sprint. Do not start without explicit sign-off.
+## Onboarding
 
-**Impact:** No current production issues. Render Free tier constraints make this a lower priority than stability and feature completeness.
+- No self-service onboarding for new restaurants
+- Agency admin must manually register each restaurant via the Agency Admin Panel
+- No automated email notifications or welcome flows
+
+---
+
+## Telegram
+
+- Each restaurant requires its own Telegram bot (created via @BotFather)
+- Bot tokens are managed by the agency admin, not automatically provisioned
+- Telegram notifications are in Uzbek by default
+
+---
+
+## Testing
+
+- Test suite uses SQLite in-memory (not PostgreSQL)
+- Some edge cases specific to PostgreSQL behavior may not be covered
+- No end-to-end browser tests (no Playwright or Selenium)
+
+---
+
+## Production Readiness
+
+- The platform has not been tested under production load with real customers
+- No uptime history or SLA data available
+- Sentry integration is included but requires a separate Sentry account and DSN
+
+---
+
+## PWA
+
+- The Web App Manifest does not include `screenshots` — production screens have not yet been captured.
+  Chrome 119+ shows screenshots in the install prompt; without them the banner appears empty.
+  Planned fix: capture real screens → save to `/static/` → add `screenshots` array to `manifest.json`
+- The `beforeinstallprompt` event is captured in `_dip` but no custom install UI has been built.
+  The app remains fully installable via the browser's native flow.
+  Planned fix: implement an in-app install banner and call `_dip.prompt()` on user confirmation
+
+---
+
+## Frontend
+
+- Product badges (`Bestseller`, `New Arrival`, `Spicy`, `Chef's Choice`) are derived from
+  hashtag syntax embedded in product descriptions (e.g. `#bestseller`) via `xBadge()`.
+  The backend already exposes boolean fields (`is_bestseller`, `is_new`, `is_spicy`, `is_chef_choice`),
+  but the frontend continues using `xBadge()` for backward compatibility with existing restaurant data.
+  Planned fix: migrate existing data → switch frontend to read boolean flags directly → remove `xBadge()`
+
+---
+
+## Out of Scope
+
+- No mobile native app (iOS / Android) — web PWA only
+- No marketplace or multi-vendor ordering
+- No inventory management
+- No staff management or scheduling
+- No loyalty or points system
