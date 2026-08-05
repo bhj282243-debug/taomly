@@ -1687,28 +1687,10 @@ function renderPopular(){
   sec.style.display='block';sc.innerHTML='';
   items.forEach(p=>{
     const el=document.createElement('div');el.className='pop-item';el.onclick=()=>openProductModal(p.id);
-
-    // Фото — DOM API, p.photo_url и p.name не попадают в innerHTML
-    const photoWrap=document.createElement('div');photoWrap.className='pop-photo';
-    if(p.photo_url){
-      const img=document.createElement('img');
-      img.src=p.photo_url;
-      img.alt=p.name;
-      img.loading='lazy';
-      img.decoding='async';
-      photoWrap.appendChild(img);
-    }else{
-      photoWrap.innerHTML='<div class="pop-ph"><div class="pop-ph-diamond"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a4 4 0 0 1 0 8M6 4v16M6 4c0 2.5 2.5 2.5 2.5 5S6 11.5 6 14"/></svg></div></div>';
-    }
-    el.appendChild(photoWrap);
-
-    // Название и цена — textContent, никакого innerHTML
-    const name=document.createElement('div');name.className='pop-name';
-    name.textContent=p.name;
-    const price=document.createElement('div');price.className='pop-price';
-    price.textContent=fmt(p.price);
-
-    el.appendChild(name);el.appendChild(price);
+    const img=p.photo_url
+      ?`<img src="${p.photo_url}" alt="${p.name}" loading="lazy" decoding="async">`
+      :`<div class="pop-ph"><div class="pop-ph-diamond"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a4 4 0 0 1 0 8M6 4v16M6 4c0 2.5 2.5 2.5 2.5 5S6 11.5 6 14"/></svg></div></div>`;
+    el.innerHTML=`<div class="pop-photo">${img}</div><div class="pop-name">${esc(p.name)}</div><div class="pop-price">${fmt(p.price)}</div>`;
     sc.appendChild(el);
   });
 }
@@ -1741,6 +1723,11 @@ function renderMenu(){
   });
 }
 
+// xBadge — обратная совместимость: парсит хэштеги #bestseller|#chef|#new|#spicy
+// из поля description. Используется в makeCard() и renderCart().
+// Backend хранит булевы поля is_bestseller/is_new/is_spicy/is_chef_choice,
+// но фронтенд пока читает бейджи из description через этот синтаксис.
+// KNOWN_LIMITATION: при переходе на булевы поля API — заменить xBadge на прямое чтение флагов.
 const BM={bestseller:'Bestseller',chef:"Chef's Choice",new:'New Arrival',spicy:'🌶 Spicy'};
 function xBadge(d){
   if(!d)return{badge:null,text:''};
@@ -2106,6 +2093,10 @@ window.addEventListener('DOMContentLoaded',()=>{
   parseParams();loadMenu();
 });
 if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').then(r=>console.log('[SW]',r.scope)).catch(e=>console.warn('[SW]',e));});}
+// _dip — заготовка для PWA install banner.
+// Захватывает событие beforeinstallprompt, чтобы показать кастомный UI вместо браузерного.
+// KNOWN_LIMITATION: баннер пока не реализован — вызов _dip.prompt() не добавлен.
+// Для активации: создать UI-элемент "Установить приложение" и вызвать _dip.prompt() по клику.
 let _dip=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();_dip=e;});
 window.addEventListener('appinstalled',()=>{_dip=null;});
