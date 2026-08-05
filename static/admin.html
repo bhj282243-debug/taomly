@@ -845,11 +845,6 @@ async function uploadToTelegraph(file){
   return data.url;
 }
 
-function getExt(mimeType){
-  const map={'image/jpeg':'.jpg','image/png':'.png','image/webp':'.webp','image/gif':'.gif'};
-  return map[mimeType]||'.jpg';
-}
-
 // ── TOAST ──
 let _tt=null;
 function showToast(msg,isError=false){
@@ -928,7 +923,7 @@ function loadApp(){
   // Загружаем имя ресторана для заголовка
   fetch(`${API}/api/restaurants/${RESTAURANT_SLUG}`)
     .then(r=>r.ok?r.json():null)
-    .then(d=>{if(d?.name){document.getElementById('headerTitle').textContent=d.name;}})
+    .then(d=>{if(d?.name){document.getElementById('headerTitle').textContent=d.name;document.title=d.name+' Admin';_origTitle=d.name+' Admin';}})
     .catch(()=>{});
   loadOrders();
 }
@@ -1515,15 +1510,9 @@ function _renderBillingPlans(plans,currentPlanId){
       </div>
       ${isCurrent
         ?`<div style="padding:10px;text-align:center;border-radius:100px;background:rgba(212,175,55,0.08);border:1px solid var(--gl);font-size:12px;font-weight:600;color:var(--g2)">✓ Joriy tarif</div>`
-        :`<button data-plan-id="${p.id}" class="billing-subscribe-btn" style="width:100%;padding:13px;border:none;border-radius:100px;background:var(--gs);color:var(--obs);font-weight:700;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;">Tanlash</button>`}
+        :`<button onclick="subscribePlan(${p.id},'${p.name}')" style="width:100%;padding:13px;border:none;border-radius:100px;background:var(--gs);color:var(--obs);font-weight:700;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;">Tanlash</button>`}
     </div>`;
   }).join('');
-  // Безопасный обработчик — p.name никогда не попадает в DOM-атрибут
-  document.getElementById('billing-plans-list').querySelectorAll('.billing-subscribe-btn').forEach(btn=>{
-    const planId=Number(btn.dataset.planId);
-    const plan=plans.find(p=>p.id===planId);
-    btn.addEventListener('click',()=>subscribePlan(planId,plan?plan.name:''));
-  });
 }
 async function subscribePlan(planId,planName){
   showConfirm(`"${planName}" tarifi`,`Ushbu tarifga o'tishni xohlaysizmi?`,async()=>{
@@ -1619,7 +1608,7 @@ function updateSoundBtn(){
 
 // ── NEW ORDER NOTIFICATION ──
 let _titleFlipInterval=null;
-const _origTitle=document.title||'Taomly Admin';
+let _origTitle=document.title||'Taomly Admin';
 
 function _showNewOrderNotification(count){
   // 1. Золотой flash вдоль верха
