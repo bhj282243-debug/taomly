@@ -6,6 +6,7 @@
 <title>Taomly — Super Admin</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <meta name="theme-color" content="#FAF6EE">
+<meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -633,16 +634,12 @@ async function loadAgencies() {
       <td style="color:var(--mist);font-size:12px">${fmtDate(a.created_at)}</td>
       <td>${badge(a.is_active)}</td>
       <td><div style="display:flex;gap:6px">
-        <button class="btn btn-ghost btn-sm sa-view-agency" data-id="${a.id}">Детали</button>
+        <button class="btn btn-ghost btn-sm" onclick="viewAgency(${a.id},'${esc(a.name)}')">Детали</button>
         <button class="btn btn-sm ${a.is_active?'btn-danger':'btn-success'}" onclick="toggleAgency(${a.id},${!a.is_active})">${a.is_active?'Блок':'Разблок'}</button>
       </div></td></tr>`).join('') : emptyRow(6,'Агентств не найдено');
     document.getElementById('agenciesInfo').textContent = `${agencySkip+1}–${Math.min(agencySkip+agencyLimit,agencyTotal)} из ${agencyTotal}`;
     document.getElementById('agencyPrevBtn').disabled = agencySkip===0;
     document.getElementById('agencyNextBtn').disabled = agencySkip+agencyLimit>=agencyTotal;
-    // Безопасный обработчик — без пользовательских данных в onclick
-    tbody.querySelectorAll('.sa-view-agency').forEach(btn=>{
-      btn.addEventListener('click',()=>viewAgency(Number(btn.dataset.id)));
-    });
   } catch(e) { tbody.innerHTML=emptyRow(6,'Ошибка загрузки'); }
 }
 function filterAgencies(){agencySkip=0;loadAgencies();}
@@ -653,14 +650,13 @@ async function toggleAgency(id,isActive) {
   catch(e){toast('Ошибка: '+e.message,'error');}
 }
 
-async function viewAgency(id) {
+async function viewAgency(id,name) {
   currentAgencyId=id;
-  document.getElementById('agencyDetailTitle').textContent='…';
+  document.getElementById('agencyDetailTitle').textContent=name;
   document.getElementById('agencyDetailBody').innerHTML=`<div style="text-align:center;padding:24px"><span class="spinner"></span></div>`;
   openModal('agencyDetailModal');
   try {
     const res=await api(`/api/superadmin/agencies/${id}`); const a=await res.json();
-    document.getElementById('agencyDetailTitle').textContent=a.name;
     document.getElementById('agencyDetailBody').innerHTML=`
       <div style="display:flex;flex-direction:column;gap:10px">
         <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line-soft)"><span style="color:var(--mist)">Email</span><span>${esc(a.email)}</span></div>
