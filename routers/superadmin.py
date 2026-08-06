@@ -21,6 +21,7 @@ Super Admin Console: управление всей платформой.
 """
 
 import logging
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -32,11 +33,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 
-from auth import create_agency_token, hash_password
+from auth import create_agency_token, hash_password, revoke_token
 from config import settings
 from database import get_db
 from limiter import limiter
-from models import Agency, Restaurant, Subscription, SubscriptionPlan
+from models import Agency, Restaurant, RevokedToken, Subscription, SubscriptionPlan
 from schemas import (
     SAAgencyCreateResponse,
     SAAgencyDetailResponse,
@@ -98,15 +99,24 @@ SUPERADMIN_ROLE = "superadmin"
 # ──────────────────────────────────────────
 
 def _create_superadmin_token() -> str:
+    exp = datetime.now(timezone.utc) + timedelta(hours=12)
     payload = {
-        "sub":  settings.SUPERADMIN_EMAIL,
-        "role": SUPERADMIN_ROLE,
-        "exp":  datetime.now(timezone.utc) + timedelta(hours=12),
+        "sub":        settings.SUPERADMIN_EMAIL,
+        "role":       SUPERADMIN_ROLE,
+        "token_type": "access",
+        "jti":        str(uuid.uuid4()),
+        "exp":        exp,
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
 
 
-def get_current_superadmin(request: Request):
+def get_current_superadmin(request: Request, db: Session = Depends(get_db)) -> dict:
+    """
+    Зависимость для всех superadmin-эндпоинтов.
+
+    Проверяет JWT и revocation. Сохраняет payload в request.state.jwt_payload
+    — superadmin /logout читает его оттуда без повторного decode.
+    """
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Не авторизован")
@@ -115,9 +125,43 @@ def get_current_superadmin(request: Request):
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Недействительный токен")
+
     if payload.get("role") != SUPERADMIN_ROLE:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Нет доступа")
+
+    jti = payload.get("jti")
+    if not jti:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Токен устарел — войдите снова",
+        )
+
+    revoked = db.query(RevokedToken).filter(RevokedToken.jti == jti).first()
+    if revoked:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Токен отозван. Выполните вход снова.",
+        )
+
+    request.state.jwt_payload = payload  # для logout
     return payload
+
+
+@router.post("/logout")
+def superadmin_logout(
+    request: Request,
+    _auth: dict = Depends(get_current_superadmin),  # инициирует проверку auth + заполняет request.state
+    db: Session = Depends(get_db),
+):
+    """
+    Выход суперадмина.
+
+    Инвалидирует текущий JWT через jti → revoked_tokens.
+    payload берётся из request.state.jwt_payload — нет повторного decode.
+    """
+    revoke_token(request.state.jwt_payload, db)
+    logger.info("Superadmin вышел: jti=%s", request.state.jwt_payload.get("jti"))
+    return {"ok": True, "message": "Выход выполнен. Токен инвалидирован."}
 
 
 @router.post("/login")
