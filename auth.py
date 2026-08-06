@@ -5,6 +5,18 @@ auth.py — Taomly Platform
 Изменения v5:
   - Все env-переменные читаются из config.py (единый источник)
   - Убраны прямые os.getenv вызовы
+
+Изменения v6 (Security — JWT Revocation):
+  - Все JWT содержат поле jti (UUID4) — уникальный идентификатор токена.
+  - decode_token(token, db) — проверяет revocation при каждом запросе.
+    db обязателен в защищённом контексте (передаётся из get_current_*).
+  - get_current_* сохраняют payload в request.state.jwt_payload —
+    logout читает его оттуда, избегая повторного decode и SELECT.
+  - revoke_token(payload, db) — атомарный INSERT ON CONFLICT DO NOTHING.
+    Нет race condition: уникальный индекс + один запрос к БД.
+  - purge_expired_revoked_tokens(db) — удаляет устаревшие записи.
+    Вызывается из maintenance-задачи или вручную. Не cron-зависимость.
+  - token_type в payload ("access" | "refresh") — подготовка к C-4 (JWT Refresh).
 """
 
 import hashlib
@@ -12,21 +24,24 @@ import hmac
 import json
 import logging
 import time
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Literal, Optional
 from urllib.parse import parse_qsl, unquote
 
 from cryptography.fernet import Fernet, InvalidToken as FernetInvalidToken
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from sqlalchemy import text
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from config import settings
 from database import get_db
-from models import Agency, Restaurant
+from models import Agency, Restaurant, RevokedToken
 
 logger = logging.getLogger(__name__)
 
@@ -276,36 +291,149 @@ def get_telegram_user(
 # ──────────────────────────────────────────
 # JWT
 # ──────────────────────────────────────────
-def create_agency_token(agency: Agency) -> str:
+def _build_token(payload_extra: dict, expire_hours: int) -> str:
+    """
+    Внутренний хелпер: собирает JWT с jti, exp, token_type.
+    token_type позволит C-4 (Refresh Token) различать access и refresh
+    без изменения архитектуры revocation.
+    """
+    exp = datetime.now(timezone.utc) + timedelta(hours=expire_hours)
     payload = {
-        "sub": str(agency.id),
-        "role": "agency_owner",
-        "agency_id": agency.id,
-        "exp": datetime.now(timezone.utc) + timedelta(hours=settings.ACCESS_TOKEN_EXPIRE_HOURS),
+        "jti": str(uuid.uuid4()),
+        "exp": exp,
+        "token_type": "access",   # C-4: refresh tokens будут "refresh"
+        **payload_extra,
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
+
+
+def create_agency_token(agency: Agency) -> str:
+    return _build_token(
+        {
+            "sub":       str(agency.id),
+            "role":      "agency_owner",
+            "agency_id": agency.id,
+        },
+        expire_hours=settings.ACCESS_TOKEN_EXPIRE_HOURS,
+    )
 
 
 def create_restaurant_token(restaurant: Restaurant) -> str:
-    payload = {
-        "sub": str(restaurant.id),
-        "role": "restaurant_admin",
-        "restaurant_id": restaurant.id,
-        "agency_id": restaurant.agency_id,
-        "exp": datetime.now(timezone.utc) + timedelta(hours=settings.ACCESS_TOKEN_EXPIRE_HOURS),
-    }
-    return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
+    return _build_token(
+        {
+            "sub":           str(restaurant.id),
+            "role":          "restaurant_admin",
+            "restaurant_id": restaurant.id,
+            "agency_id":     restaurant.agency_id,
+        },
+        expire_hours=settings.ACCESS_TOKEN_EXPIRE_HOURS,
+    )
 
 
-def decode_token(token: str) -> dict:
+def decode_token(token: str, db: Session) -> dict:
+    """
+    Декодирует и валидирует JWT. Проверяет revocation через БД.
+
+    db обязателен — нет silent bypass revocation.
+    Вызывается только из get_current_* зависимостей.
+
+    Токены без jti (выданные до v6) получат 401 —
+    пользователь войдёт заново и получит токен с jti.
+    """
     try:
-        return jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
     except JWTError as exc:
         logger.warning("JWT decode failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Невалидный или истёкший токен",
         )
+
+    jti = payload.get("jti")
+    if not jti:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Токен устарел — войдите снова",
+        )
+
+    # Один SELECT по уникальному индексу ~1ms на Neon
+    revoked = db.query(RevokedToken).filter(RevokedToken.jti == jti).first()
+    if revoked:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Токен отозван. Выполните вход снова.",
+        )
+
+    return payload
+
+
+def revoke_token(
+    payload: dict,
+    db: Session,
+    token_type: Literal["access", "refresh"] = "access",
+) -> None:
+    """
+    Атомарно добавляет jti в revocation list.
+
+    Использует INSERT ... ON CONFLICT DO NOTHING — нет race condition,
+    нет предварительного SELECT. Один запрос к БД.
+
+    token_type зарезервирован для C-4 (Refresh Token):
+    при logout потребуется отозвать оба токена разными вызовами.
+
+    При любой ошибке БД — rollback и логирование. Не бросает исключение:
+    если revocation не записалась — безопаснее вернуть 200 и залогировать,
+    чем ломать logout пользователя (токен истечёт по exp в любом случае).
+    """
+    jti = payload.get("jti")
+    if not jti:
+        logger.warning("revoke_token: jti отсутствует в payload — пропуск")
+        return
+
+    exp_ts = payload.get("exp")
+    if exp_ts:
+        expires_at = datetime.fromtimestamp(float(exp_ts), tz=timezone.utc)
+    else:
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=settings.ACCESS_TOKEN_EXPIRE_HOURS)
+
+    try:
+        stmt = (
+            pg_insert(RevokedToken)
+            .values(jti=jti, token_type=token_type, expires_at=expires_at)
+            .on_conflict_do_nothing(index_elements=["jti"])
+        )
+        db.execute(stmt)
+        db.commit()
+        logger.info("JWT отозван: jti=%s type=%s", jti, token_type)
+    except Exception:
+        db.rollback()
+        logger.exception("revoke_token: ошибка записи в БД jti=%s", jti)
+
+
+def purge_expired_revoked_tokens(db: Session) -> int:
+    """
+    Удаляет записи revoked_tokens с истёкшим expires_at.
+
+    Вызывать из maintenance-задачи или вручную из Neon SQL Editor:
+        DELETE FROM revoked_tokens WHERE expires_at < NOW();
+
+    Возвращает количество удалённых записей.
+
+    Безопасно: истёкшие токены недействительны по exp в любом случае —
+    их присутствие или отсутствие в таблице не влияет на безопасность.
+    """
+    try:
+        result = db.execute(
+            text("DELETE FROM revoked_tokens WHERE expires_at < NOW()")
+        )
+        db.commit()
+        deleted = result.rowcount
+        logger.info("purge_expired_revoked_tokens: удалено %d записей", deleted)
+        return deleted
+    except Exception:
+        db.rollback()
+        logger.exception("purge_expired_revoked_tokens: ошибка")
+        return 0
 
 
 # ──────────────────────────────────────────
@@ -318,11 +446,18 @@ bearer_scheme = HTTPBearer()
 # DEPENDS — Agency Owner
 # ──────────────────────────────────────────
 def get_current_agency(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> Agency:
-    """Зависимость для роутеров Agency Owner."""
-    payload = decode_token(credentials.credentials)
+    """
+    Зависимость для роутеров Agency Owner.
+
+    Сохраняет декодированный payload в request.state.jwt_payload —
+    logout читает его оттуда без повторного decode и SELECT к revoked_tokens.
+    """
+    payload = decode_token(credentials.credentials, db=db)
+    request.state.jwt_payload = payload  # для logout
 
     if payload.get("role") != "agency_owner":
         raise HTTPException(
@@ -355,11 +490,18 @@ def get_current_agency(
 # DEPENDS — Restaurant Admin
 # ──────────────────────────────────────────
 def get_current_restaurant_admin(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> Restaurant:
-    """Зависимость для роутеров ресторанного администратора."""
-    payload = decode_token(credentials.credentials)
+    """
+    Зависимость для роутеров ресторанного администратора.
+
+    Сохраняет декодированный payload в request.state.jwt_payload —
+    logout читает его оттуда без повторного decode и SELECT к revoked_tokens.
+    """
+    payload = decode_token(credentials.credentials, db=db)
+    request.state.jwt_payload = payload  # для logout
 
     if payload.get("role") != "restaurant_admin":
         raise HTTPException(
