@@ -9,6 +9,8 @@ tests/test_auth.py — Auth, JWT, Password hashing тесты
   - Restaurant admin login success/fail
   - Rate limit (структурно)
   - Роль в JWT payload
+  - jti наличие в payload (v6)
+  - JWT Revocation: revoke_token + повторный decode_token → 401 (v6)
 """
 
 import pytest
@@ -19,6 +21,7 @@ from auth import (
     create_restaurant_token,
     decode_token,
     hash_password,
+    revoke_token,
     verify_password,
 )
 
@@ -41,41 +44,81 @@ def test_password_hash_and_verify():
 # TEST 2: JWT agency token payload
 # ──────────────────────────────────────────
 @pytest.mark.unit
-def test_agency_token_payload(agency):
+def test_agency_token_payload(agency, db):
     token = create_agency_token(agency)
-    payload = decode_token(token)
+    payload = decode_token(token, db)
 
     assert payload["role"] == "agency_owner"
     assert payload["agency_id"] == agency.id
     assert "exp" in payload
+    assert "jti" in payload          # v6: jti обязателен
+    assert "token_type" in payload   # v6: зарезервировано для C-4
 
 
 # ──────────────────────────────────────────
 # TEST 3: JWT restaurant token payload
 # ──────────────────────────────────────────
 @pytest.mark.unit
-def test_restaurant_token_payload(restaurant, agency):
+def test_restaurant_token_payload(restaurant, agency, db):
     token = create_restaurant_token(restaurant)
-    payload = decode_token(token)
+    payload = decode_token(token, db)
 
     assert payload["role"] == "restaurant_admin"
     assert payload["restaurant_id"] == restaurant.id
     assert payload["agency_id"] == agency.id
+    assert "jti" in payload
 
 
 # ──────────────────────────────────────────
 # TEST 4: JWT invalid signature
 # ──────────────────────────────────────────
 @pytest.mark.security
-def test_invalid_jwt_raises(agency):
+def test_invalid_jwt_raises(agency, db):
     from fastapi import HTTPException
 
     token = create_agency_token(agency)
     tampered = token[:-5] + "XXXXX"  # портим подпись
 
     with pytest.raises(HTTPException) as exc_info:
-        decode_token(tampered)
+        decode_token(tampered, db)
     assert exc_info.value.status_code == 401
+
+
+# ──────────────────────────────────────────
+# TEST 4b: JWT Revocation — отозванный токен отклоняется
+# ──────────────────────────────────────────
+@pytest.mark.security
+@pytest.mark.postgres
+def test_revoked_token_raises_401(agency, db):
+    """
+    После revoke_token() любой запрос с этим jti должен получать 401.
+    Проверяет что INSERT ON CONFLICT DO NOTHING работает и SELECT находит запись.
+    """
+    from fastapi import HTTPException
+
+    token = create_agency_token(agency)
+    payload = decode_token(token, db)  # первый decode — OK
+
+    revoke_token(payload, db)          # отзываем
+
+    with pytest.raises(HTTPException) as exc_info:
+        decode_token(token, db)        # второй decode — должен вернуть 401
+    assert exc_info.value.status_code == 401
+    assert "отозван" in exc_info.value.detail.lower()
+
+
+# ──────────────────────────────────────────
+# TEST 4c: Идемпотентный revoke_token
+# ──────────────────────────────────────────
+@pytest.mark.security
+@pytest.mark.postgres
+def test_revoke_token_idempotent(agency, db):
+    """Двойной revoke не должен бросать исключение (ON CONFLICT DO NOTHING)."""
+    token = create_agency_token(agency)
+    payload = decode_token(token, db)
+
+    revoke_token(payload, db)  # первый отзыв
+    revoke_token(payload, db)  # второй — не должен упасть
 
 
 # ──────────────────────────────────────────
