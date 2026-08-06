@@ -28,6 +28,7 @@ from auth import (
     get_current_agency,
     get_current_restaurant_admin,
     hash_password,
+    revoke_token,
     verify_password,
 )
 from config import settings
@@ -164,26 +165,43 @@ def get_agency_me(agency: Agency = Depends(get_current_agency)):
 
 
 @router.post("/logout")
-def logout_agency(agency: Agency = Depends(get_current_agency)):
+def logout_agency(
+    request: Request,
+    agency: Agency = Depends(get_current_agency),
+    db: Session = Depends(get_db),
+):
     """
     Выход Agency Owner.
 
-    Stateless: клиент должен удалить токен на своей стороне.
-    JWT остаётся технически валидным до истечения (8 часов).
-    При появлении Redis — добавить jti в blacklist.
+    Серверная инвалидация: jti токена записывается в revoked_tokens.
+    Все последующие запросы с этим токеном вернут 401, даже если токен
+    ещё не истёк по времени.
+
+    payload берётся из request.state.jwt_payload, установленного в
+    get_current_agency() — нет повторного decode и SELECT к revoked_tokens.
     """
-    logger.info("Agency Owner вышел: agency_id=%s", agency.id)
-    return {"ok": True, "message": "Выход выполнен. Удалите токен на клиенте."}
+    payload = request.state.jwt_payload
+    revoke_token(payload, db)
+    logger.info("Agency Owner вышел: agency_id=%s jti=%s", agency.id, payload.get("jti"))
+    return {"ok": True, "message": "Выход выполнен. Токен инвалидирован."}
 
 
 @router.post("/restaurant-logout")
-def logout_restaurant_admin(restaurant: Restaurant = Depends(get_current_restaurant_admin)):
+def logout_restaurant_admin(
+    request: Request,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
     """
     Выход ресторанного администратора.
-    Stateless: клиент удаляет токен. Серверная инвалидация — в следующем этапе (Redis).
+
+    Серверная инвалидация: jti токена записывается в revoked_tokens.
+    payload берётся из request.state.jwt_payload — нет повторного decode.
     """
-    logger.info("Restaurant Admin вышел: restaurant_id=%s", restaurant.id)
-    return {"ok": True, "message": "Выход выполнен. Удалите токен на клиенте."}
+    payload = request.state.jwt_payload
+    revoke_token(payload, db)
+    logger.info("Restaurant Admin вышел: restaurant_id=%s jti=%s", restaurant.id, payload.get("jti"))
+    return {"ok": True, "message": "Выход выполнен. Токен инвалидирован."}
 
 
 # ──────────────────────────────────────────
