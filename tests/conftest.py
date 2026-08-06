@@ -88,10 +88,27 @@ def db():
     """
     Изолированная БД-сессия на один тест.
     После теста — rollback, данные не остаются.
+
+    SQLAlchemy 2.0: subtransactions удалены. Если тестируемый код вызывает
+    session.commit() (например, revoke_token()), он коммитит на уровне соединения
+    и внешний transaction.rollback() не откатит эти данные.
+
+    Решение: begin_nested() создаёт SAVEPOINT. session.commit() внутри теста
+    коммитит до SAVEPOINT, а не до реального коммита соединения.
+    Внешний transaction.rollback() откатывает всё включая SAVEPOINT.
+    Изоляция между тестами сохраняется.
     """
     connection = engine.connect()
     transaction = connection.begin()
+    nested = connection.begin_nested()  # SAVEPOINT
     session = TestingSessionLocal(bind=connection)
+
+    # Пересоздаём SAVEPOINT если тестируемый код случайно его закрыл
+    @event.listens_for(session, "after_transaction_end")
+    def restart_savepoint(session, transaction):
+        if transaction.nested and not transaction._parent.nested:
+            session.expire_all()
+            connection.begin_nested()
 
     yield session
 
