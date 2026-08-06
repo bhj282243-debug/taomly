@@ -65,7 +65,7 @@ def test_agency_cannot_delete_foreign_restaurant(client, db, restaurant2, agency
 # TEST 31: Restaurant admin token scope
 # ──────────────────────────────────────────
 @pytest.mark.security
-def test_restaurant_admin_token_contains_agency_id(restaurant, agency):
+def test_restaurant_admin_token_contains_agency_id(restaurant, agency, db):
     """
     JWT ресторанного администратора содержит agency_id —
     для будущих проверок cross-agency доступа.
@@ -73,11 +73,12 @@ def test_restaurant_admin_token_contains_agency_id(restaurant, agency):
     from auth import create_restaurant_token, decode_token
 
     token = create_restaurant_token(restaurant)
-    payload = decode_token(token)
+    payload = decode_token(token, db)
 
     assert payload["restaurant_id"] == restaurant.id
     assert payload["agency_id"] == agency.id
     assert payload["role"] == "restaurant_admin"
+    assert "jti" in payload
 
 
 # ──────────────────────────────────────────
