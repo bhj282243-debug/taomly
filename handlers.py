@@ -103,9 +103,65 @@ def invalidate_bot_cache(restaurant_id: int) -> None:
 
 
 # ──────────────────────────────────────────
+# WEBHOOK_URL VALIDATION
+# ──────────────────────────────────────────
+def _validate_webhook_url(url: str) -> str:
+    """
+    Проверяет что WEBHOOK_URL является абсолютным HTTPS base URL
+    без trailing path (допустим только trailing slash).
+
+    Корректно:   https://example.com
+    Корректно:   https://example.com/
+    Некорректно: http://example.com     (не HTTPS)
+    Некорректно: https://example.com/webhook  (лишний path)
+    Некорректно: https://example.com/app      (лишний path)
+
+    Returns: нормализованный URL без trailing slash.
+    Raises: ValueError с понятным сообщением.
+    """
+    url = url.strip()
+    if not url.startswith("https://"):
+        raise ValueError(
+            f"WEBHOOK_URL must be an absolute HTTPS base URL, "
+            f'e.g. https://your-app.onrender.com — got: {url!r}. '
+            f"Make sure it starts with https:// and has no path suffix."
+        )
+    # Убираем trailing slash для нормализации
+    normalized = url.rstrip("/")
+    # Проверяем что нет лишнего path (допустима только схема + хост + опциональный порт)
+    from urllib.parse import urlparse
+    parsed = urlparse(normalized)
+    if parsed.path and parsed.path != "/":
+        raise ValueError(
+            f"WEBHOOK_URL must be a base URL without path suffix — "
+            f"got {url!r} (path: {parsed.path!r}). "
+            f"Correct example: https://your-app.onrender.com"
+        )
+    return normalized
+
+
+# ──────────────────────────────────────────
 # /start ДЛЯ РЕСТОРАННЫХ БОТОВ (Multi-Tenant)
 # ──────────────────────────────────────────
-_APP_BASE_URL = (settings.WEBHOOK_URL or "https://taomly.onrender.com").rstrip("/") + "/app"
+# APP_BASE_URL — базовый URL Mini App (например: https://your-app.onrender.com/app).
+# Используется ресторанными и платформенным ботом для WebAppInfo кнопок.
+# WEBHOOK_URL = base domain деплоя. Код дописывает /webhook, /webhook/{slug}, /app.
+# Если platform bot активен и WEBHOOK_URL некорректен — стартап прерывается с ошибкой.
+if platform_bot and not settings.WEBHOOK_URL:
+    raise RuntimeError(
+        "[STARTUP ERROR] BOT_TOKEN задан (platform bot активен), "
+        "но WEBHOOK_URL отсутствует. "
+        "Mini App кнопки в Telegram будут нерабочими. "
+        "Задайте: WEBHOOK_URL=https://your-app-domain.com"
+    )
+
+if platform_bot and settings.WEBHOOK_URL:
+    try:
+        _validate_webhook_url(settings.WEBHOOK_URL)
+    except ValueError as _exc:
+        raise RuntimeError(f"[STARTUP ERROR] Некорректный WEBHOOK_URL: {_exc}") from _exc
+
+_APP_BASE_URL = (settings.WEBHOOK_URL or "").rstrip("/") + "/app"
 
 
 def _send_restaurant_welcome(bot: telebot.TeleBot, chat_id: int, restaurant) -> None:
@@ -181,7 +237,7 @@ if platform_bot:
         reply_markup.add(
             telebot.types.KeyboardButton(
                 text="🍽️  MENYUNI OCHISH  🍽️",
-                web_app=telebot.types.WebAppInfo(url="https://taomly.onrender.com/app"),
+                web_app=telebot.types.WebAppInfo(url=_APP_BASE_URL),
             )
         )
 
@@ -189,7 +245,7 @@ if platform_bot:
         inline_markup.add(
             telebot.types.InlineKeyboardButton(
                 text="🍽️  Menyuni ochish  →",
-                web_app=telebot.types.WebAppInfo(url="https://taomly.onrender.com/app"),
+                web_app=telebot.types.WebAppInfo(url=_APP_BASE_URL),
             )
         )
 
@@ -214,7 +270,7 @@ if platform_bot:
         inline_markup.add(
             telebot.types.InlineKeyboardButton(
                 text="🍽️  Menyuni ochish  →",
-                web_app=telebot.types.WebAppInfo(url="https://taomly.onrender.com/app"),
+                web_app=telebot.types.WebAppInfo(url=_APP_BASE_URL),
             )
         )
         platform_bot.send_message(
