@@ -25,6 +25,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from auth import get_current_restaurant_admin
+from config import settings
 from database import get_db
 from models import Restaurant, Subscription, SubscriptionPlan, UsageEvent
 from schemas import (
@@ -35,6 +36,16 @@ from schemas import (
 )
 
 logger = logging.getLogger(__name__)
+
+def _platform_footer() -> str:
+    """Строка футера для PDF-инвойсов. Собирается из env PLATFORM_* переменных."""
+    parts = [settings.PLATFORM_NAME]
+    if settings.PLATFORM_URL:
+        parts.append(settings.PLATFORM_URL)
+    if settings.PLATFORM_EMAIL:
+        parts.append(settings.PLATFORM_EMAIL)
+    return "  |  ".join(p for p in parts if p)
+
 
 router = APIRouter(prefix="/api/billing", tags=["billing"])
 
@@ -395,14 +406,17 @@ def get_invoice(
         Spacer(1, 1.2*cm),
         HRFlowable(width="100%", thickness=0.5, color=C_LINE, spaceAfter=10),
         Paragraph(f"Sana: {now.strftime('%d.%m.%Y')}", ft),
-        Paragraph("Taomly Platform  |  taomly.uz  |  admin@taomly.uz", ft),
+        Paragraph(
+            _platform_footer(), ft
+        ),
         Paragraph("Ushbu hujjat to'lov cheki emas — obuna tasdiqidir.", ft),
     ]
 
     doc.build(story)
     buf.seek(0)
 
-    filename = f"taomly-subscription-{year}{month:02d}-{restaurant.slug}.pdf"
+    platform_slug = settings.PLATFORM_NAME.lower().replace(" ", "-") or "platform"
+    filename = f"{platform_slug}-subscription-{year}{month:02d}-{restaurant.slug}.pdf"
     return StreamingResponse(
         buf,
         media_type="application/pdf",
