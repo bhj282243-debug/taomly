@@ -176,16 +176,15 @@ if settings.ALLOWED_ORIGINS:
 else:
     if settings.ENVIRONMENT == "production":
         raise RuntimeError(
-            "[TAOMLY] КРИТИЧЕСКАЯ ОШИБКА ЗАПУСКА: "
-            "ENVIRONMENT=production, но ALLOWED_ORIGINS не задан. "
-            "Задайте в Render Dashboard → Environment: "
-            "ALLOWED_ORIGINS=https://taomly.onrender.com "
+            "[STARTUP ERROR] ENVIRONMENT=production, но ALLOWED_ORIGINS не задан. "
+            "Задайте в Render Dashboard → Environment Variables: "
+            "ALLOWED_ORIGINS=https://your-app-domain.com "
             "(плюс остальные ваши домены через запятую)."
         )
     import sys
     print(
-        "\n[TAOMLY CORS WARNING] ALLOWED_ORIGINS не задан — CORS разрешает ВСЕ origins (*).\n"
-        "В production обязательно задайте: ALLOWED_ORIGINS=https://taomly.onrender.com\n",
+        "\n[CORS WARNING] ALLOWED_ORIGINS не задан — CORS разрешает ВСЕ origins (*).\n"
+        "В production задайте: ALLOWED_ORIGINS=https://your-app-domain.com\n",
         file=sys.stderr,
     )
     _cors_origins = ["*"]
