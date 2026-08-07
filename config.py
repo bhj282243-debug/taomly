@@ -107,7 +107,17 @@ class _Settings:
     FERNET_KEY: str = _validate_fernet_key(_require("FERNET_KEY"))
 
     SUPERADMIN_PASSWORD_HASH: str = _load_superadmin_password_hash()
-    SUPERADMIN_EMAIL: str = os.getenv("SUPERADMIN_EMAIL", "superadmin@taomly.uz")
+    SUPERADMIN_EMAIL: str = os.getenv("SUPERADMIN_EMAIL", "superadmin@example.com")
+
+    # -- White-label platform branding ----------------------------------------
+    # Используются в PDF-инвойсах и системных сообщениях.
+    # Задайте через env-переменные после деплоя:
+    #   PLATFORM_NAME=My Restaurant Platform
+    #   PLATFORM_URL=https://my-platform.com
+    #   PLATFORM_EMAIL=billing@my-platform.com
+    PLATFORM_NAME: str  = os.getenv("PLATFORM_NAME", "Restaurant SaaS Platform")
+    PLATFORM_URL: str   = os.getenv("PLATFORM_URL", "")
+    PLATFORM_EMAIL: str = os.getenv("PLATFORM_EMAIL", "")
 
     WEBHOOK_URL: str = os.getenv("WEBHOOK_URL", "")
     BOT_TOKEN: str = os.getenv("BOT_TOKEN", "")
@@ -136,7 +146,7 @@ class _Settings:
     # Cloudflare R2 (S3-compatible object storage для фото блюд)
     R2_ACCESS_KEY_ID: str = os.getenv("R2_ACCESS_KEY_ID", "")
     R2_SECRET_ACCESS_KEY: str = os.getenv("R2_SECRET_ACCESS_KEY", "")
-    R2_BUCKET_NAME: str = os.getenv("R2_BUCKET_NAME", "taomly-photos")
+    R2_BUCKET_NAME: str = os.getenv("R2_BUCKET_NAME", "restaurant-photos")
     R2_ACCOUNT_ID: str = os.getenv("R2_ACCOUNT_ID", "")
 
     @property
