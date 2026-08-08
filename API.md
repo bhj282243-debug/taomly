@@ -1,6 +1,6 @@
 # Taomly API Reference
 
-Base URL: https://taomly.onrender.com
+Base URL: https://your-app.onrender.com  (replace with your WEBHOOK_URL)
 
 Authentication: Bearer JWT token in Authorization header.
 
