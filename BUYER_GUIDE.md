@@ -1,367 +1,480 @@
-# Taomly — Buyer's Guide
+# Buyer's Guide
 
-Complete step-by-step guide for deploying, configuring, and taking ownership of the Taomly platform.
+Complete guide for taking ownership of, deploying, and operating the platform.
 
 ---
 
 ## Table of Contents
 
-1. [Requirements](#1-requirements)
-2. [Environment Variables](#2-environment-variables)
-3. [Database Setup & Migrations](#3-database-setup--migrations)
-4. [Deploy to Render](#4-deploy-to-render)
-5. [Create SuperAdmin](#5-create-superadmin)
-6. [Create First Agency](#6-create-first-agency)
-7. [Create First Restaurant](#7-create-first-restaurant)
-8. [Connect Telegram Bot](#8-connect-telegram-bot)
-9. [Verify Everything Works](#9-verify-everything-works)
-10. [Database Backups](#10-database-backups)
-11. [Known Limitations](#11-known-limitations)
-12. [Support & Handover](#12-support--handover)
+1. [What You're Getting](#1-what-youre-getting)
+2. [Requirements](#2-requirements)
+3. [Environment Variables](#3-environment-variables)
+4. [Database Setup](#4-database-setup)
+5. [Deploy to Render](#5-deploy-to-render)
+6. [First Setup: Superadmin → Agency → Restaurant](#6-first-setup)
+7. [Telegram Bots](#7-telegram-bots)
+8. [Restaurant Tables & QR Codes](#8-restaurant-tables--qr-codes)
+9. [Billing & Subscriptions](#9-billing--subscriptions)
+10. [Cloudflare R2 Photo Storage](#10-cloudflare-r2-photo-storage)
+11. [Clean Install Verification](#11-clean-install-verification)
+12. [Known Limitations](#12-known-limitations)
+13. [What's Included in the Sale](#13-whats-included-in-the-sale)
 
 ---
 
-## 1. Requirements
+## 1. What You're Getting
+
+A production-ready multi-tenant white-label restaurant SaaS platform:
+
+- **Multi-tenant** — one platform, multiple agencies, each with multiple restaurants
+- **White-label** — each restaurant has its own Telegram bot, branding, and Mini App
+- **Full order flow** — Telegram Mini App → order → admin panel → status updates → client notifications
+- **Admin panels** — superadmin, agency admin, restaurant admin
+- **Billing module** — subscription plans, usage tracking, PDF invoices
+- **PWA** — installable customer-facing app
+
+**Architecture:** FastAPI backend · PostgreSQL · Telegram Bot API · Cloudflare R2 · Render
+
+---
+
+## 2. Requirements
 
 | Component | Version | Notes |
 |---|---|---|
-| Python | 3.11+ | 3.12+ also supported |
-| PostgreSQL | 15+ | Neon (free tier) recommended |
-| Render | Free or Starter | For hosting the backend |
-| Telegram | Any | One bot per restaurant |
-| Git | Any | To clone the repository |
+| Python | 3.11+ | 3.12 also supported |
+| PostgreSQL | 15+ | Neon free tier recommended |
+| Render | Free or Starter | Web Service hosting |
+| Telegram | Any | One bot per restaurant + optional platform bot |
+| Cloudflare | Free | R2 object storage for dish photos |
 
-**Third-party accounts you will need:**
-
-- [Neon](https://neon.tech) — free PostgreSQL database
-- [Render](https://render.com) — free web service hosting
-- [Sentry](https://sentry.io) — optional, for error monitoring
-- [Telegram](https://t.me/BotFather) — to create bots for restaurants
+**Accounts you will need:**
+- [neon.tech](https://neon.tech) — free PostgreSQL
+- [render.com](https://render.com) — web hosting
+- [Telegram @BotFather](https://t.me/BotFather) — create bots
+- [cloudflare.com](https://cloudflare.com) — R2 photo storage
 
 ---
 
-## 2. Environment Variables
+## 3. Environment Variables
 
-Create these variables in Render → Your Service → Environment.
+Full reference. All variables read from `config.py` — see `.env.example` for a ready-to-copy template.
 
-### Required
+### Required (app won't start without these)
+
+| Variable | Description | How to generate |
+|---|---|---|
+| `DATABASE_URL` | PostgreSQL connection string | Copy from Neon dashboard |
+| `SECRET_KEY` | JWT signing key (min 32 chars) | `python -c "import secrets; print(secrets.token_hex(32))"` |
+| `FERNET_KEY` | Fernet key for encrypting bot tokens | `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
+| `SUPERADMIN_PASSWORD_HASH` | bcrypt hash of superadmin password | `python -c "from passlib.context import CryptContext; print(CryptContext(schemes=['bcrypt']).hash('yourpassword'))"` |
+| `SUPERADMIN_EMAIL` | Superadmin login email | Your choice |
+| `WEBHOOK_URL` | Base URL of your deployment | `https://your-app.onrender.com` (no path suffix) |
+| `ENVIRONMENT` | Runtime mode | Set to `production` on Render |
+| `ALLOWED_ORIGINS` | CORS allowed origins (required in production) | `https://your-app.onrender.com` |
+
+> ⚠️ `FERNET_KEY`: if lost, all encrypted Telegram bot tokens in the database become unrecoverable. Back it up securely.
+
+### Superadmin password — official method
+
+Use `SUPERADMIN_PASSWORD_HASH` (bcrypt). The legacy `SUPERADMIN_PASSWORD` (plain text) is supported for convenience but logs a security warning on startup. Never use plain text in production.
+
+### WEBHOOK_URL — critical semantics
+
+`WEBHOOK_URL` is the **base URL of your deployment** — no path suffix:
 
 ```
-DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
-SECRET_KEY=<random 64-char string>
-FERNET_KEY=<Fernet key — see generation below>
-SUPERADMIN_EMAIL=superadmin@yourdomain.com
-SUPERADMIN_PASSWORD_HASH=<bcrypt hash — see generation below>
-WEBHOOK_URL=https://your-app.onrender.com
+✅ https://your-app.onrender.com
+❌ https://your-app.onrender.com/webhook
+❌ https://your-app.onrender.com/app
 ```
+
+The platform builds all paths from this base:
+- `+ /webhook` → Telegram webhook for platform bot
+- `+ /webhook/{slug}` → Telegram webhook per restaurant
+- `+ /app` → Mini App URL in Telegram buttons
+
+If `BOT_TOKEN` is set but `WEBHOOK_URL` is missing or has a path suffix, the app will **refuse to start** with a clear error.
 
 ### Optional
 
-```
-BOT_TOKEN=<platform-level Telegram bot token>
-SENTRY_DSN=<your Sentry DSN>
-ALLOWED_ORIGINS=https://yourdomain.com,https://your-app.onrender.com
-MAX_INIT_DATA_AGE_SECONDS=3600
-ACCESS_TOKEN_EXPIRE_HOURS=8
-RATE_LIMIT_LOGIN=10/minute
-RATE_LIMIT_SUPERADMIN_LOGIN=5/minute
-BUILD_HASH=<set automatically by Render on each deploy>
-```
-
-### Generating Secret Keys
-
-**SECRET_KEY** (run once, save the result):
-```bash
-python -c "import secrets; print(secrets.token_hex(32))"
-```
-
-**FERNET_KEY** (run once, save the result):
-```bash
-python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-```
-
-**SUPERADMIN_PASSWORD_HASH** (replace `yourpassword` with your chosen password):
-```bash
-python -c "from passlib.context import CryptContext; print(CryptContext(schemes=['bcrypt']).hash('yourpassword'))"
-```
-
-> ⚠️ Store all keys securely. If `FERNET_KEY` is lost, encrypted bot tokens in the database cannot be recovered.
+| Variable | Default | Description |
+|---|---|---|
+| `BOT_TOKEN` | — | Platform-level Telegram bot token |
+| `PLATFORM_NAME` | `Restaurant SaaS Platform` | Shown in PDF invoices |
+| `PLATFORM_URL` | — | Shown in PDF invoices |
+| `PLATFORM_EMAIL` | — | Shown in PDF invoices |
+| `R2_ACCOUNT_ID` | — | Cloudflare account ID |
+| `R2_ACCESS_KEY_ID` | — | R2 API key |
+| `R2_SECRET_ACCESS_KEY` | — | R2 API secret |
+| `R2_BUCKET_NAME` | `restaurant-photos` | R2 bucket name |
+| `R2_PUBLIC_URL` | auto-derived | Custom domain for serving photos |
+| `AI_ENABLED` | `false` | Enable AI features |
+| `AI_PROVIDER` | `openrouter` | openrouter / openai / anthropic / gemini |
+| `AI_API_KEY` | — | API key for AI provider |
+| `AI_MODEL` | `mistralai/mistral-7b-instruct` | Model name |
+| `SENTRY_DSN` | — | Sentry error monitoring |
+| `ACCESS_TOKEN_EXPIRE_HOURS` | `8` | JWT TTL in hours |
+| `MAX_INIT_DATA_AGE_SECONDS` | `3600` | Telegram initData max age |
+| `WEBHOOK_SECRET` | auto-derived | Telegram webhook signature key |
 
 ---
 
-## 3. Database Setup & Migrations
+## 4. Database Setup
 
-### Step 1 — Create a Neon database
+### Fresh installation
 
-1. Sign up at [neon.tech](https://neon.tech)
-2. Create a new project
-3. Copy the connection string (format: `postgresql://user:pass@host/dbname?sslmode=require`)
-4. Set it as `DATABASE_URL` in Render
-
-### Step 2 — Run migrations
-
-Migrations are managed by Alembic. On Render, they run automatically via the Start Command:
+After deploying to Render, migrations run automatically on startup:
 
 ```
-alembic upgrade head && uvicorn api:app --host 0.0.0.0 --port $PORT --workers 1
+alembic upgrade head && uvicorn api:app ...
 ```
 
-To run manually from your local machine:
-
-```bash
-git clone https://github.com/your-org/taomly.git
-cd taomly
-pip install -r requirements.txt
-export DATABASE_URL=postgresql://...
-alembic upgrade head
-```
-
-### Migration chain
+This creates all 14 tables in a single sequence:
 
 ```
-0001_initial → 0002_add_badge_columns → 0003_add_is_popular
+0001_initial          → agencies, restaurants, users, categories,
+                        products, restaurant_tables, orders, order_items,
+                        reservations, waiter_calls
+0002_add_badge_columns
+0003_add_is_popular
+0004_add_delivery_fields
+0005_add_missing_tables → revoked_tokens, subscription_plans (+ seed),
+                          subscriptions, usage_events
 ```
 
-All three migrations must apply cleanly. Verify:
-
+Verify after deploy:
 ```bash
 alembic current
-# Expected: 0003 (head)
+# Expected: 0005 (head)
 ```
+
+### Existing database (previously ran MIGRATION_billing.sql manually)
+
+If you already ran `MIGRATION_billing.sql` from the `migrations_manual/` folder, tables `subscription_plans`, `subscriptions`, and `usage_events` already exist. Running migration 0005 will fail.
+
+**Safe procedure:**
+
+1. Check which tables exist:
+   ```sql
+   SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;
+   ```
+
+2. If `revoked_tokens` is **missing**, create it before stamping:
+   ```sql
+   CREATE TABLE IF NOT EXISTS revoked_tokens (
+       id BIGSERIAL PRIMARY KEY,
+       jti VARCHAR(36) NOT NULL,
+       token_type VARCHAR(16) NOT NULL DEFAULT 'access',
+       expires_at TIMESTAMPTZ NOT NULL,
+       revoked_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+       CONSTRAINT uq_revoked_tokens_jti UNIQUE (jti)
+   );
+   CREATE INDEX IF NOT EXISTS ix_revoked_tokens_expires_at
+       ON revoked_tokens (expires_at);
+   ```
+
+3. After verifying all tables in 0005 exist with correct columns, mark the migration as applied:
+   ```bash
+   python -m alembic stamp 0005
+   ```
+
+   > ⚠️ `alembic stamp` skips the migration entirely. Use it **only after** confirming the tables are already present and correct. If in doubt, check each table against the model in `models.py` before stamping.
 
 ---
 
-## 4. Deploy to Render
+## 5. Deploy to Render
 
-1. Fork or transfer the repository to your GitHub account
-2. Go to [render.com](https://render.com) → New → Web Service
-3. Connect your GitHub repository
-4. Configure:
-   - **Environment:** Python 3
+1. Fork/transfer the repository to your GitHub
+2. Render → **New → Web Service** → connect your repo
+3. Settings:
    - **Build Command:** `pip install -r requirements.txt`
-   - **Start Command:** `alembic upgrade head && uvicorn api:app --host 0.0.0.0 --port $PORT --workers 1 --loop uvloop`
-5. Add all environment variables from Section 2
-6. Click **Deploy**
-
-### Verify deployment
-
-```
-https://your-app.onrender.com/health
-```
-
-Expected response:
-```json
-{"status": "healthy", "db": "ok"}
-```
+   - **Start Command:** `alembic upgrade head && uvicorn api:app --host 0.0.0.0 --port $PORT --workers 1`
+4. Add all required environment variables
+5. Deploy → wait for green status
+6. Verify: `GET https://your-app.onrender.com/health` → `{"status": "healthy", "db": "ok"}`
 
 ---
 
-## 5. Create SuperAdmin
+## 6. First Setup
 
-The SuperAdmin account is configured via environment variables — there is no registration endpoint.
+### Step 1 — Superadmin
 
-1. Set `SUPERADMIN_EMAIL` and `SUPERADMIN_PASSWORD_HASH` in Render (see Section 2)
-2. Redeploy the service
-3. Open `https://your-app.onrender.com/superadmin`
-4. Log in with the email and password you chose
+1. Open `https://your-app.onrender.com/superadmin`
+2. Log in with `SUPERADMIN_EMAIL` and your chosen password
+3. From the Superadmin Console you can: manage agencies, view all restaurants, freeze/unfreeze, view platform metrics
 
-From the SuperAdmin Console you can:
-- Create and manage agencies
-- View all restaurants across the platform
-- Freeze/unfreeze restaurants
-- View MRR and platform metrics
-- Impersonate any agency
+### Step 2 — Create Agency
 
----
+An agency is a reseller (a studio or individual) that manages multiple restaurants.
 
-## 6. Create First Agency
+**Via Superadmin Console:**
+- **Agencies → + New Agency** → name, email, password
 
-An agency is a reseller — a digital studio or individual that manages multiple restaurants.
-
-### Via SuperAdmin Console (UI)
-
-1. Open `/superadmin` → **Agencies** → **+ New Agency**
-2. Fill in: name, email, password
-3. Click **Create**
-
-### Via API
-
+**Via API:**
 ```bash
 curl -X POST https://your-app.onrender.com/api/superadmin/agencies \
   -H "Authorization: Bearer <superadmin_token>" \
   -H "Content-Type: application/json" \
-  -d '{"name": "My Agency", "email": "agency@example.com", "password": "securepass123"}'
+  -d '{"name": "My Agency", "email": "agency@example.com", "password": "securepass"}'
 ```
 
-The agency owner logs in at `/agency-admin` with their email and password.
+Agency owner logs in at: `https://your-app.onrender.com/agency-admin`
+
+### Step 3 — Create Restaurant
+
+1. Log in at `/agency-admin` as the agency owner
+2. **+ New Restaurant**:
+   - **Name** — display name
+   - **Slug** — URL identifier (e.g. `pizza-house`) — must be unique
+   - **Admin password** — for restaurant staff
+   - **Bot Token** — from @BotFather (see Section 7)
+   - **Dispatcher ID** — your Telegram user ID (receives order notifications)
+3. Click **Create**
+
+| Panel | URL |
+|---|---|
+| Restaurant Admin | `https://your-app.onrender.com/admin?slug=pizza-house` |
+| Customer Mini App | `https://your-app.onrender.com/app?slug=pizza-house` |
+
+### Step 4 — Add Menu
+
+1. Log in to Restaurant Admin
+2. **Menu** → **+ Add Category** → **+ Add Item**
+3. Upload dish photos (requires R2 configured)
+
+### Step 5 — Test Order
+
+Open the Mini App URL → add items to cart → place order → check Restaurant Admin → change status → client receives Telegram notification.
 
 ---
 
-## 7. Create First Restaurant
+## 7. Telegram Bots
 
-Restaurants are created by agency owners from the Agency Admin Panel.
+### Create a restaurant bot
 
-### Via Agency Admin Panel (UI)
+1. Telegram → `@BotFather` → `/newbot`
+2. Choose name and username (must end in `bot`)
+3. Copy the token: `1234567890:AAF...`
 
-1. Open `/agency-admin` → log in as the agency owner
-2. Click **+ New Restaurant**
-3. Fill in:
-   - Name
-   - Slug (URL identifier, e.g. `pizza-house`) — must be unique
-   - Admin password (for restaurant staff)
-   - Telegram Bot Token (from BotFather — see Section 8)
-   - Telegram Dispatcher ID (your Telegram user ID — receives order notifications)
-4. Click **Create**
+### Get your Telegram user ID (Dispatcher ID)
 
-### Restaurant admin panel
+1. Telegram → `@userinfobot` → `/start`
+2. Copy your numeric ID (e.g. `331294063`)
 
-Restaurant staff log in at:
-```
-https://your-app.onrender.com/admin?slug=your-restaurant-slug
-```
+### Connect to restaurant
 
-Password: set during restaurant creation.
+Agency Admin → select restaurant → **Settings** → paste Bot Token + Dispatcher ID → Save.
 
-### Customer-facing Mini App
-
-Customers order via:
-```
-https://your-app.onrender.com/app?slug=your-restaurant-slug
-```
-
-Or via Telegram:
-```
-https://t.me/your_bot?start=your-restaurant-slug
-```
-
----
-
-## 8. Connect Telegram Bot
-
-Each restaurant needs its own Telegram bot.
-
-### Step 1 — Create a bot
-
-1. Open Telegram → search `@BotFather`
-2. Send `/newbot`
-3. Choose a name and username (must end in `bot`)
-4. Copy the token (format: `1234567890:AAF...`)
-
-### Step 2 — Get your Telegram user ID
-
-1. Open Telegram → search `@userinfobot`
-2. Send `/start`
-3. Copy your numeric ID (e.g. `331294063`)
-
-### Step 3 — Set up the bot in the Agency Admin Panel
-
-1. Open `/agency-admin` → select the restaurant → **Settings**
-2. Paste the Bot Token and your Telegram ID
-3. Save
-
-The platform automatically registers a webhook for the bot. You will receive a Telegram notification for every new order.
-
-### Step 4 — Test
-
-Place a test order via the Mini App. You should receive a Telegram message within 2–3 seconds.
-
----
-
-## 9. Verify Everything Works
-
-Run through this checklist after deployment:
-
-```
-[ ] GET /health returns {"status": "healthy", "db": "ok"}
-[ ] SuperAdmin can log in at /superadmin
-[ ] Agency can log in at /agency-admin
-[ ] Restaurant admin can log in at /admin?slug=...
-[ ] Menu loads at /app?slug=...
-[ ] Test order can be placed
-[ ] Telegram notification received after order
-[ ] Order status can be changed in admin panel
-[ ] Client receives Telegram notification on status change
-```
-
----
-
-## 10. Database Backups
-
-Neon provides automatic backups on paid plans. On the free tier, set up manual backups.
-
-### Manual backup (run daily via cron or manually)
-
+The platform automatically calls `setWebhook` on Telegram's API. Verify:
 ```bash
-pg_dump $DATABASE_URL > taomly_backup_$(date +%Y%m%d).sql
+curl https://api.telegram.org/bot{TOKEN}/getWebhookInfo
+# Expected: "url": "https://your-app.onrender.com/webhook/pizza-house"
 ```
 
-### Restore
+### Platform bot (optional)
 
-```bash
-psql $DATABASE_URL < taomly_backup_20260101.sql
-```
+Set `BOT_TOKEN` in Render env → redeploy. This enables a platform-wide bot where users can browse all restaurants via `/start`.
 
-### Recommended
+### How it works
 
-- Enable Neon's point-in-time restore on the Launch plan ($19/month)
-- Or export daily to S3/Backblaze via a simple cron script
-
-> ⚠️ No automated backup is configured out of the box. Set this up before onboarding real clients.
+- Customer sends `/start` to the restaurant bot → receives Mini App button
+- Customer places order → restaurant receives Telegram notification
+- Restaurant changes order status → customer receives Telegram notification
+- Customer can call waiter or make a reservation via the Mini App
 
 ---
 
-## 11. Known Limitations
+## 8. Restaurant Tables & QR Codes
 
-The full list is in [KNOWN_LIMITATIONS.md](./KNOWN_LIMITATIONS.md). Key points:
+### Current status
+
+⚠️ **Known limitation:** there is no UI or API endpoint for creating restaurant table records. The QR code tab in the admin panel generates QR images in the browser but does **not** save anything to the database.
+
+### How dine-in works
+
+When a customer scans a table QR code, the Mini App calls:
+```
+GET /api/restaurants/{slug}/table/{table_number}
+```
+This returns the `table_id` from the database. The `table_id` is then sent with the order.
+
+### Creating tables (required for dine-in)
+
+Create table records manually in Neon SQL Editor:
+
+```sql
+-- Find your restaurant ID first:
+SELECT id, name, slug FROM restaurants;
+
+-- Then insert tables:
+INSERT INTO restaurant_tables (restaurant_id, table_number)
+VALUES
+  (1, 1),
+  (1, 2),
+  (1, 3);
+-- Replace 1 with your actual restaurant ID
+```
+
+After creating records in the database, use the admin panel's QR tab to generate and download QR code images for each table number.
+
+### QR URL format
+
+Each QR code contains:
+```
+https://your-app.onrender.com/app?slug=pizza-house&table=1
+```
+
+When scanned, the Mini App resolves table number → database ID automatically.
+
+> A table management API is planned for a future update.
+
+---
+
+## 9. Billing & Subscriptions
+
+### What exists
+
+The billing module tracks subscription plans and usage. It does **not** process payments — there is no payment gateway integration.
+
+### Tables (created by migration 0005)
+
+- `subscription_plans` — plan definitions (Free / Basic / Pro)
+- `subscriptions` — per-restaurant subscriptions
+- `usage_events` — order and product usage tracking
+
+### Seed data
+
+Migration 0005 automatically seeds three starter plans:
+
+| Plan | Price | Orders/month | Products |
+|---|---|---|---|
+| Free | $0 | 100 | 20 |
+| Basic | $29 | 500 | 100 |
+| Pro | $79 | 2000 | 500 |
+
+### Working endpoints
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/billing/plans` | List all plans |
+| `GET /api/billing/subscription` | Current restaurant subscription |
+| `POST /api/billing/subscribe` | Subscribe to a plan |
+| `GET /api/billing/usage` | Current month usage |
+| `GET /api/billing/invoice/{month}` | Generate PDF invoice |
+
+### PDF invoices
+
+Invoice generation requires `reportlab`:
+```
+pip install reportlab
+```
+It is included in `requirements.txt`. The invoice footer shows `PLATFORM_NAME`, `PLATFORM_URL`, `PLATFORM_EMAIL` from your environment.
+
+### Current limitations
+
+- No payment processing — billing is tracking only
+- Paid plans return 402 (payment required) — only Free plan is fully functional out of the box
+- No dunning, no automatic plan expiry
+
+---
+
+## 10. Cloudflare R2 Photo Storage
+
+Required for dish photo upload. Without R2, the rest of the platform works normally but photo uploads return an error.
+
+1. Cloudflare Dashboard → **R2** → **Create Bucket**
+2. **Manage R2 API Tokens** → **Create Token** → **Object Read & Write** for your bucket
+3. Set in Render environment:
+   ```
+   R2_ACCOUNT_ID=your-cloudflare-account-id
+   R2_ACCESS_KEY_ID=your-key-id
+   R2_SECRET_ACCESS_KEY=your-secret
+   R2_BUCKET_NAME=restaurant-photos
+   ```
+4. For public file serving, configure a **Custom Domain** in R2 and set `R2_PUBLIC_URL`
+
+---
+
+## 11. Clean Install Verification
+
+Run through this checklist after every fresh deployment:
+
+```
+[ ] GET /health → {"status": "healthy", "db": "ok"}
+[ ] alembic current → 0005 (head)
+[ ] 14 tables exist in DB (check in Neon dashboard)
+[ ] Superadmin login works at /superadmin
+[ ] Superadmin logout works (tests JWT revocation via revoked_tokens)
+[ ] Agency created
+[ ] Restaurant created
+[ ] Menu category and item created
+[ ] Telegram bot token + dispatcher set in restaurant settings
+[ ] Telegram webhook registered (verified via getWebhookInfo)
+[ ] Mini App opens in Telegram browser
+[ ] Test order placed from Mini App
+[ ] Order appears in restaurant admin panel
+[ ] Telegram notification received by dispatcher
+[ ] Order status changed in admin panel
+[ ] Client Telegram notification received on status change
+[ ] Reservation created
+[ ] Waiter call created
+[ ] GET /api/billing/subscription → 200
+[ ] GET /api/billing/invoice/01 → PDF downloaded
+[ ] Dish photo upload works (requires R2)
+```
+
+---
+
+## 12. Known Limitations
+
+Full list in `KNOWN_LIMITATIONS.md`. Key points:
 
 | Area | Limitation |
 |---|---|
-| Payments | No payment gateway — billing module is tracking only |
-| AI | Disabled by default — requires OpenRouter/OpenAI API key |
-| Scale | Synchronous SQLAlchemy, 1 Uvicorn worker — suitable for ~50 concurrent users |
+| Tables API | No UI/API to create restaurant tables — requires direct SQL |
+| Payments | No payment gateway — billing is tracking only |
+| AI | Disabled by default — requires API key and `AI_ENABLED=true` |
+| Scale | Sync SQLAlchemy, 1 Uvicorn worker — ~50 concurrent users |
 | Notifications | Telegram only — no email, no SMS |
-| Onboarding | No self-service — agency admin creates each restaurant manually |
-| Backups | Not automated — must be configured by the buyer |
 | Tests | SQLite in-memory — some PostgreSQL edge cases not covered |
+| Backups | Not automated — configure separately |
 
 ---
 
-## 12. Support & Handover
+## 13. What's Included in the Sale
 
-### What is included in the sale
-
-- Full source code (MIT License)
-- This deployment guide
-- Architecture documentation (`ARCHITECTURE.md`)
-- API documentation (`API.md`)
-- Security documentation (`SECURITY.md`)
-- Known limitations (`KNOWN_LIMITATIONS.md`)
-- Alembic migration history
+**Included:**
+- Full source code
+- Alembic migration history (all 5 migrations)
+- This Buyer's Guide
+- `DEPLOYMENT.md` — deployment reference
+- `ARCHITECTURE.md` — system design overview
+- `API.md` — endpoint reference
+- `SECURITY.md` — security model
+- `KNOWN_LIMITATIONS.md` — honest list of current gaps
 - CI/CD pipeline (GitHub Actions)
-- Docker configuration
+- Dockerfile + docker-compose for local development
 
-### What is NOT included
-
+**Not included:**
 - Production data or client list
-- Render account or Neon account (buyer creates their own)
-- Telegram bot tokens (buyer creates their own via BotFather)
-- Sentry account
+- Your Render / Neon / Cloudflare accounts (create your own)
+- Telegram bot tokens (create via @BotFather)
 - Ongoing support (negotiate separately if needed)
 
 ### Recommended first steps after purchase
 
-1. Fork the repository to your own GitHub account
-2. Create Neon database and Render service
-3. Set environment variables and deploy
-4. Run `alembic upgrade head` and verify `/health`
-5. Create your SuperAdmin account
-6. Create your first Agency and Restaurant
-7. Place a test order end-to-end
-8. Set up daily database backups
+1. Fork repository to your GitHub
+2. Create Neon database + Render service
+3. Generate all secret keys (Section 3)
+4. Set all required environment variables
+5. Deploy and verify `/health`
+6. Create superadmin → agency → restaurant
+7. Connect Telegram bot and place a test order end-to-end
+8. Set up daily database backups (`pg_dump`)
 9. Configure `ALLOWED_ORIGINS` with your domain
-10. Set up Sentry for error monitoring
+10. Set `PLATFORM_NAME`, `PLATFORM_URL`, `PLATFORM_EMAIL` for branded invoices
 
 ---
 
-*Taomly v2.1.0 — White Label Multi-Tenant Restaurant SaaS Platform*
+*Multi-Tenant White-Label Restaurant SaaS Platform*
 *Built with FastAPI · PostgreSQL · Telegram Mini App · PWA*
