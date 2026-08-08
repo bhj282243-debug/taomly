@@ -2,7 +2,8 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability, please email: admin@taomly.uz
+If you discover a security vulnerability, please email the platform owner directly.
+Set your security contact in `SECURITY.md` after purchase.
 
 Do not open a public GitHub issue for security problems.
 
