@@ -1,66 +1,325 @@
-# Taomly Deployment Guide
+# Deployment Guide
+
+Complete guide for deploying the platform from scratch on Render + Neon.
+
+---
 
 ## Stack
 
-- Backend: FastAPI + SQLAlchemy (sync)
-- Database: Neon PostgreSQL
-- Hosting: Render (Web Service)
-- Telegram: Bot API + Mini App
-- PWA: Static files on Render
+| Layer | Technology |
+|---|---|
+| Backend | FastAPI + SQLAlchemy (sync) |
+| Database | PostgreSQL (Neon recommended) |
+| Hosting | Render Web Service |
+| Storage | Cloudflare R2 (dish photos) |
+| Bots | Telegram Bot API + Mini App |
+| Frontend | Static HTML/PWA served by FastAPI |
 
-## Environment Variables
+---
 
-DATABASE_URL — Neon PostgreSQL connection string
-SECRET_KEY — JWT signing key (min 32 chars)
-FERNET_KEY — Fernet encryption key (base64)
-AI_ENABLED — true / false (default: false)
-AI_PROVIDER — openai / anthropic / openrouter / gemini
-AI_API_KEY — API key for AI provider
-AI_MODEL — Model name (e.g. gpt-4o-mini)
-SENTRY_DSN — Sentry error tracking (optional)
+## Step 1 — Create PostgreSQL Database
 
-## Generate Keys
+1. Sign up at [neon.tech](https://neon.tech) → **New Project**
+2. Copy the connection string:
+   ```
+   postgresql://user:password@host/dbname?sslmode=require
+   ```
+3. Save it — you'll need it as `DATABASE_URL`
 
-SECRET_KEY: openssl rand -hex 32
+---
 
-FERNET_KEY: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+## Step 2 — Generate Secret Keys
 
-## Render Setup
+Run each command once and save the results securely:
 
-1. Connect GitHub repo: bhj282243-debug/taomly
-2. Runtime: Python 3.11
-3. Build command: pip install -r requirements.txt
-4. Start command: uvicorn api:app --host 0.0.0.0 --port $PORT
-5. Add all environment variables
-6. Deploy
+```bash
+# SECRET_KEY
+python -c "import secrets; print(secrets.token_hex(32))"
 
-## Database Migration
+# FERNET_KEY (encrypts Telegram bot tokens in DB — do not lose this)
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 
-Run: alembic upgrade head
+# SUPERADMIN_PASSWORD_HASH (replace 'yourpassword')
+python -c "from passlib.context import CryptContext; print(CryptContext(schemes=['bcrypt']).hash('yourpassword'))"
+```
 
-Migrations:
-- 0001_initial.py — all base tables
-- 0002_add_badge_columns.py — badge columns for products
+---
 
-## Telegram Webhook
+## Step 3 — Deploy to Render
 
-Webhooks register automatically when creating a restaurant via Agency Admin.
+1. Fork or transfer the repository to your GitHub account
+2. Go to [render.com](https://render.com) → **New → Web Service**
+3. Connect your GitHub repository
+4. Configure the service:
 
-Manual: POST https://api.telegram.org/bot{TOKEN}/setWebhook
-Body: url = https://taomly.onrender.com/webhook/{slug}
+| Setting | Value |
+|---|---|
+| **Environment** | Python 3 |
+| **Build Command** | `pip install -r requirements.txt` |
+| **Start Command** | `alembic upgrade head && uvicorn api:app --host 0.0.0.0 --port $PORT --workers 1` |
 
-## Admin Panels
+5. Add environment variables (see `.env.example` for full list):
 
-Agency Admin: https://taomly.onrender.com/static/agency_admin.html
-Restaurant Admin: https://taomly.onrender.com/static/admin.html
-Client Mini App: https://taomly.onrender.com/static/index.html
+| Variable | Required | Notes |
+|---|---|---|
+| `DATABASE_URL` | ✅ | Neon connection string with `sslmode=require` |
+| `SECRET_KEY` | ✅ | Random 64-char string |
+| `FERNET_KEY` | ✅ | Fernet key for bot token encryption |
+| `SUPERADMIN_PASSWORD_HASH` | ✅ | bcrypt hash from Step 2 |
+| `SUPERADMIN_EMAIL` | ✅ | Your superadmin login email |
+| `WEBHOOK_URL` | ✅ | Your Render app URL — **base URL only**, no path suffix |
+| `ENVIRONMENT` | ✅ | Set to `production` |
+| `ALLOWED_ORIGINS` | ✅ in production | Comma-separated allowed origins |
+| `BOT_TOKEN` | optional | Platform-level Telegram bot |
+| `PLATFORM_NAME` | optional | Shown in PDF invoices |
+| `PLATFORM_URL` | optional | Shown in PDF invoices |
+| `PLATFORM_EMAIL` | optional | Shown in PDF invoices |
+| `R2_ACCOUNT_ID` | optional | Required for dish photo upload |
+| `R2_ACCESS_KEY_ID` | optional | Required for dish photo upload |
+| `R2_SECRET_ACCESS_KEY` | optional | Required for dish photo upload |
+| `R2_BUCKET_NAME` | optional | Default: `restaurant-photos` |
 
-## Default Credentials
+6. Click **Deploy**
 
-Agency: admin@taomly.uz / 12345678
-Restaurant 1: chinar / 12345678
-Restaurant 2: taomly-test-2 / secret
+### WEBHOOK_URL — important
 
-## Tests
+`WEBHOOK_URL` must be the base URL of your deployment with **no path suffix**:
 
-Run: pytest tests/ -v
+```
+✅ Correct:  https://your-app.onrender.com
+❌ Wrong:    https://your-app.onrender.com/webhook
+❌ Wrong:    https://your-app.onrender.com/app
+```
+
+The platform automatically builds:
+- `WEBHOOK_URL + /webhook` — platform bot Telegram webhook
+- `WEBHOOK_URL + /webhook/{slug}` — per-restaurant Telegram webhook
+- `WEBHOOK_URL + /app` — Mini App URL in Telegram buttons
+
+---
+
+## Step 4 — Verify Deployment
+
+```
+GET https://your-app.onrender.com/health
+```
+
+Expected:
+```json
+{"status": "healthy", "db": "ok"}
+```
+
+---
+
+## Step 5 — Database Schema
+
+Migrations run automatically via the Start Command (`alembic upgrade head`).
+
+**Migration chain after a clean install:**
+
+```
+0001_initial          → 14 core tables
+0002_add_badge_columns
+0003_add_is_popular
+0004_add_delivery_fields
+0005_add_missing_tables → revoked_tokens, subscription_plans,
+                          subscriptions, usage_events + seed data
+```
+
+**Verify:**
+```bash
+alembic current
+# Expected: 0005 (head)
+```
+
+**All tables created by `alembic upgrade head`:**
+
+```
+agencies            restaurants         users
+categories          products            restaurant_tables
+orders              order_items         reservations
+waiter_calls        revoked_tokens      subscription_plans
+subscriptions       usage_events
+```
+
+### Existing database migration path
+
+If you previously ran `MIGRATION_billing.sql` manually, the `subscription_plans`, `subscriptions`, and `usage_events` tables already exist. Running `alembic upgrade 0005` will fail with "table already exists".
+
+**Safe path for existing databases:**
+
+1. Verify the tables exist and match the expected schema:
+   ```sql
+   \d subscription_plans
+   \d subscriptions
+   \d usage_events
+   ```
+2. Check if `revoked_tokens` exists:
+   ```sql
+   \d revoked_tokens
+   ```
+3. If `revoked_tokens` does **not** exist, create it manually:
+   ```sql
+   CREATE TABLE revoked_tokens (
+       id BIGSERIAL PRIMARY KEY,
+       jti VARCHAR(36) NOT NULL,
+       token_type VARCHAR(16) NOT NULL DEFAULT 'access',
+       expires_at TIMESTAMPTZ NOT NULL,
+       revoked_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+       CONSTRAINT uq_revoked_tokens_jti UNIQUE (jti)
+   );
+   CREATE INDEX ix_revoked_tokens_expires_at ON revoked_tokens (expires_at);
+   ```
+4. Mark migration 0005 as applied **without running it**:
+   ```bash
+   python -m alembic stamp 0005
+   ```
+   ⚠️ Only use `alembic stamp` after you have manually verified that all tables in 0005 exist with the correct schema.
+
+---
+
+## Step 6 — First Login
+
+Open `https://your-app.onrender.com/superadmin`
+
+Log in with `SUPERADMIN_EMAIL` and the password you used to generate `SUPERADMIN_PASSWORD_HASH`.
+
+---
+
+## Step 7 — Create Agency and Restaurant
+
+1. **Superadmin Console** → **Agencies** → **+ New Agency**
+   - Fill: name, email, password
+2. Log in at `/agency-admin` with agency credentials
+3. **+ New Restaurant**:
+   - Name, slug (URL identifier), admin password
+   - Telegram Bot Token (from @BotFather)
+   - Dispatcher ID (your Telegram user ID — for order notifications)
+
+---
+
+## Step 8 — Telegram Bot Setup
+
+### Get a bot token
+
+1. Open Telegram → `@BotFather` → `/newbot`
+2. Choose name and username (must end in `bot`)
+3. Copy the token: `1234567890:AAF...`
+
+### Get your Telegram user ID
+
+1. Telegram → `@userinfobot` → `/start`
+2. Copy your numeric ID
+
+### Connect to restaurant
+
+1. Agency Admin → select restaurant → **Settings**
+2. Paste Bot Token + Dispatcher ID → **Save**
+3. The platform registers the webhook automatically
+
+### Verify webhook
+
+```bash
+curl https://api.telegram.org/bot{TOKEN}/getWebhookInfo
+```
+
+Expected: `"url": "https://your-app.onrender.com/webhook/{slug}"`
+
+### Platform bot (optional)
+
+Set `BOT_TOKEN` in Render environment → redeploy.
+The platform bot sends users a Mini App link on `/start`.
+
+---
+
+## Step 9 — Restaurant Tables (for dine-in orders)
+
+⚠️ **Current limitation:** There is no UI or API for creating restaurant tables.
+The QR code tab in the admin panel generates QR images client-side but does **not** save records to the database.
+
+For dine-in orders to work, create table records manually in Neon SQL Editor:
+
+```sql
+INSERT INTO restaurant_tables (restaurant_id, table_number)
+VALUES
+  (1, 1),
+  (1, 2),
+  (1, 3);
+```
+
+Replace `1` with your restaurant's ID (visible in the URL when editing the restaurant).
+
+Then print the QR codes from the admin panel's QR tab — they will correctly resolve to the table IDs you just created.
+
+> A table management API is planned. See `KNOWN_LIMITATIONS.md`.
+
+---
+
+## Step 10 — Cloudflare R2 (Photo Storage)
+
+Required for dish photo upload. Without it, photos return an error but the rest of the app works.
+
+1. Cloudflare Dashboard → **R2** → **Create Bucket** (name it `restaurant-photos` or your custom name)
+2. **Manage R2 API Tokens** → **Create API Token** → permissions: **Object Read & Write**
+3. Copy Account ID, Access Key, Secret Key
+4. Set in Render environment:
+   ```
+   R2_ACCOUNT_ID=...
+   R2_ACCESS_KEY_ID=...
+   R2_SECRET_ACCESS_KEY=...
+   R2_BUCKET_NAME=restaurant-photos
+   ```
+5. Optional: configure a **Custom Domain** in R2 for public file URLs, then set `R2_PUBLIC_URL`
+
+---
+
+## Step 11 — Admin Panel URLs
+
+After deployment, access the panels at:
+
+| Panel | URL |
+|---|---|
+| Superadmin | `https://your-app.onrender.com/superadmin` |
+| Agency Admin | `https://your-app.onrender.com/agency-admin` |
+| Restaurant Admin | `https://your-app.onrender.com/admin?slug=restaurant-slug` |
+| Customer Mini App | `https://your-app.onrender.com/app?slug=restaurant-slug` |
+
+---
+
+## Clean Install Verification Checklist
+
+```
+[ ] GET /health → {"status": "healthy", "db": "ok"}
+[ ] alembic current → 0005 (head)
+[ ] All 14 tables exist in database
+[ ] Superadmin login works
+[ ] Superadmin logout works (JWT revocation — requires revoked_tokens table)
+[ ] Agency created
+[ ] Restaurant created
+[ ] Menu item created
+[ ] Telegram bot webhook registered
+[ ] Mini App opens in Telegram
+[ ] Test order placed
+[ ] Order appears in admin panel
+[ ] Telegram notification received on new order
+[ ] Order status change triggers client notification
+[ ] Reservation works
+[ ] Waiter call works
+[ ] Billing endpoint: GET /api/billing/subscription → 200
+[ ] Invoice endpoint: GET /api/billing/invoice → PDF generated
+```
+
+---
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `/health` returns unhealthy | Bad DATABASE_URL | Check Neon connection string, `sslmode=require` |
+| `alembic upgrade head` fails | DB not reachable | Set DATABASE_URL env var before running |
+| Logout returns 500 | `revoked_tokens` table missing | Run migration 0005 or create manually (see Step 5) |
+| Mini App button URL is `/app` | WEBHOOK_URL not set | Set `WEBHOOK_URL=https://your-app.onrender.com` |
+| Telegram webhook not registering | Wrong WEBHOOK_URL | Must be HTTPS base URL, no path suffix |
+| Photos not uploading | R2 not configured | Set R2_* env vars (Step 10) |
+| CORS error in browser | ALLOWED_ORIGINS missing | Set `ALLOWED_ORIGINS=https://your-domain.com` |
+| Billing returns 500 | Billing tables missing | Check migration 0005 applied |
