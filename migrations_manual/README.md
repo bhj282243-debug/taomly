@@ -1,41 +1,52 @@
 # migrations_manual/
 
-Ручные SQL-миграции для выполнения в **Neon SQL Editor**.
-
-Используются потому что Render Free план блокирует Shell и Pre-Deploy Commands,
-поэтому Alembic не может запускаться автоматически при деплое.
+Исторические SQL-файлы. **Для новых установок не нужны.**
 
 ---
 
-## Порядок применения (свежая установка)
+## Новая установка
 
-| # | Файл | Когда применять |
+Все таблицы создаются автоматически одной командой:
+
+```
+alembic upgrade head
+```
+
+Это создаёт все 14 таблиц включая биллинг и revoked_tokens.
+Ручной SQL больше не требуется.
+
+---
+
+## Файлы в этой папке (legacy)
+
+| Файл | Статус | Примечание |
 |---|---|---|
-| 1 | `MIGRATION_badges.sql` | Если 0002 Alembic-миграция не применялась |
-| 2 | `MIGRATION_billing.sql` | Если таблицы биллинга ещё не созданы |
-| 3 | `MIGRATION_price_constraints.sql` | После коммита `models.py` с CHECK-ограничениями |
-| 4 | `MIGRATION_popular_partial_index.sql` | Если индекс `ix_products_popular` уже существует как обычный |
+| `MIGRATION_billing.sql` | ⚠️ Legacy | Заменён migration 0005. Запускать только если 0005 уже применён через stamp |
+| `MIGRATION_badges.sql` | ⚠️ Legacy | Покрыт migration 0002 |
+| `MIGRATION_price_constraints.sql` | ⚠️ Legacy | Покрыт migration 0001 |
+| `MIGRATION_popular_partial_index.sql` | ⚠️ Legacy | Покрыт migration 0003 |
 
 ---
 
-## Как применять
+## Существующая БД (если MIGRATION_billing.sql уже применялся вручную)
 
-1. Открой **Neon Console → SQL Editor**
-2. Вставь содержимое нужного файла целиком
-3. Нажми **Run**
-4. Убедись что ошибок нет
+Если billing-таблицы уже существуют, пометь migration 0005 как выполненную без запуска:
 
-Все файлы идемпотентны — повторный запуск безопасен.
+```bash
+python -m alembic stamp 0005
+```
+
+⚠️ Используй `stamp` только убедившись что все таблицы из 0005 уже существуют в БД.
+Подробнее — в `BUYER_GUIDE.md` → раздел "Existing database".
 
 ---
 
-## Alembic-миграции (для справки)
+## Полная история Alembic-миграций
 
-Полная история схемы БД через Alembic:
-
-| Revision | Файл | Что делает |
-|---|---|---|
-| 0001 | `alembic/versions/0001_initial.py` | Начальная схема |
-| 0002 | `alembic/versions/0002_add_badge_columns.py` | Badge-колонки products |
-| 0003 | `alembic/versions/0003_add_is_popular.py` | is_popular + partial index |
-| 0004 | `alembic/versions/0004_add_delivery_fields.py` | Поля доставки restaurants |
+| Revision | Что делает |
+|---|---|
+| 0001 | Начальная схема: все основные таблицы |
+| 0002 | Badge-колонки в products |
+| 0003 | is_popular + partial index |
+| 0004 | Поля доставки в restaurants |
+| 0005 | revoked_tokens, subscription_plans, subscriptions, usage_events + seed |
