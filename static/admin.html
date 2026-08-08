@@ -1438,30 +1438,88 @@ function downloadQR(containerId,label){
   else return;
   const a=document.createElement('a');a.href=dataUrl;a.download=`qr-${RESTAURANT_SLUG||'restaurant'}-${label}.png`;a.click();
 }
-function generateTableQR(){
-  const input=document.getElementById('newTableNumber');const num=input.value.trim();if(!num){input.focus();return;}
-  if(qrTables.find(t=>t.number===num)){showToast(`Stol ${num} allaqachon mavjud`,true);input.value='';return;}
-  const url=buildQrUrl('table',num);
-  const canvasId=`qr-table-canvas-${num.replace(/\s+/g,'-')}`;
-  const card=document.createElement('div');card.className='qr-card';card.id=`qr-table-card-${num}`;
+// ── QR TABLES — API-backed management ──────────────────────────────────────
+async function loadTablesList(){
+  const list=document.getElementById('qr-tables-list');
+  list.innerHTML='<div style="padding:16px;color:var(--text-muted);font-size:13px">Yuklanmoqda...</div>';
+  try{
+    const res=await fetch(`${API}/api/restaurants/me/tables`,{headers:{Authorization:`Bearer ${AUTH_TOKEN}`}});
+    if(!res.ok)throw new Error(await res.text());
+    const data=await res.json();
+    list.innerHTML='';
+    if(!data.tables.length){
+      list.innerHTML='<div style="padding:16px;color:var(--text-muted);font-size:13px">Stollar yo'q. Birinchi stolni qo'shing.</div>';
+      return;
+    }
+    data.tables.forEach(t=>list.appendChild(_buildTableCard(t)));
+  }catch(e){
+    list.innerHTML=`<div style="padding:16px;color:#f66;font-size:13px">Xato: ${e.message}</div>`;
+  }
+}
+function _buildTableCard(t){
+  const url=buildQrUrl('table',t.table_number);
+  const canvasId=`qr-table-canvas-${String(t.id)}`;
+  const card=document.createElement('div');card.className='qr-card';card.id=`qr-table-card-${t.id}`;
   card.innerHTML=`
-    <div class="qr-card-header"><div class="qr-table-label">Stol № ${num}</div><button class="qr-remove-btn" onclick="removeTableQR('${num}')">×</button></div>
+    <div class="qr-card-header">
+      <div class="qr-table-label">Stol № ${t.table_number}</div>
+      <button class="qr-remove-btn" data-id="${t.id}" onclick="deleteTable(${t.id})">×</button>
+    </div>
     <div class="qr-canvas-wrap" id="${canvasId}"></div>
     <div class="qr-url-text">${url}</div>
-    <button class="qr-download-btn" onclick="downloadQR('${canvasId}','stol-${num}')">↓ PNG yuklab olish</button>`;
-  document.getElementById('qr-tables-list').prepend(card);
-  makeQR(document.getElementById(canvasId),url);
-  qrTables.push({number:num});input.value='';input.focus();
+    <button class="qr-download-btn" onclick="downloadQR('${canvasId}','stol-${t.table_number}')">↓ PNG yuklab olish</button>`;
+  setTimeout(()=>{const el=document.getElementById(canvasId);if(el)makeQR(el,url);},30);
+  return card;
 }
-function removeTableQR(num){
-  qrTables=qrTables.filter(t=>t.number!==num);
-  const card=document.getElementById(`qr-table-card-${num}`);if(card)card.remove();
+async function generateTableQR(){
+  const input=document.getElementById('newTableNumber');
+  const num=input.value.trim();
+  if(!num){input.focus();return;}
+  const btn=document.querySelector('.qr-gen-btn');
+  btn.disabled=true;
+  try{
+    const res=await fetch(`${API}/api/restaurants/me/tables`,{
+      method:'POST',
+      headers:{Authorization:`Bearer ${AUTH_TOKEN}`,'Content-Type':'application/json'},
+      body:JSON.stringify({table_number:num}),
+    });
+    if(res.status===409){showToast(`Stol "${num}" allaqachon mavjud`,true);input.value='';input.focus();return;}
+    if(!res.ok)throw new Error(await res.text());
+    const data=await res.json();
+    input.value='';input.focus();
+    const list=document.getElementById('qr-tables-list');
+    const placeholder=list.querySelector('div[style]');if(placeholder)placeholder.remove();
+    list.prepend(_buildTableCard({id:data.id,table_number:data.table_number}));
+    showToast(`Stol № ${data.table_number} saqlandi`);
+  }catch(e){
+    showToast(`Xato: ${e.message}`,true);
+  }finally{
+    btn.disabled=false;
+  }
+}
+async function deleteTable(tableId){
+  if(!confirm('Stolni o'chirish?'))return;
+  try{
+    const res=await fetch(`${API}/api/restaurants/me/tables/${tableId}`,{
+      method:'DELETE',
+      headers:{Authorization:`Bearer ${AUTH_TOKEN}`},
+    });
+    if(!res.ok&&res.status!==204)throw new Error(await res.text());
+    const card=document.getElementById(`qr-table-card-${tableId}`);
+    if(card)card.remove();
+    const list=document.getElementById('qr-tables-list');
+    if(!list.children.length)list.innerHTML='<div style="padding:16px;color:var(--text-muted);font-size:13px">Stollar yo'q. Birinchi stolni qo'shing.</div>';
+    showToast('Stol o'chirildi');
+  }catch(e){
+    showToast(`Xato: ${e.message}`,true);
+  }
 }
 let _qrTakeawayDone=false,_qrDeliveryDone=false;
 function initQrPage(){
   _qrTakeawayDone=false;_qrDeliveryDone=false;
   document.getElementById('qr-takeaway-url').textContent=buildQrUrl('takeaway');
   document.getElementById('qr-delivery-url').textContent=buildQrUrl('delivery');
+  loadTablesList();
 }
 
 // ── BILLING ──
@@ -1650,39 +1708,4 @@ function _showNewOrderNotification(count){
 
 function _clearNewOrderIndicators(){
   const dot=document.getElementById('ordersDot');if(dot)dot.classList.remove('visible');
-  const cnt=document.getElementById('newOrderCount');if(cnt){cnt.textContent='';cnt.classList.remove('visible');}
-  if(_titleFlipInterval){clearInterval(_titleFlipInterval);_titleFlipInterval=null;}
-  document.title=_origTitle;
-}
-
-// ── INIT ──
-checkAuth();
-updateSoundBtn();
-
-// Умный polling:
-// — 15 сек пока страница в фокусе (активная работа)
-// — 30 сек когда страница в фоне (экономия ресурсов)
-let _pollInterval=null;
-
-function _startPolling(){
-  if(_pollInterval)clearInterval(_pollInterval);
-  const delay=document.hidden?30000:15000;
-  _pollInterval=setInterval(()=>{
-    if(AUTH_TOKEN&&RESTAURANT_ID)loadOrders();
-  },delay);
-}
-
-document.addEventListener('visibilitychange',()=>{
-  // При возврате на вкладку — сразу обновляем
-  if(!document.hidden&&AUTH_TOKEN&&RESTAURANT_ID){
-    loadOrders();
-    // Сбрасываем мигание title
-    if(_titleFlipInterval){clearInterval(_titleFlipInterval);_titleFlipInterval=null;document.title=_origTitle;}
-  }
-  _startPolling();
-});
-
-_startPolling();
-</script>
-</body>
-</html>
+  const cnt=document.getElemen
