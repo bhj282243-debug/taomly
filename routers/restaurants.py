@@ -44,6 +44,10 @@ from schemas import (
     RestaurantPublicResponse,
     RestaurantSettingsResponse,
     RestaurantSettingsUpdateResponse,
+    TableCreateRequest,
+    TableCreateResponse,
+    TableItem,
+    TablesListResponse,
     TableResponse,
 )
 
@@ -216,6 +220,106 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
 
 
 # ──────────────────────────────────────────
+# ──────────────────────────────────────────
+# GET  /me/tables  — список столов ресторана
+# POST /me/tables  — создать стол
+# DELETE /me/tables/{table_id} — удалить стол
+# ──────────────────────────────────────────
+
+@router.get("/me/tables", response_model=TablesListResponse)
+def list_tables(
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Возвращает все столы ресторана.
+    Требует авторизацию: restaurant_admin.
+    """
+    tables = (
+        db.query(RestaurantTable)
+        .filter(RestaurantTable.restaurant_id == restaurant.id)
+        .order_by(RestaurantTable.table_number)
+        .all()
+    )
+    items = [
+        TableItem(
+            id=t.id,
+            table_number=t.table_number,
+            created_at=t.created_at.isoformat(),
+        )
+        for t in tables
+    ]
+    return TablesListResponse(tables=items, total=len(items))
+
+
+@router.post("/me/tables", response_model=TableCreateResponse, status_code=201)
+def create_table(
+    data: TableCreateRequest,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Создаёт новый стол для ресторана.
+    Номер стола должен быть уникальным в рамках ресторана.
+    Требует авторизацию: restaurant_admin.
+    """
+    existing = db.query(RestaurantTable).filter(
+        RestaurantTable.restaurant_id == restaurant.id,
+        RestaurantTable.table_number == data.table_number,
+    ).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Стол '{data.table_number}' уже существует",
+        )
+
+    table = RestaurantTable(
+        restaurant_id=restaurant.id,
+        table_number=data.table_number,
+    )
+    db.add(table)
+    db.commit()
+    db.refresh(table)
+
+    logger.info(
+        "Table created: restaurant_id=%s table_number=%s id=%s",
+        restaurant.id,
+        table.table_number,
+        table.id,
+    )
+    return TableCreateResponse(ok=True, id=table.id, table_number=table.table_number)
+
+
+@router.delete("/me/tables/{table_id}", status_code=204)
+def delete_table(
+    table_id: int,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Удаляет стол по ID.
+    Стол должен принадлежать ресторану текущего admin.
+    Требует авторизацию: restaurant_admin.
+    """
+    table = db.query(RestaurantTable).filter(
+        RestaurantTable.id == table_id,
+        RestaurantTable.restaurant_id == restaurant.id,
+    ).first()
+    if not table:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Стол не найден",
+        )
+    db.delete(table)
+    db.commit()
+    logger.info(
+        "Table deleted: restaurant_id=%s table_id=%s table_number=%s",
+        restaurant.id,
+        table_id,
+        table.table_number,
+    )
+
+
 # GET /{slug}/table/{table_number} — получить стол по номеру
 # ──────────────────────────────────────────
 @router.get("/{slug}/table/{table_number}", response_model=TableResponse)
