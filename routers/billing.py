@@ -90,7 +90,7 @@ def _get_free_plan(db: Session) -> SubscriptionPlan:
     if not plan:
         raise HTTPException(
             status_code=503,
-            detail="Тарифные планы не найдены. Выполните MIGRATION_billing.sql в Neon.",
+            detail="Subscription plans not found. Run: alembic upgrade head",
         )
     return plan
 
@@ -144,7 +144,7 @@ def get_plans(db: Session = Depends(get_db)) -> List[PlanResponse]:
         .all()
     )
     if not plans:
-        raise HTTPException(status_code=503, detail="Выполните MIGRATION_billing.sql в Neon.")
+        raise HTTPException(status_code=503, detail="Billing tables missing. Run: alembic upgrade head")
     return [PlanResponse(
         id=p.id,
         name=p.name,
