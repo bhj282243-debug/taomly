@@ -843,3 +843,35 @@ class SADashboardResponse(BaseModel):
     arr:                 int
     recent_agencies:     List[SARecentAgencyItem]
     recent_restaurants:  List[SARecentRestaurantItem]
+
+
+# ──────────────────────────────────────────
+# RESTAURANT TABLES — management schemas
+# ──────────────────────────────────────────
+
+class TableCreateRequest(BaseModel):
+    table_number: str = Field(..., min_length=1, max_length=50, description="Номер или название стола (1, 2, VIP...)")
+
+    @field_validator("table_number")
+    @classmethod
+    def strip_table_number(cls, v: str) -> str:
+        return v.strip()
+
+
+class TableItem(BaseModel):
+    id:           int
+    table_number: str
+    created_at:   str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TablesListResponse(BaseModel):
+    tables: List[TableItem]
+    total:  int
+
+
+class TableCreateResponse(BaseModel):
+    ok:           bool
+    id:           int
+    table_number: str
