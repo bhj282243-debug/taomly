@@ -45,6 +45,10 @@ def verify_bot_token(bot_token: str) -> Optional[str]:
     """
     Проверяет токен бота через Telegram getMe.
 
+    TODO: функция не вызывается в текущей кодовой базе (F-34).
+    Планируется использовать при валидации токена в agency admin
+    перед сохранением в БД.
+
     Returns:
         username бота при успехе, None если токен невалиден.
     """
@@ -151,7 +155,13 @@ def setup_restaurant_bot_from_encrypted(
     webhook_secret: str,
     restaurant_name: str = "",
 ) -> WebhookResult:
-    """Удобная обёртка: расшифровывает токен и регистрирует webhook."""
+    """
+    Удобная обёртка: расшифровывает токен и регистрирует webhook.
+
+    TODO: функция не вызывается в текущей кодовой базе (F-34).
+    Планируется использовать в agency admin при создании/обновлении ресторана
+    вместо прямого вызова setup_restaurant_bot().
+    """
     try:
         bot_token = decrypt_token(encrypted_token)
     except Exception:
