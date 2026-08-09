@@ -52,6 +52,10 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/agency", tags=["agency"])
 
+# Фиктивный хеш для timing-safe проверки пароля (SEC-6).
+# bcrypt отрабатывает даже когда email/slug не найден — выравнивает время ответа.
+_DUMMY_HASH: str = "$2b$12$dummyhashXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
 
 # ──────────────────────────────────────────
 # AUTH
@@ -110,7 +114,13 @@ def login_agency(request: Request, data: AgencyLogin, db: Session = Depends(get_
         Agency.is_active == True,
     ).first()
 
-    if not agency or not verify_password(data.password, agency.owner_password_hash):
+    # SEC-6: verify_password вызывается всегда — защита от timing enumeration.
+    # При отсутствии agency bcrypt отрабатывает на фиктивном хеше, выравнивая время ответа.
+    password_ok = verify_password(
+        data.password,
+        agency.owner_password_hash if agency else _DUMMY_HASH,
+    )
+    if not agency or not password_ok:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Неверный email или пароль",
@@ -136,13 +146,12 @@ def login_restaurant_admin(
         Restaurant.is_active == True,
     ).first()
 
-    if not restaurant or not restaurant.admin_password_hash:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Неверный slug или пароль",
-        )
-
-    if not verify_password(data.password, restaurant.admin_password_hash):
+    # SEC-6: verify_password вызывается всегда — защита от timing enumeration по slug.
+    password_ok = verify_password(
+        data.password,
+        restaurant.admin_password_hash if (restaurant and restaurant.admin_password_hash) else _DUMMY_HASH,
+    )
+    if not restaurant or not restaurant.admin_password_hash or not password_ok:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Неверный slug или пароль",
