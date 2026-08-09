@@ -288,7 +288,7 @@ Set `BOT_TOKEN` in Render env → redeploy. This enables a platform-wide bot whe
 
 ### Current status
 
-⚠️ **Known limitation:** there is no UI or API endpoint for creating restaurant table records. The QR code tab in the admin panel generates QR images in the browser but does **not** save anything to the database.
+Restaurant tables are fully managed via the admin panel UI and REST API — no direct SQL required.
 
 ### How dine-in works
 
@@ -300,22 +300,23 @@ This returns the `table_id` from the database. The `table_id` is then sent with 
 
 ### Creating tables (required for dine-in)
 
-Create table records manually in Neon SQL Editor:
+**Option 1 — Admin panel UI (recommended):**
+Open the restaurant admin panel → QR Codes tab → enter the number of tables → click Generate. Tables are saved to the database and QR code images are generated for download.
 
-```sql
--- Find your restaurant ID first:
-SELECT id, name, slug FROM restaurants;
+**Option 2 — API:**
+```
+POST /api/restaurants/me/tables
+Authorization: Bearer <restaurant_admin_token>
+Content-Type: application/json
 
--- Then insert tables:
-INSERT INTO restaurant_tables (restaurant_id, table_number)
-VALUES
-  (1, 1),
-  (1, 2),
-  (1, 3);
--- Replace 1 with your actual restaurant ID
+{"table_count": 10}
 ```
 
-After creating records in the database, use the admin panel's QR tab to generate and download QR code images for each table number.
+**Option 3 — Delete a table:**
+```
+DELETE /api/restaurants/me/tables/{table_id}
+Authorization: Bearer <restaurant_admin_token>
+```
 
 ### QR URL format
 
@@ -325,8 +326,6 @@ https://your-app.onrender.com/app?slug=pizza-house&table=1
 ```
 
 When scanned, the Mini App resolves table number → database ID automatically.
-
-> A table management API is planned for a future update.
 
 ---
 
@@ -431,7 +430,7 @@ Full list in `KNOWN_LIMITATIONS.md`. Key points:
 
 | Area | Limitation |
 |---|---|
-| Tables API | No UI/API to create restaurant tables — requires direct SQL |
+| Tables API | Full UI (QR Codes tab) and API (`POST /api/restaurants/me/tables`) |
 | Payments | No payment gateway — billing is tracking only |
 | AI | Disabled by default — requires API key and `AI_ENABLED=true` |
 | Scale | Sync SQLAlchemy, 1 Uvicorn worker — ~50 concurrent users |
