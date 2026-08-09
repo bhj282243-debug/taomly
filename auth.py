@@ -37,7 +37,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from config import settings
 from database import get_db
@@ -255,7 +255,9 @@ def get_telegram_user(
     Загружает ресторан, расшифровывает токен бота, верифицирует initData.
     Если initData отсутствует (браузер/PWA) — создаём гостевого пользователя.
     """
-    restaurant = db.query(Restaurant).filter(
+    restaurant = db.query(Restaurant).options(
+        joinedload(Restaurant.agency)
+    ).filter(
         Restaurant.id == x_restaurant_id,
         Restaurant.is_active == True,
     ).first()
@@ -264,6 +266,13 @@ def get_telegram_user(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Ресторан не найден",
+        )
+
+    # F-07: проверяем что агентство-владелец не заморожено
+    if not restaurant.agency or not restaurant.agency.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Доступ запрещён: агентство деактивировано",
         )
 
     # Если initData есть — верифицируем через Telegram HMAC
@@ -516,7 +525,9 @@ def get_current_restaurant_admin(
             detail="Невалидный токен: отсутствует restaurant_id",
         )
 
-    restaurant = db.query(Restaurant).filter(
+    restaurant = db.query(Restaurant).options(
+        joinedload(Restaurant.agency)
+    ).filter(
         Restaurant.id == restaurant_id,
         Restaurant.is_active == True,
     ).first()
@@ -525,6 +536,13 @@ def get_current_restaurant_admin(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Ресторан не найден или деактивирован",
+        )
+
+    # F-07: проверяем что агентство-владелец не заморожено
+    if not restaurant.agency or not restaurant.agency.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Доступ запрещён: агентство деактивировано",
         )
 
     return restaurant
