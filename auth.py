@@ -316,15 +316,15 @@ def _build_token(payload_extra: dict, expire_hours: int) -> str:
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
 
 
-def create_agency_token(agency: Agency) -> str:
-    return _build_token(
-        {
-            "sub":       str(agency.id),
-            "role":      "agency_owner",
-            "agency_id": agency.id,
-        },
-        expire_hours=settings.ACCESS_TOKEN_EXPIRE_HOURS,
-    )
+def create_agency_token(agency: Agency, impersonated_by: str | None = None) -> str:
+    payload: dict = {
+        "sub":       str(agency.id),
+        "role":      "agency_owner",
+        "agency_id": agency.id,
+    }
+    if impersonated_by:
+        payload["impersonated_by"] = impersonated_by
+    return _build_token(payload, expire_hours=settings.ACCESS_TOKEN_EXPIRE_HOURS)
 
 
 def create_restaurant_token(restaurant: Restaurant) -> str:
