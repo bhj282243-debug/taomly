@@ -11,6 +11,10 @@ It is intended to help the buyer make an informed decision.
 - The billing module demonstrates subscription plans and usage tracking,
   but does not process real transactions
 - Payment integration must be implemented by the buyer
+- `products_limit` per subscription plan is enforced at the API level
+- `users_limit` per subscription plan is defined in the schema but all seeded plans
+  set it to `-1` (unlimited); enforcement logic is not yet implemented and will be
+  required if the buyer introduces user-count-based tiers
 
 ---
 
