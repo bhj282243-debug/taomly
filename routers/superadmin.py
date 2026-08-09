@@ -31,13 +31,13 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import case, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from jose import JWTError, jwt
+from jose import jwt
 
-from auth import create_agency_token, hash_password, revoke_token
+from auth import create_agency_token, decode_token, hash_password, revoke_token
 from config import settings
 from database import get_db
 from limiter import limiter
-from models import Agency, Restaurant, RevokedToken, Subscription, SubscriptionPlan
+from models import Agency, Restaurant, Subscription, SubscriptionPlan
 from schemas import (
     SAAgencyCreateResponse,
     SAAgencyDetailResponse,
@@ -114,34 +114,19 @@ def get_current_superadmin(request: Request, db: Session = Depends(get_db)) -> d
     """
     Зависимость для всех superadmin-эндпоинтов.
 
-    Проверяет JWT и revocation. Сохраняет payload в request.state.jwt_payload
-    — superadmin /logout читает его оттуда без повторного decode.
+    Делегирует decode + revocation check в auth.decode_token() —
+    единственная точка логики, нет дублирования (F-09).
+    Сохраняет payload в request.state.jwt_payload для /logout.
     """
-    auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "):
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Не авторизован")
-    token = auth.split(" ", 1)[1]
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
-    except JWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Недействительный токен")
+    token = auth_header.split(" ", 1)[1]
+
+    payload = decode_token(token, db)  # decode + jti check + revocation check
 
     if payload.get("role") != SUPERADMIN_ROLE:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Нет доступа")
-
-    jti = payload.get("jti")
-    if not jti:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Токен устарел — войдите снова",
-        )
-
-    revoked = db.query(RevokedToken).filter(RevokedToken.jti == jti).first()
-    if revoked:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Токен отозван. Выполните вход снова.",
-        )
 
     request.state.jwt_payload = payload  # для logout
     return payload
