@@ -399,7 +399,7 @@ class RestaurantCreate(BaseModel):
     description: Optional[str] = Field(None, max_length=500)
     phone: Optional[str] = None
     address: Optional[str] = Field(None, max_length=300)
-    admin_password: str = Field(..., min_length=6, max_length=128)
+    admin_password: str = Field(..., min_length=8, max_length=128)
 
     logo_url: Optional[str] = None
     primary_color: Optional[str] = "#8B1A2E"
@@ -446,7 +446,7 @@ class RestaurantUpdate(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = Field(None, max_length=300)
     is_active: Optional[bool] = None
-    admin_password: Optional[str] = Field(None, min_length=6, max_length=128)
+    admin_password: Optional[str] = Field(None, min_length=8, max_length=128)
 
     logo_url: Optional[str] = None
     primary_color: Optional[str] = None
