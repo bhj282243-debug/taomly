@@ -466,7 +466,10 @@ def impersonate_agency(
     if not agency:
         raise HTTPException(status_code=404, detail="Агентство не найдено")
 
-    token = create_agency_token(agency)
+    token = create_agency_token(
+        agency,
+        impersonated_by=superadmin.get("sub", "unknown"),
+    )
     logger.warning(
         "Superadmin impersonate: superadmin=%s → agency_id=%s agency_email=%s",
         superadmin.get("sub", "unknown"),
