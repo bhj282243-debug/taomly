@@ -138,15 +138,7 @@ def _check_order_quota(db: Session, restaurant_id: int) -> None:
 # Заказ создаётся сразу со статусом "accepted" (авто-подтверждение).
 # Статус "new" оставлен в машине для совместимости на случай если
 # владелец захочет добавить ручное подтверждение заказов в будущем.
-VALID_STATUS_TRANSITIONS: dict[str, list[str]] = {
-    "new":                ["accepted", "cancelled"],
-    "accepted":           ["preparing", "cancelled"],
-    "preparing":          ["ready_for_delivery", "cancelled"],
-    "ready_for_delivery": ["delivering", "cancelled"],
-    "delivering":         ["completed"],
-    "completed":          [],
-    "cancelled":          [],
-}
+from status_transitions import ORDER_STATUS_TRANSITIONS as VALID_STATUS_TRANSITIONS
 
 
 # ──────────────────────────────────────────
