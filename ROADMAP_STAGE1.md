@@ -45,7 +45,7 @@
 | M-1 | WEBHOOK_SECRET logic duplicated in `api.py` and `agency.py` | `api.py`, `routers/agency.py` | ✅ Done |
 | M-2 | Product badges (#bestseller etc.) stored in description text — anti-pattern | `models.py`, `schemas.py`, `index.html` | ✅ Done |
 | M-3 | `OrderResponse` missing `updated_at` — no status change timestamp | `schemas.py` | ✅ Done |
-| M-4 | Duplicate `VALID_STATUS_TRANSITIONS` in orders, waiter_calls, reservations | 3 routers | ✅ Done |
+| M-4 | Duplicate `VALID_STATUS_TRANSITIONS` in orders, waiter_calls, reservations | 3 routers | ✅ Done (status_transitions.py) |
 | M-5 | `GET /api/restaurants/{slug}` embeds full menu — doubles `/api/menu/` | `routers/restaurants.py` | 📝 Documented |
 | M-6 | `agency_admin.html` active nav item missing contrast fix | `static/agency_admin.html` | ✅ Done (in C-3 fix) |
 | M-7 | No `robots.txt` / `sitemap.xml` — crawlers index admin panels | `static/` | ✅ Done |
