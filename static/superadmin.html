@@ -663,7 +663,7 @@ async function viewAgency(id,name) {
         <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line-soft)"><span style="color:var(--mist)">Статус</span>${badge(a.is_active)}</div>
         <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line-soft)"><span style="color:var(--mist)">Создано</span><span>${fmtDate(a.created_at)}</span></div>
         <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line-soft)"><span style="color:var(--mist)">Ресторанов</span><span><strong>${a.restaurants.length}</strong></span></div>
-        <div style="display:flex;justify-content:space-between;padding:8px 0"><span style="color:var(--mist)">MRR агентства</span><span style="color:var(--gold);font-weight:700">${fmtMoney(a.restaurants.filter(r=>r.is_active).length*600000)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0"><span style="color:var(--mist)">MRR агентства</span><span style="color:var(--gold);font-weight:700">—</span></div>
       </div>
       ${a.restaurants.length?`<div style="margin-top:16px"><div style="font-size:11px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Рестораны</div>
       ${a.restaurants.map(r=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line-soft)"><div><div style="font-size:13.5px;font-weight:600">${esc(r.name)}</div><div style="font-size:11.5px;color:var(--mist)">${esc(r.slug)}</div></div>${badge(r.is_active)}</div>`).join('')}</div>`:''}`;
@@ -737,10 +737,10 @@ async function loadFinance() {
   try {
     const res=await api('/api/superadmin/dashboard'); const d=await res.json();
     const active=d.restaurants.active;
-    const mrr=d.mrr||active*600000;
+    const mrr=d.mrr||0;
     const arr=mrr*12;
     const arpu=active>0?Math.round(mrr/active):0;
-    const potential=d.restaurants.total*600000;
+    const potential=0; // потенциальная выручка не вычисляется без реальных тарифов
     document.getElementById('f-mrr').textContent=fmtMoney(mrr);
     document.getElementById('f-arr').textContent=fmtMoney(arr);
     document.getElementById('f-arpu').textContent=fmtMoney(arpu);
@@ -752,8 +752,7 @@ async function loadFinance() {
     const ares=await api('/api/superadmin/agencies?limit=100'); const ad=await ares.json();
     const ftbody=document.getElementById('financeTable');
     ftbody.innerHTML=ad.items.length?ad.items.map(a=>{
-      const agMrr=a.restaurant_count*600000;
-      return `<tr><td><strong>${esc(a.name)}</strong></td><td>${a.restaurant_count}</td><td style="color:var(--gold);font-weight:700">${fmtMoney(agMrr)}</td><td>${badge(a.is_active)}</td></tr>`;
+      return `<tr><td><strong>${esc(a.name)}</strong></td><td>${a.restaurant_count}</td><td style="color:var(--gold);font-weight:700">—</td><td>${badge(a.is_active)}</td></tr>`;
     }).join(''):emptyRow(4,'Нет данных');
   } catch(e){console.error(e);}
 }
@@ -805,7 +804,7 @@ function renderNotifyHistory() {
 }
 
 // HELPERS
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function badge(active){return active?'<span class="badge badge-active">Активен</span>':'<span class="badge badge-inactive">Неактивен</span>';}
 function emptyRow(cols,msg){return`<tr><td colspan="${cols}" style="padding:32px;text-align:center;color:var(--mist)">${msg}</td></tr>`;}
 function fmtDate(iso){if(!iso)return'—';return new Date(iso).toLocaleDateString('ru-RU');}
@@ -857,20 +856,22 @@ async function loadSubscriptions() {
     document.getElementById('sub-free').textContent = free;
     document.getElementById('sub-expired').textContent = 0;
 
-    // Тарифные планы — берём из billing API если есть, иначе показываем дефолтные
+    // Тарифные планы — из реального billing API
     const tbody = document.getElementById('plansTable');
-    const plans = [
-      { name:'Starter', price:300000, restaurants: d.items.filter(r=>r.is_active).length, active:true },
-      { name:'Pro', price:600000, restaurants: 0, active:true },
-      { name:'Enterprise', price:1200000, restaurants: 0, active:true },
-    ];
-    tbody.innerHTML = plans.map(p=>`<tr>
-      <td><strong>${p.name}</strong></td>
-      <td style="color:var(--gold);font-weight:700">${fmtMoney(p.price)}</td>
-      <td>${p.restaurants}</td>
-      <td>${badge(p.active)}</td>
-      <td><button class="btn btn-ghost btn-sm">Редактировать</button></td>
-    </tr>`).join('');
+    try {
+      const plansRes = await api('/api/billing/plans');
+      const plans = await plansRes.json();
+      tbody.innerHTML = plans.length ? plans.map(p=>`<tr>
+        <td><strong>${esc(p.name)}</strong></td>
+        <td style="color:var(--gold);font-weight:700">${fmtMoney(p.price)}</td>
+        <td>—</td>
+        <td>${badge(p.is_active !== false)}</td>
+        <td><button class="btn btn-ghost btn-sm">Редактировать</button></td>
+      </tr>`).join('') : emptyRow(5, 'Нет тарифных планов');
+    } catch(e) {
+      tbody.innerHTML = emptyRow(5, 'Не удалось загрузить тарифы');
+      console.error('plans load error', e);
+    }
   } catch(e) { console.error(e); }
 }
 
