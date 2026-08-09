@@ -44,7 +44,7 @@ jobs:
         run: pip-audit -r requirements.txt --progress-spinner off
 
   test:
-    name: Tests
+    name: Tests (SQLite)
     runs-on: ubuntu-latest
     needs: lint
     env:
@@ -85,10 +85,61 @@ jobs:
           file: coverage.xml
           fail_ci_if_error: false
 
+  test-postgres:
+    name: Tests (PostgreSQL)
+    runs-on: ubuntu-latest
+    needs: lint
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: taomly
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: taomly_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    env:
+      DATABASE_URL: "postgresql://taomly:testpass@localhost:5432/taomly_test"
+      SECRET_KEY: "ci-secret-key-minimum-32-characters-ok"
+      WEBHOOK_URL: "https://test.taomly.uz"
+      BOT_TOKEN: ""
+      SENTRY_DSN: ""
+      SUPERADMIN_EMAIL: "superadmin@taomly.uz"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      - name: Generate FERNET_KEY for tests
+        run: |
+          FERNET_KEY=$(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+          echo "FERNET_KEY=$FERNET_KEY" >> $GITHUB_ENV
+      - name: Generate SUPERADMIN_PASSWORD_HASH for tests
+        run: |
+          SUPERADMIN_PASSWORD_HASH=$(python -c "from passlib.context import CryptContext; print(CryptContext(schemes=['bcrypt'], deprecated='auto').hash('ci-test-password'))")
+          echo "SUPERADMIN_PASSWORD_HASH=$SUPERADMIN_PASSWORD_HASH" >> $GITHUB_ENV
+      - name: Run Alembic migrations
+        run: alembic upgrade head
+      - name: Run tests
+        run: |
+          pytest tests/ -v
+
   docker:
     name: Docker Build
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test, test-postgres]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
