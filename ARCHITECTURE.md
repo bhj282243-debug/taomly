@@ -207,12 +207,13 @@ waiter_calls
 
 ## Known Technical Debt
 
+> **Note:** TD-4 (static manifest.json) was resolved — `GET /manifest.json` is dynamically generated per restaurant with per-brand `name`, `theme_color`, `background_color`, and icons.
+
 | ID | Description | Planned for |
 |----|-------------|-------------|
 | TD-1 | Sync SQLAlchemy blocks event loop | Stage 2 |
 | TD-2 | `_BOT_CACHE` in-process dict breaks with 2+ workers | Before scaling |
 | TD-3 | Webhook accepts raw `dict` — no Pydantic TelegramUpdate schema | Stage 2 |
-| TD-4 | `manifest.json` is static — no per-restaurant branding in PWA | Stage 2 |
 | TD-5 | Telegram notifications hardcoded in Uzbek — no i18n | Stage 2 |
 | TD-6 | No pagination on order history endpoint | Stage 2 |
 | TD-7 | No Redis — rate limiting state lost on restart | Before scaling |
