@@ -689,8 +689,7 @@ function renderStats(list) {
   animateCount('statTotal', list.length);
   const active = list.filter(r=>r.is_active).length;
   animateCount('statActive', active);
-  const mrr = active * 600000;
-  document.getElementById('statMrr').textContent = mrr > 0 ? (mrr/1000).toFixed(0)+'K сум' : '—';
+  document.getElementById('statMrr').textContent = '—';
   const thirtyDaysAgo = Date.now() - 30*24*3600*1000;
   animateCount('statNew', list.filter(r=>r.created_at && new Date(r.created_at).getTime()>thirtyDaysAgo).length);
 }
