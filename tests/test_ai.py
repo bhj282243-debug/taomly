@@ -79,12 +79,12 @@ def _raw_client(db):
     from auth import get_db
     app.dependency_overrides = {get_db: lambda: db}
     client = TestClient(app, raise_server_exceptions=False)
-    return client
+    return client, app  # возвращаем оба — app нужен для .clear() в тестах
 
 
 def test_generate_description_no_auth(db):
     """Без токена → 401/403."""
-    raw = _raw_client(db)
+    raw, app = _raw_client(db)
     response = raw.post(
         "/api/ai/generate-description",
         json={"dish_name": "Плов"},
@@ -95,7 +95,7 @@ def test_generate_description_no_auth(db):
 
 def test_translate_menu_no_auth(db):
     """Без токена → 401/403."""
-    raw = _raw_client(db)
+    raw, app = _raw_client(db)
     response = raw.post(
         "/api/ai/translate-menu",
         json={"items": [], "target_language": "uz"},
@@ -106,7 +106,7 @@ def test_translate_menu_no_auth(db):
 
 def test_suggest_tags_no_auth(db):
     """Без токена → 401/403."""
-    raw = _raw_client(db)
+    raw, app = _raw_client(db)
     response = raw.post(
         "/api/ai/suggest-tags",
         json={"dish_name": "Лагман"},
@@ -117,7 +117,7 @@ def test_suggest_tags_no_auth(db):
 
 def test_generate_seo_no_auth(db):
     """Без токена → 401/403."""
-    raw = _raw_client(db)
+    raw, app = _raw_client(db)
     response = raw.post(
         "/api/ai/generate-seo",
         json={"restaurant_name": "Чинор"},
