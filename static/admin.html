@@ -1320,7 +1320,7 @@ function _renderTopDishes(dishes){
   container.innerHTML=dishes.map(d=>`
     <div class="dish-row">
       <div class="dish-rank ${rankClasses[d.rank-1]||''}">${d.rank}</div>
-      <div class="dish-info"><div class="dish-name">${d.name}</div><div class="dish-qty">${d.qty} ta sotildi</div></div>
+      <div class="dish-info"><div class="dish-name">${esc(d.name)}</div><div class="dish-qty">${d.qty} ta sotildi</div></div>
       <div class="dish-revenue">${fmtShort(d.revenue)}</div>
     </div>`).join('');
 }
@@ -1467,7 +1467,7 @@ function _buildTableCard(t){
     </div>
     <div class="qr-canvas-wrap" id="${canvasId}"></div>
     <div class="qr-url-text">${url}</div>
-    <button class="qr-download-btn" onclick="downloadQR('${canvasId}','stol-${t.table_number}')">↓ PNG yuklab olish</button>`;
+    <button class="qr-download-btn" onclick="downloadQR('${canvasId}','stol-${esc(t.table_number)}')">↓ PNG yuklab olish</button>`;
   setTimeout(()=>{const el=document.getElementById(canvasId);if(el)makeQR(el,url);},30);
   return card;
 }
@@ -1708,4 +1708,4 @@ function _showNewOrderNotification(count){
 
 function _clearNewOrderIndicators(){
   const dot=document.getElementById('ordersDot');if(dot)dot.classList.remove('visible');
-  const cnt=document.getElemen
+  const cnt=document
