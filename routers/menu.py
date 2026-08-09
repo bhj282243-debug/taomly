@@ -33,7 +33,8 @@ from sqlalchemy.orm import Session, joinedload
 from auth import get_current_restaurant_admin
 from config import settings
 from database import get_db
-from models import Category, Product, Restaurant
+from models import Category, Product, Restaurant, Subscription, SubscriptionPlan
+from sqlalchemy import func
 from schemas import (
     CategoryResponse,
     ProductCreate,
@@ -66,6 +67,55 @@ def _get_active_restaurant(restaurant_id: int, db: Session) -> Restaurant:
             detail="Ресторан не найден",
         )
     return restaurant
+
+
+# ──────────────────────────────────────────
+# ХЕЛПЕР — проверка лимита продуктов по тарифу
+# ──────────────────────────────────────────
+def _check_products_quota(db: Session, restaurant_id: int) -> None:
+    """
+    Проверяет что ресторан не превысил лимит продуктов по текущему тарифному плану.
+
+    Алгоритм:
+      1. Загружает активную подписку ресторана.
+      2. Если подписки нет — считает ресторан на Free плане.
+      3. Если products_limit == -1 — безлимит, проверка не нужна.
+      4. Считает все продукты ресторана (включая недоступные).
+      5. Если лимит достигнут — возвращает HTTP 402 с понятным сообщением.
+
+    Вызывается в create_product до любой записи в БД.
+    """
+    sub = (
+        db.query(Subscription)
+        .filter(
+            Subscription.restaurant_id == restaurant_id,
+            Subscription.is_active == True,
+        )
+        .order_by(Subscription.started_at.desc())
+        .first()
+    )
+
+    if sub is None:
+        plan = db.query(SubscriptionPlan).filter(SubscriptionPlan.name == "Free").first()
+        if plan is None:
+            return
+    else:
+        plan = db.query(SubscriptionPlan).filter(SubscriptionPlan.id == sub.plan_id).first()
+        if plan is None:
+            return
+
+    if plan.products_limit == -1:
+        return
+
+    count = db.query(func.count(Product.id)).filter(
+        Product.restaurant_id == restaurant_id,
+    ).scalar() or 0
+
+    if count >= plan.products_limit:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=f"Лимит продуктов тарифа достигнут ({plan.products_limit}). Обновите тарифный план.",
+        )
 
 
 # ──────────────────────────────────────────
@@ -421,6 +471,8 @@ def create_product(
     из JWT-токена. Нельзя создать продукт в категории чужого ресторана.
     price > 0 проверяется в Pydantic схеме (ProductCreate).
     """
+    _check_products_quota(db, restaurant.id)
+
     category = db.query(Category).filter(
         Category.id == data.category_id,
         Category.restaurant_id == restaurant.id,
