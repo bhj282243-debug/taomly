@@ -27,12 +27,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-VALID_STATUS_TRANSITIONS: dict[str, list[str]] = {
-    "active":    ["accepted", "cancelled"],
-    "accepted":  ["completed", "cancelled"],
-    "completed": [],
-    "cancelled": [],
-}
+from status_transitions import WAITER_CALL_STATUS_TRANSITIONS as VALID_STATUS_TRANSITIONS
 
 
 # ──────────────────────────────────────────
