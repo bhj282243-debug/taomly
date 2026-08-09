@@ -13,8 +13,9 @@ We will respond within 48 hours.
 
 ## Authentication
 
-- Agency admin: JWT token (30 days expiry)
-- Restaurant admin: JWT token (30 days expiry)
+- Agency admin: JWT token (8 hours expiry, configurable via ACCESS_TOKEN_EXPIRE_HOURS)
+- Restaurant admin: JWT token (8 hours expiry, configurable via ACCESS_TOKEN_EXPIRE_HOURS)
+- Superadmin: JWT token (12 hours expiry, hardcoded)
 - Telegram users: HMAC-SHA256 signature verification per restaurant
 
 ---
@@ -30,16 +31,19 @@ We will respond within 48 hours.
 
 ## Rate Limiting
 
-- Agency registration: 5 requests / 10 minutes
-- Order creation: 60 requests / minute
-- General API: 100 requests / minute
+- Agency registration: 5 requests / hour
+- Order creation: 10 requests / minute
+- Order status fetch: 30 requests / minute
+- AI endpoints: 10 requests / minute
+- General API default: not set (planned, configurable via RATE_LIMIT_API env var)
 
 ---
 
 ## Infrastructure
 
 - HTTPS only (Render TLS)
-- Security headers: X-Content-Type-Options, X-Frame-Options, HSTS
+- Security headers: X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Content-Security-Policy
+- HSTS: planned (add Strict-Transport-Security header before production)
 - Database: Neon PostgreSQL (isolated, encrypted at rest)
 - Secrets stored as environment variables (never in code)
 
@@ -57,4 +61,5 @@ We will respond within 48 hours.
 
 | Version | Supported |
 |---------|-----------|
-| 1.x     | Yes       |
+| 2.1.x   | Yes       |
+| 1.x     | No        |
