@@ -167,5 +167,5 @@ First MRR target: **$300–500/month** (10 restaurants × $30–50)
 
 ---
 
-*Taomly v2.1.1 — White Label Multi-Tenant Restaurant SaaS Platform*
+*Taomly v2.1.0 — White Label Multi-Tenant Restaurant SaaS Platform*
 *Stack: FastAPI · PostgreSQL · Telegram Mini App · PWA · MIT License*
