@@ -51,20 +51,9 @@ router = APIRouter(prefix="/api/billing", tags=["billing"])
 
 
 # ──────────────────────────────────────────
-# HELPER — PostgreSQL advisory lock
+# HELPER — PostgreSQL advisory lock (F-32: вынесен в utils.py)
 # ──────────────────────────────────────────
-def _pg_advisory_lock(db: Session, lock_key: int) -> bool:
-    # Tries to acquire pg_try_advisory_xact_lock for lock_key.
-    # Returns True if acquired (or on SQLite/other engines).
-    # Returns False if already held by another concurrent request.
-    try:
-        row = db.execute(
-            text("SELECT pg_try_advisory_xact_lock(:key)"),
-            {"key": lock_key},
-        ).fetchone()
-        return bool(row[0]) if row else True
-    except Exception:
-        return True
+from utils import pg_advisory_lock as _pg_advisory_lock
 
 
 # ──────────────────────────────────────────
