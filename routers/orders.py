@@ -445,6 +445,7 @@ def update_order_status(
             Order.id == order_id,
             Order.restaurant_id == restaurant.id,
         )
+        .with_for_update()  # F-40: блокируем строку — защита от race condition
         .first()
     )
     if not order:
