@@ -107,7 +107,7 @@ patterns, similar restaurant digitalization gap.
 
 ### Factors That Increase Value
 
-- Clean, audited codebase with zero critical security issues
+- Codebase has undergone multiple security hardening passes and independent technical audit; one stored XSS finding was identified and patched before sale
 - Full documentation (architecture, API, security, deployment, buyer guide)
 - MIT license — no restrictions on resale or white-labeling
 - Working CI/CD pipeline with automated security audit
@@ -161,7 +161,7 @@ First MRR target: **$300–500/month** (10 restaurants × $30–50)
 
 1. **Finished product** — not a prototype. Orders flow end-to-end, Telegram notifications work, admin panels are complete.
 2. **Honest documentation** — known limitations are documented, not hidden.
-3. **Security audit completed** — zero critical issues confirmed by independent review.
+3. **Security audit completed** — prior review identified and resolved one stored XSS finding; independent re-audit recommended before closing.
 4. **Clear growth path** — 4-stage roadmap with concrete next steps.
 5. **Low operational cost** — Render Free + Neon Free = $0/month until revenue justifies upgrade.
 
