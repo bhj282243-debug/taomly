@@ -234,24 +234,22 @@ The platform bot sends users a Mini App link on `/start`.
 
 ## Step 9 — Restaurant Tables (for dine-in orders)
 
-⚠️ **Current limitation:** There is no UI or API for creating restaurant tables.
-The QR code tab in the admin panel generates QR images client-side but does **not** save records to the database.
+Restaurant tables are created via the admin panel or API — no direct SQL required.
 
-For dine-in orders to work, create table records manually in Neon SQL Editor:
+**Via admin panel (recommended):**
+Open the restaurant admin panel → QR Codes tab → enter table count → click Generate.
+Tables are saved to the database and QR images are available for download immediately.
 
-```sql
-INSERT INTO restaurant_tables (restaurant_id, table_number)
-VALUES
-  (1, 1),
-  (1, 2),
-  (1, 3);
+**Via API:**
+```
+POST /api/restaurants/me/tables
+Authorization: Bearer <restaurant_admin_token>
+Content-Type: application/json
+
+{"table_count": 10}
 ```
 
-Replace `1` with your restaurant's ID (visible in the URL when editing the restaurant).
-
-Then print the QR codes from the admin panel's QR tab — they will correctly resolve to the table IDs you just created.
-
-> A table management API is planned. See `KNOWN_LIMITATIONS.md`.
+The QR codes in the admin panel will correctly resolve to the table IDs created above.
 
 ---
 
