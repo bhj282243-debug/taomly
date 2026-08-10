@@ -33,7 +33,7 @@ from sqlalchemy.orm import Session, joinedload
 from auth import get_current_restaurant_admin
 from config import settings
 from database import get_db
-from models import Category, Product, Restaurant, Subscription, SubscriptionPlan
+from models import Category, Product, Restaurant, Subscription, SubscriptionPlan, UsageEvent
 from sqlalchemy import func
 from schemas import (
     CategoryResponse,
@@ -518,6 +518,19 @@ def create_product(
         "Продукт создан: product_id=%s name=%s restaurant_id=%s",
         product.id, data.name, restaurant.id,
     )
+
+    # Записываем событие создания продукта для биллинга/аудита.
+    # Ошибка записи не откатывает созданный продукт.
+    try:
+        db.add(UsageEvent(restaurant_id=restaurant.id, event_type="product_created"))
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.warning(
+            "Не удалось записать UsageEvent product_created: product_id=%s restaurant_id=%s",
+            product.id, restaurant.id,
+        )
+
     return product
 
 
@@ -654,6 +667,18 @@ def delete_product(
         "Продукт удалён: product_id=%s restaurant_id=%s",
         product_id, restaurant.id,
     )
+
+    # Записываем событие удаления продукта для биллинга/аудита.
+    # Ошибка записи не пробрасывается — продукт уже удалён.
+    try:
+        db.add(UsageEvent(restaurant_id=restaurant.id, event_type="product_deleted"))
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.warning(
+            "Не удалось записать UsageEvent product_deleted: product_id=%s restaurant_id=%s",
+            product_id, restaurant.id,
+        )
 
     # Удаляем фото из R2 после успешного commit
     if photo_url:
