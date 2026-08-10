@@ -165,9 +165,13 @@ class Restaurant(Base):
     # working_hours    — часы работы, отображаются клиенту на Hero-экране
     # delivery_fee     — стоимость доставки в сомах; 0 = бесплатно
     # min_order_amount — минимальная сумма заказа в сомах; 0 = без ограничений
+    # timezone         — IANA timezone для пиковых часов в аналитике,
+    #                    например "Asia/Tashkent" (UTC+5), "Asia/Almaty" (UTC+5/+6)
+    #                    Дефолт "Asia/Tashkent" — основной рынок (Узбекистан).
     working_hours    = Column(String(50), nullable=True)
     delivery_fee     = Column(Integer, default=0, nullable=False, server_default="0")
     min_order_amount = Column(Integer, default=0, nullable=False, server_default="0")
+    timezone         = Column(String(64), nullable=True, server_default="Asia/Tashkent")
 
     agency       = relationship("Agency", back_populates="restaurants", lazy="select")
     categories   = relationship("Category", back_populates="restaurant", lazy="select")
