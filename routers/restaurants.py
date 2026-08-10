@@ -59,10 +59,14 @@ router = APIRouter(prefix="/api/restaurants", tags=["restaurants"])
 # ──────────────────────────────────────────
 # Pydantic схема для настроек
 # ──────────────────────────────────────────
+_SAFE_TZ_RE_SETTINGS = __import__("re").compile(r"^[A-Za-z_]+/[A-Za-z_/]+$|^UTC$")
+
+
 class RestaurantSettingsUpdate(BaseModel):
-    working_hours: Optional[str] = None
-    delivery_fee: Optional[int] = None
+    working_hours:    Optional[str] = None
+    delivery_fee:     Optional[int] = None
     min_order_amount: Optional[int] = None
+    timezone:         Optional[str] = None
 
 
 # ──────────────────────────────────────────
@@ -113,17 +117,26 @@ def update_restaurant_settings(
                 detail="Минимальная сумма не может быть отрицательной",
             )
         restaurant.min_order_amount = data.min_order_amount
+    if data.timezone is not None:
+        tz = data.timezone.strip()
+        if not _SAFE_TZ_RE_SETTINGS.match(tz):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Невалидный timezone. Пример: Asia/Tashkent, Asia/Almaty, UTC",
+            )
+        restaurant.timezone = tz
 
     db.commit()
     db.refresh(restaurant)
 
     logger.info(
         "Restaurant settings updated: slug=%s working_hours=%s "
-        "delivery_fee=%s min_order_amount=%s",
+        "delivery_fee=%s min_order_amount=%s timezone=%s",
         restaurant.slug,
         restaurant.working_hours,
         restaurant.delivery_fee,
         restaurant.min_order_amount,
+        restaurant.timezone,
     )
 
     return RestaurantSettingsUpdateResponse(
@@ -131,6 +144,7 @@ def update_restaurant_settings(
         working_hours=restaurant.working_hours or "",
         delivery_fee=restaurant.delivery_fee or 0,
         min_order_amount=restaurant.min_order_amount or 0,
+        timezone=restaurant.timezone or "Asia/Tashkent",
     )
 
 
