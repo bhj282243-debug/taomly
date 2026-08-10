@@ -12,12 +12,19 @@ Pytest fixtures: in-memory SQLite DB, test client, pre-seeded data.
 import os
 import sys
 
-# Устанавливаем тестовые env vars ДО импорта config
+# Устанавливаем тестовые env vars ДО импорта config.
+#
+# ВАЖНО: FERNET_KEY должен быть валидным base64url-ключом 32 байта ДО импорта auth/config,
+# потому что config._validate_fernet_key() вызывается на уровне определения класса _Settings.
+# Ключ ниже детерминированный (sha256 от строки "taomly-test-fernet-key-deterministic"),
+# всегда один и тот же — тесты воспроизводимы без генерации в рантайме.
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-minimum-32-chars-here-ok")
-os.environ.setdefault("FERNET_KEY", "test-fernet-key-32-bytes-base64==")
+os.environ.setdefault("FERNET_KEY", "bQG9o6ru5yC7KSDNJaHlTYr4YEyAp7SDUAYZQQmygX4=")
 os.environ.setdefault("WEBHOOK_URL", "https://test.taomly.uz")
 os.environ.setdefault("BOT_TOKEN", "")
+# config._load_superadmin_password_hash() требует SUPERADMIN_PASSWORD или SUPERADMIN_PASSWORD_HASH
+os.environ.setdefault("SUPERADMIN_PASSWORD", "test-superadmin-password")
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -39,13 +46,10 @@ from auth import (
 )
 from database import Base, get_db
 
-# Генерируем реальный Fernet-ключ для тестов
-_FERNET_KEY = Fernet.generate_key().decode()
-os.environ["FERNET_KEY"] = _FERNET_KEY
-
-# Пересоздаём encrypt_token после установки реального ключа
-from cryptography.fernet import Fernet as _Fernet
-_fernet_test = _Fernet(_FERNET_KEY.encode())
+# Используем тот же детерминированный ключ что был задан до импортов.
+# Ключ уже валиден — config прошёл инициализацию без ошибок.
+_FERNET_KEY = os.environ["FERNET_KEY"]
+_fernet_test = Fernet(_FERNET_KEY.encode())
 
 
 def _encrypt(token: str) -> str:
