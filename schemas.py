@@ -658,6 +658,7 @@ class RestaurantSettingsResponse(BaseModel):
     working_hours:    str = ""
     delivery_fee:     int = 0
     min_order_amount: int = 0
+    timezone:         str = "Asia/Tashkent"
 
     model_config = ConfigDict(from_attributes=True)
 
