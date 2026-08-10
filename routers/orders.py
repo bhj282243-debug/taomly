@@ -15,6 +15,11 @@ routers/orders.py — Taomly Platform
     Гостевой пользователь (tg_user.id == 0) получает пустой список.
   - GET /my/{order_id} — один заказ клиента по ID (live-статус).
     Используется index.html для polling статуса после оформления заказа.
+
+Изменения v8 (Usage Events):
+  - create_order: после успешного commit пишет UsageEvent(event_type='order_created')
+    в таблицу usage_events. Ошибка записи события не откатывает заказ —
+    логируется предупреждение, заказ возвращается клиенту.
 """
 
 import logging
@@ -27,7 +32,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from auth import TelegramUser, get_current_restaurant_admin, get_telegram_user
 from database import get_db
-from models import Order, OrderItem, Product, Restaurant, RestaurantTable, Subscription, SubscriptionPlan
+from models import Order, OrderItem, Product, Restaurant, RestaurantTable, Subscription, SubscriptionPlan, UsageEvent, User
 from schemas import OrderCreate, OrderResponse, OrderStatusUpdate
 import handlers
 from limiter import limiter
@@ -215,8 +220,20 @@ def create_order(
             ),
         )
 
+    # Ищем User запись по telegram_id чтобы заполнить client_id (FK на users.id).
+    # Гостевой пользователь (tg_user.id == 0) не имеет записи в users — client_id = NULL.
+    client_db_id: int | None = None
+    if tg_user.id != 0:
+        user_row = db.query(User.id).filter(
+            User.telegram_id == tg_user.id,
+            User.restaurant_id == restaurant.id,
+        ).first()
+        if user_row:
+            client_db_id = user_row[0]
+
     order = Order(
         restaurant_id=restaurant.id,
+        client_id=client_db_id,
         client_telegram_id=tg_user.id,
         client_name=data.client_name or tg_user.display_name,
         client_phone=data.client_phone,
@@ -252,6 +269,19 @@ def create_order(
         .filter(Order.id == order.id)
         .first()
     )
+
+    # Записываем событие использования для биллинга/аудита.
+    # Ошибка записи события НЕ откатывает уже созданный заказ —
+    # квота всё равно пересчитывается из COUNT(orders) при следующем запросе.
+    try:
+        db.add(UsageEvent(restaurant_id=restaurant.id, event_type="order_created"))
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.warning(
+            "Не удалось записать UsageEvent order_created: order_id=%s restaurant_id=%s",
+            order_with_items.id, restaurant.id,
+        )
 
     background_tasks.add_task(
         handlers.notify_new_order,
