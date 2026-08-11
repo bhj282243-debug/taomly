@@ -62,11 +62,15 @@ router = APIRouter(prefix="/api/restaurants", tags=["restaurants"])
 _SAFE_TZ_RE_SETTINGS = __import__("re").compile(r"^[A-Za-z_]+/[A-Za-z_/]+$|^UTC$")
 
 
+_SUPPORTED_CURRENCIES = {"UZS", "KZT", "RUB", "USD", "TRY", "AED"}
+
+
 class RestaurantSettingsUpdate(BaseModel):
     working_hours:    Optional[str] = None
     delivery_fee:     Optional[int] = None
     min_order_amount: Optional[int] = None
     timezone:         Optional[str] = None
+    currency:         Optional[str] = None
 
 
 # ──────────────────────────────────────────
@@ -84,6 +88,8 @@ def get_restaurant_settings(
         working_hours=restaurant.working_hours or "",
         delivery_fee=restaurant.delivery_fee or 0,
         min_order_amount=restaurant.min_order_amount or 0,
+        timezone=getattr(restaurant, "timezone", None) or "Asia/Tashkent",
+        currency=getattr(restaurant, "currency", None) or "UZS",
     )
 
 
@@ -126,17 +132,30 @@ def update_restaurant_settings(
             )
         restaurant.timezone = tz
 
+    if data.currency is not None:
+        cur = data.currency.strip().upper()
+        if cur not in _SUPPORTED_CURRENCIES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Неподдерживаемая валюта '{cur}'. "
+                    f"Допустимые: {', '.join(sorted(_SUPPORTED_CURRENCIES))}"
+                ),
+            )
+        restaurant.currency = cur
+
     db.commit()
     db.refresh(restaurant)
 
     logger.info(
         "Restaurant settings updated: slug=%s working_hours=%s "
-        "delivery_fee=%s min_order_amount=%s timezone=%s",
+        "delivery_fee=%s min_order_amount=%s timezone=%s currency=%s",
         restaurant.slug,
         restaurant.working_hours,
         restaurant.delivery_fee,
         restaurant.min_order_amount,
         restaurant.timezone,
+        restaurant.currency,
     )
 
     return RestaurantSettingsUpdateResponse(
@@ -144,7 +163,8 @@ def update_restaurant_settings(
         working_hours=restaurant.working_hours or "",
         delivery_fee=restaurant.delivery_fee or 0,
         min_order_amount=restaurant.min_order_amount or 0,
-        timezone=restaurant.timezone or "Asia/Tashkent",
+        timezone=getattr(restaurant, "timezone", None) or "Asia/Tashkent",
+        currency=getattr(restaurant, "currency", None) or "UZS",
     )
 
 
@@ -202,6 +222,8 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
         "working_hours": restaurant.working_hours or "",
         "delivery_fee": restaurant.delivery_fee or 0,
         "min_order_amount": restaurant.min_order_amount or 0,
+        # Валюта ресторана: UZS, KZT, RUB, USD, TRY, AED
+        "currency": getattr(restaurant, "currency", None) or "UZS",
         # telegram_bot_token_encrypted намеренно не включён
         "categories": [
             {
