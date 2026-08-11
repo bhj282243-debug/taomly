@@ -177,6 +177,7 @@ def restaurant(db, agency) -> Restaurant:
         accent_color="#D4A853",
         telegram_bot_token_encrypted=_encrypt("1234567890:AAFakeTokenForTests"),
         telegram_dispatcher_id=12345678,
+        currency="UZS",
     )
     db.add(r)
     db.flush()
@@ -196,6 +197,7 @@ def restaurant2(db, agency2) -> Restaurant:
         accent_color="#C0A060",
         telegram_bot_token_encrypted=_encrypt("9876543210:AAFakeTokenForTests2"),
         telegram_dispatcher_id=87654321,
+        currency="USD",
     )
     db.add(r)
     db.flush()
@@ -203,7 +205,23 @@ def restaurant2(db, agency2) -> Restaurant:
 
 
 @pytest.fixture
-def category(db, restaurant) -> Category:
+def restaurant_rub(db, agency) -> Restaurant:
+    """Ресторан с валютой RUB — для тестов currency formatter."""
+    r = Restaurant(
+        agency_id=agency.id,
+        name="Moscow Restaurant",
+        slug="moscow",
+        admin_password_hash=hash_password("secret"),
+        primary_color="#1A1A2E",
+        secondary_color="#F0F0F0",
+        accent_color="#C0A060",
+        telegram_bot_token_encrypted=_encrypt("1111111111:AAFakeTokenRUB"),
+        telegram_dispatcher_id=11111111,
+        currency="RUB",
+    )
+    db.add(r)
+    db.flush()
+    return r
     c = Category(restaurant_id=restaurant.id, name="Горячие блюда", sort_order=1)
     db.add(c)
     db.flush()
