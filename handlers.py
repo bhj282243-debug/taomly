@@ -20,6 +20,7 @@ from config import settings
 import telebot
 
 from auth import decrypt_token
+from utils import format_price as _fmt_price
 
 logger = logging.getLogger(__name__)
 
@@ -308,8 +309,9 @@ def notify_new_order(order, items, restaurant) -> None:
     }
     type_label = order_type_labels.get(order.order_type, order.order_type)
 
+    _cur = getattr(restaurant, "currency", None) or "UZS"
     items_text = "".join(
-        f"  • {item.name} × {item.quantity} — {item.price * item.quantity:,} so'm\n"
+        f"  • {item.name} × {item.quantity} — {_fmt_price(item.price * item.quantity, _cur)}\n"
         for item in items
     )
 
@@ -337,7 +339,7 @@ def notify_new_order(order, items, restaurant) -> None:
         f"{'─' * 28}\n"
         f"{items_text}"
         f"{'─' * 28}\n"
-        f"💰 Jami: {int(order.total_amount):,} so'm"
+        f"💰 Jami: {_fmt_price(int(order.total_amount), _cur)}"
     )
 
     try:
@@ -416,7 +418,7 @@ def notify_client_accepted(order, restaurant) -> None:
     text = (
         f"✅ Buyurtmangiz qabul qilindi!\n"
         f"{'─' * 28}\n"
-        f"Buyurtma #{order.id} — {int(order.total_amount):,} so'm\n"
+        f"Buyurtma #{order.id} — {_fmt_price(int(order.total_amount), getattr(restaurant, 'currency', None) or 'UZS')}\n"
         f"Tez orada {action} 🙏"
     )
     _notify_client(order, restaurant, text, "notify_client_accepted")
@@ -427,7 +429,7 @@ def notify_client_preparing(order, restaurant) -> None:
     text = (
         f"👨\u200d🍳 Buyurtmangiz tayyorlanmoqda!\n"
         f"{'─' * 28}\n"
-        f"Buyurtma #{order.id} — {int(order.total_amount):,} so'm\n"
+        f"Buyurtma #{order.id} — {_fmt_price(int(order.total_amount), getattr(restaurant, 'currency', None) or 'UZS')}\n"
         f"Biroz kuting 🙏"
     )
     _notify_client(order, restaurant, text, "notify_client_preparing")
@@ -444,7 +446,7 @@ def notify_client_ready(order, restaurant) -> None:
     text = (
         f"🔔 Buyurtmangiz tayyor!\n"
         f"{'─' * 28}\n"
-        f"Buyurtma #{order.id} — {int(order.total_amount):,} so'm\n"
+        f"Buyurtma #{order.id} — {_fmt_price(int(order.total_amount), getattr(restaurant, 'currency', None) or 'UZS')}\n"
         f"{detail}"
     )
     _notify_client(order, restaurant, text, "notify_client_ready")
@@ -455,7 +457,7 @@ def notify_client_delivering(order, restaurant) -> None:
     text = (
         f"🚗 Kuryer yo'lda!\n"
         f"{'─' * 28}\n"
-        f"Buyurtma #{order.id} — {int(order.total_amount):,} so'm\n"
+        f"Buyurtma #{order.id} — {_fmt_price(int(order.total_amount), getattr(restaurant, 'currency', None) or 'UZS')}\n"
         f"Tez orada yetib boradi 📍"
     )
     _notify_client(order, restaurant, text, "notify_client_delivering")
@@ -466,7 +468,7 @@ def notify_client_completed(order, restaurant) -> None:
     text = (
         f"🎉 Buyurtma yetkazildi!\n"
         f"{'─' * 28}\n"
-        f"Buyurtma #{order.id} — {int(order.total_amount):,} so'm\n"
+        f"Buyurtma #{order.id} — {_fmt_price(int(order.total_amount), getattr(restaurant, 'currency', None) or 'UZS')}\n"
         f"Rahmat! Yana tashrif buyuring 🙏"
     )
     _notify_client(order, restaurant, text, "notify_client_completed")
@@ -478,7 +480,7 @@ def notify_client_cancelled(order, restaurant, comment: str = "") -> None:
     text = (
         f"❌ Buyurtma bekor qilindi.\n"
         f"{'─' * 28}\n"
-        f"Buyurtma #{order.id} — {int(order.total_amount):,} so'm"
+        f"Buyurtma #{order.id} — {_fmt_price(int(order.total_amount), getattr(restaurant, 'currency', None) or 'UZS')}"
         f"{reason}\n"
         f"Uzr so'raymiz 🙏"
     )
