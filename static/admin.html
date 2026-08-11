@@ -753,7 +753,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 <script>
 const API='';
 const SESSION_KEY='taomly_admin_session';
-let AUTH_TOKEN=null,RESTAURANT_ID=null,RESTAURANT_SLUG=null;
+let AUTH_TOKEN=null,RESTAURANT_ID=null,RESTAURANT_SLUG=null,RESTAURANT_CURRENCY='UZS';
 let allOrders=[],prevNewCount=0,soundEnabled=localStorage.getItem('taomly_sound')==='true';
 let currentFilter='active',currentPage='orders',menuData=null,editingProductId=null,analyticsPeriod='30d';
 let qrTables=[],qrCurrentTab='tables',qrPageInitialized=false;
@@ -928,7 +928,7 @@ function loadApp(){
   // Загружаем имя ресторана для заголовка
   fetch(`${API}/api/restaurants/${RESTAURANT_SLUG}`)
     .then(r=>r.ok?r.json():null)
-    .then(d=>{if(d?.name){document.getElementById('headerTitle').textContent=d.name;}})
+    .then(d=>{if(d?.name){document.getElementById('headerTitle').textContent=d.name;}if(d?.currency){RESTAURANT_CURRENCY=d.currency;}})
     .catch(()=>{});
   loadOrders();
 }
@@ -939,7 +939,7 @@ function doLogout(){
   if(AUTH_TOKEN){
     fetch(`${API}/api/agency/restaurant-logout`,{method:'POST',headers:authHeaders()}).catch(()=>{});
   }
-  AUTH_TOKEN=null;RESTAURANT_ID=null;RESTAURANT_SLUG=null;allOrders=[];menuData=null;
+  AUTH_TOKEN=null;RESTAURANT_ID=null;RESTAURANT_SLUG=null;RESTAURANT_CURRENCY='UZS';allOrders=[];menuData=null;
   sessionStorage.removeItem(SESSION_KEY);
   document.getElementById('mainApp').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
@@ -989,8 +989,30 @@ function getNextLabel(status){
   return labels[status] || null;
 }
 
-function fmt(p){return Number(p).toLocaleString('uz-UZ')+" so'm";}
-function fmtShort(p){if(p>=1000000)return(p/1000000).toFixed(1)+' mln';if(p>=1000)return(p/1000).toFixed(0)+' ming';return p.toLocaleString('uz-UZ');}
+// ── PRICE FORMATTER ─────────────────────────────────────────────────────────
+// Единый форматтер цен для admin.html. Использует RESTAURANT_CURRENCY.
+const _ADM_CURRENCY_FMT={
+  UZS:{pre:'',     suf:" so\u2019m",dec:0},
+  KZT:{pre:'',     suf:' \u20b8',   dec:0},
+  RUB:{pre:'',     suf:' \u20bd',   dec:0},
+  USD:{pre:'$',    suf:'',          dec:2},
+  TRY:{pre:'\u20ba',suf:'',        dec:2},
+  AED:{pre:'AED ', suf:'',          dec:2},
+};
+function fmt(p){
+  const c=RESTAURANT_CURRENCY||'UZS';
+  const f=_ADM_CURRENCY_FMT[c]||_ADM_CURRENCY_FMT.UZS;
+  if(f.dec===0){
+    const s=Math.round(Number(p)).toLocaleString('ru-RU');
+    return f.pre+s+f.suf;
+  }else{
+    return f.pre+parseFloat(p).toFixed(f.dec)+f.suf;
+  }
+}
+// fmtShort — сокращённый формат для KPI (без суффикса валюты, отдельно добавляется)
+function fmtShort(p){if(p>=1000000)return(p/1000000).toFixed(1)+' mln';if(p>=1000)return(p/1000).toFixed(0)+' ming';return Math.round(p).toLocaleString('ru-RU');}
+// fmtMoney — полный формат для суммы, используется в analytics KPI
+function fmtMoney(p){return fmt(p);}
 /* XSS-защита: экранирует HTML-спецсимволы перед вставкой в innerHTML */
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function timeAgo(dateStr){
@@ -1303,11 +1325,11 @@ async function _loadAnalyticsFromServer(period){
 }
 
 function _renderSummary(s){
-  document.getElementById('kpi-revenue').textContent=fmtShort(s.revenue)+" so'm";
+  document.getElementById('kpi-revenue').textContent=fmt(s.revenue);
   document.getElementById('kpi-revenue-sub').textContent=s.orders_completed+' ta bajarilgan';
   document.getElementById('kpi-orders').textContent=s.orders_total;
   document.getElementById('kpi-orders-sub').textContent=(s.orders_total-s.orders_completed-s.orders_cancelled)+' ta faol';
-  document.getElementById('kpi-avg').textContent=s.avg_check?fmtShort(s.avg_check)+" so'm":'—';
+  document.getElementById('kpi-avg').textContent=s.avg_check?fmt(s.avg_check):'—';
   document.getElementById('kpi-returning').textContent=s.returning_clients;
   document.getElementById('kpi-returning-sub').textContent=s.new_clients+' ta yangi';
 }
@@ -1688,12 +1710,4 @@ document.addEventListener('visibilitychange',()=>{
   if(!document.hidden&&AUTH_TOKEN&&RESTAURANT_ID){
     loadOrders();
     // Сбрасываем мигание title
-    if(_titleFlipInterval){clearInterval(_titleFlipInterval);_titleFlipInterval=null;document.title=_origTitle;}
-  }
-  _startPolling();
-});
-
-_startPolling();
-</script>
-</body>
-</html>
+    if(_titleFlipInterval){clearInterval(_titleFlipInterval);_titleFlipInterval=null
