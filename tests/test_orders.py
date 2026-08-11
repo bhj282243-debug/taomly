@@ -30,7 +30,7 @@ def test_create_takeaway_order(client, product):
     })
     assert resp.status_code == 201
     data = resp.json()
-    assert data["status"] == "new"
+    assert data["status"] == "accepted"   # заказ создаётся сразу accepted (авто-подтверждение)
     assert data["order_type"] == "takeaway"
     # total_amount = цена из БД (15000) * 2, не из запроса
     assert data["total_amount"] == 30000
@@ -110,7 +110,9 @@ def test_create_order_unavailable_product(client, product_unavailable):
         "order_type": "takeaway",
         "items": [{"product_id": product_unavailable.id, "quantity": 1}],
     })
-    assert resp.status_code == 404
+    # 400 Bad Request: продукт существует, но недоступен
+    assert resp.status_code == 400
+    assert "недоступен" in resp.json()["detail"]
 
 
 # ──────────────────────────────────────────
@@ -232,3 +234,268 @@ def test_get_orders_tenant_isolation(client, db, restaurant, restaurant2):
     order_ids = [o["id"] for o in resp.json()]
     # Заказ ресторана B не должен появиться в ответе ресторана A
     assert order_b.id not in order_ids
+
+
+# ══════════════════════════════════════════
+# TASK 1A — новые тесты
+# ══════════════════════════════════════════
+
+# ──────────────────────────────────────────
+# TEST 21: Product changed to unavailable after page load — still rejected
+# ──────────────────────────────────────────
+@pytest.mark.security
+def test_create_order_product_made_unavailable_after_load(client, db, product):
+    """
+    Race condition: клиент загрузил меню (продукт был available), затем
+    администратор выключил продукт. Повторный заказ должен быть отклонён.
+
+    Проверяет серверную валидацию is_available — не доверяем состоянию клиента.
+    """
+    # Сначала убеждаемся что продукт доступен
+    assert product.is_available is True
+
+    # Администратор выключает продукт
+    product.is_available = False
+    db.flush()
+
+    # Клиент пытается заказать (как будто не знает об изменении)
+    resp = client.post("/api/orders/", json={
+        "order_type": "takeaway",
+        "items": [{"product_id": product.id, "quantity": 1}],
+    })
+    assert resp.status_code == 400
+    assert "недоступен" in resp.json()["detail"]
+
+
+# ──────────────────────────────────────────
+# TEST 22: Product from another tenant rejected even if available
+# ──────────────────────────────────────────
+@pytest.mark.security
+def test_create_order_cross_tenant_product_rejected(client, db, agency2, restaurant2):
+    """
+    Продукт из ресторана B (доступный) нельзя заказать через ресторан A.
+    Tenant isolation: проверяется Product.restaurant_id == current_restaurant.id
+    """
+    from models import Category, Product
+
+    cat2 = Category(restaurant_id=restaurant2.id, name="Menu B", sort_order=1)
+    db.add(cat2)
+    db.flush()
+
+    product_b = Product(
+        restaurant_id=restaurant2.id,
+        category_id=cat2.id,
+        name="Чужое блюдо",
+        price=1,           # цена 1 — если бы прошло, был бы признак утечки
+        is_available=True,
+    )
+    db.add(product_b)
+    db.flush()
+
+    resp = client.post("/api/orders/", json={
+        "order_type": "takeaway",
+        "items": [{"product_id": product_b.id, "quantity": 1}],
+    })
+    assert resp.status_code == 404
+    # total_amount не должен использовать цену 1 из чужого ресторана
+    assert "total_amount" not in resp.json()
+
+
+# ──────────────────────────────────────────
+# TEST 23: Server ignores client-supplied price
+# ──────────────────────────────────────────
+@pytest.mark.security
+def test_order_total_uses_server_price_not_client(client, product, product2):
+    """
+    Клиент не может подменить цену через тело запроса.
+    total_amount считается строго из БД: product.price * quantity.
+    product  = 15000, product2 = 30000.
+    """
+    resp = client.post("/api/orders/", json={
+        "order_type": "takeaway",
+        "items": [
+            {"product_id": product.id,  "quantity": 2},
+            {"product_id": product2.id, "quantity": 1},
+        ],
+    })
+    assert resp.status_code == 201
+    # 15000*2 + 30000*1 = 60000
+    assert resp.json()["total_amount"] == 60000
+
+
+# ──────────────────────────────────────────
+# TEST 24: Nonexistent product_id → 404
+# ──────────────────────────────────────────
+@pytest.mark.integration
+def test_create_order_nonexistent_product(client):
+    """
+    product_id которого нет в БД → 404.
+    Защита от прямых API-запросов с произвольными ID.
+    """
+    resp = client.post("/api/orders/", json={
+        "order_type": "takeaway",
+        "items": [{"product_id": 999999999, "quantity": 1}],
+    })
+    assert resp.status_code == 404
+
+
+# ──────────────────────────────────────────
+# TEST 25: format_price — UZS
+# ──────────────────────────────────────────
+@pytest.mark.unit
+def test_format_price_uzs():
+    from utils import format_price
+    result = format_price(25000, "UZS")
+    # 25 000 so'm — пробел как разделитель тысяч (неразрывный \u00a0)
+    assert "25" in result
+    assert "000" in result
+    assert "so" in result
+
+
+# ──────────────────────────────────────────
+# TEST 26: format_price — KZT
+# ──────────────────────────────────────────
+@pytest.mark.unit
+def test_format_price_kzt():
+    from utils import format_price
+    result = format_price(25000, "KZT")
+    assert "25" in result
+    assert "\u20b8" in result   # ₸
+
+
+# ──────────────────────────────────────────
+# TEST 27: format_price — RUB
+# ──────────────────────────────────────────
+@pytest.mark.unit
+def test_format_price_rub():
+    from utils import format_price
+    result = format_price(1500, "RUB")
+    assert "1" in result
+    assert "500" in result
+    assert "\u20bd" in result   # ₽
+
+
+# ──────────────────────────────────────────
+# TEST 28: format_price — USD
+# ──────────────────────────────────────────
+@pytest.mark.unit
+def test_format_price_usd():
+    from utils import format_price
+    result = format_price(25, "USD")
+    assert result == "$25.00"
+
+
+# ──────────────────────────────────────────
+# TEST 29: format_price — TRY
+# ──────────────────────────────────────────
+@pytest.mark.unit
+def test_format_price_try():
+    from utils import format_price
+    result = format_price(25, "TRY")
+    assert "\u20ba" in result   # ₺
+    assert "25.00" in result
+
+
+# ──────────────────────────────────────────
+# TEST 30: format_price — AED
+# ──────────────────────────────────────────
+@pytest.mark.unit
+def test_format_price_aed():
+    from utils import format_price
+    result = format_price(25, "AED")
+    assert result == "AED 25.00"
+
+
+# ──────────────────────────────────────────
+# TEST 31: format_price — unknown currency fallback to UZS
+# ──────────────────────────────────────────
+@pytest.mark.unit
+def test_format_price_unknown_currency_fallback():
+    from utils import format_price
+    # Неизвестная валюта → fallback UZS, не ломается
+    result = format_price(1000, "XYZ")
+    assert "1" in result
+    assert "000" in result
+    assert "so" in result
+
+
+# ──────────────────────────────────────────
+# TEST 32: format_price — None currency → UZS default
+# ──────────────────────────────────────────
+@pytest.mark.unit
+def test_format_price_none_currency():
+    from utils import format_price
+    result = format_price(5000, None)
+    assert "so" in result
+
+
+# ──────────────────────────────────────────
+# TEST 33: Restaurant.currency field exists and defaults to UZS
+# ──────────────────────────────────────────
+@pytest.mark.integration
+def test_restaurant_currency_default(restaurant):
+    assert restaurant.currency == "UZS"
+
+
+# ──────────────────────────────────────────
+# TEST 34: Restaurant with RUB currency — price format in order error
+# ──────────────────────────────────────────
+@pytest.mark.integration
+def test_order_min_amount_error_uses_restaurant_currency(client, db, restaurant):
+    """
+    Сообщение об ошибке минимальной суммы заказа использует валюту ресторана,
+    а не hardcoded so'm.
+    """
+    from models import Category, Product
+
+    # Устанавливаем min_order_amount и RUB
+    restaurant.min_order_amount = 500
+    restaurant.currency = "RUB"
+    db.flush()
+
+    cat = Category(restaurant_id=restaurant.id, name="Тест", sort_order=99)
+    db.add(cat)
+    db.flush()
+
+    cheap = Product(
+        restaurant_id=restaurant.id,
+        category_id=cat.id,
+        name="Дешёвое блюдо",
+        price=10,
+        is_available=True,
+    )
+    db.add(cheap)
+    db.flush()
+
+    resp = client.post("/api/orders/", json={
+        "order_type": "delivery",
+        "address": "ул. Тестовая, 1",
+        "items": [{"product_id": cheap.id, "quantity": 1}],
+    })
+    assert resp.status_code == 400
+    detail = resp.json()["detail"]
+    # Должен содержать символ рубля, не so'm
+    assert "\u20bd" in detail   # ₽
+    assert "so'm" not in detail
+
+
+# ──────────────────────────────────────────
+# TEST 35: RestaurantPublicResponse includes currency
+# ──────────────────────────────────────────
+@pytest.mark.integration
+def test_restaurant_public_response_includes_currency(client, db, restaurant):
+    """
+    GET /api/restaurants/{slug} возвращает поле currency.
+    Фронтенд использует его для форматирования цен.
+    """
+    from models import Category
+    # Убедимся что у ресторана есть хотя бы одна категория (иначе пустой ответ не дойдёт)
+    cat = Category(restaurant_id=restaurant.id, name="Тест", sort_order=99)
+    db.add(cat)
+    db.flush()
+
+    resp = client.get(f"/api/restaurants/{restaurant.slug}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "currency" in data
+    assert data["currency"] == "UZS"
