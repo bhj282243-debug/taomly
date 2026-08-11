@@ -122,6 +122,10 @@ class Restaurant(Base):
     __tablename__ = "restaurants"
     __table_args__ = (
         Index("ix_restaurants_agency_active", "agency_id", "is_active"),
+        CheckConstraint(
+            "currency IN ('UZS', 'KZT', 'RUB', 'USD', 'TRY', 'AED')",
+            name="ck_restaurants_currency",
+        ),
     )
 
     id          = Column(BigInteger, primary_key=True)
@@ -172,6 +176,11 @@ class Restaurant(Base):
     delivery_fee     = Column(Integer, default=0, nullable=False, server_default="0")
     min_order_amount = Column(Integer, default=0, nullable=False, server_default="0")
     timezone         = Column(String(64), nullable=True, server_default="Asia/Tashkent")
+    # currency — валюта ресторана для отображения цен клиентам и в уведомлениях.
+    # НЕ путать с SubscriptionPlan.currency (биллинговая валюта тарифа).
+    # Допустимые значения: UZS, KZT, RUB, USD, TRY, AED.
+    # Добавлено миграцией 0007_add_restaurant_currency.
+    currency         = Column(String(10), nullable=False, server_default="UZS", default="UZS")
 
     agency       = relationship("Agency", back_populates="restaurants", lazy="select")
     categories   = relationship("Category", back_populates="restaurant", lazy="select")
