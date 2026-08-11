@@ -45,7 +45,7 @@ router = APIRouter()
 # ──────────────────────────────────────────
 # HELPER — PostgreSQL advisory lock (F-32: вынесен в utils.py)
 # ──────────────────────────────────────────
-from utils import pg_advisory_lock as _pg_advisory_lock
+from utils import pg_advisory_lock as _pg_advisory_lock, format_price as _fmt_price
 
 
 # ──────────────────────────────────────────
@@ -211,12 +211,13 @@ def create_order(
         and restaurant.min_order_amount
         and total < restaurant.min_order_amount
     ):
+        _cur = getattr(restaurant, "currency", None) or "UZS"
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
                 f"Минимальная сумма заказа для доставки: "
-                f"{restaurant.min_order_amount:,} so'm. "
-                f"Ваш заказ: {total:,} so'm."
+                f"{_fmt_price(restaurant.min_order_amount, _cur)}. "
+                f"Ваш заказ: {_fmt_price(total, _cur)}."
             ),
         )
 
