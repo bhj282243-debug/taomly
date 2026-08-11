@@ -659,6 +659,9 @@ class RestaurantSettingsResponse(BaseModel):
     delivery_fee:     int = 0
     min_order_amount: int = 0
     timezone:         str = "Asia/Tashkent"
+    # currency — валюта ресторана для отображения цен.
+    # Дефолт "UZS" обеспечивает обратную совместимость.
+    currency:         str = "UZS"
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -711,6 +714,9 @@ class RestaurantPublicResponse(BaseModel):
     working_hours:          str = ""
     delivery_fee:           int = 0
     min_order_amount:       int = 0
+    # Валюта ресторана для форматирования цен на фронтенде.
+    # Дефолт "UZS" обеспечивает обратную совместимость.
+    currency:               str = "UZS"
     # Menu (only available products, grouped by category)
     categories:             List[CategoryPublicResponse]
     # telegram_bot_token_encrypted намеренно отсутствует — защита токена
