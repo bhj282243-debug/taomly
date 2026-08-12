@@ -126,6 +126,10 @@ class Restaurant(Base):
             "currency IN ('UZS', 'KZT', 'RUB', 'USD', 'TRY', 'AED')",
             name="ck_restaurants_currency",
         ),
+        CheckConstraint(
+            "language IN ('uz', 'ru', 'en')",
+            name="ck_restaurants_language",
+        ),
     )
 
     id          = Column(BigInteger, primary_key=True)
@@ -181,6 +185,11 @@ class Restaurant(Base):
     # Допустимые значения: UZS, KZT, RUB, USD, TRY, AED.
     # Добавлено миграцией 0007_add_restaurant_currency.
     currency         = Column(String(10), nullable=False, server_default="UZS", default="UZS")
+    # language — язык клиентского UI и Telegram-уведомлений для клиентов ресторана.
+    # Допустимые значения: uz, ru, en.
+    # Дефолт 'uz' — основной рынок (Узбекистан).
+    # Добавлено миграцией 0008_add_restaurant_language.
+    language         = Column(String(5), nullable=False, server_default="uz", default="uz")
 
     agency       = relationship("Agency", back_populates="restaurants", lazy="select")
     categories   = relationship("Category", back_populates="restaurant", lazy="select")
