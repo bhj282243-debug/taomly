@@ -24,11 +24,48 @@
   "order.cancelled":  "Cancelled",
   "order.number":     "Order #{{id}}",
 
-  "validation.name_required":    "Name is required",
-  "validation.phone_required":   "Phone number is required",
-  "validation.address_required": "Delivery address is required",
+  "validation.name_required":    "Please enter your name",
+  "validation.phone_required":   "Please enter your phone number",
+  "validation.address_required": "Please enter a delivery address",
   "validation.minimum_order":    "Minimum order amount: {{amount}}",
   "validation.generic":          "Please check your input",
+
+  "hero.tagline":                "Restaurant experience",
+  "hero.open":                   "Open",
+  "hero.view_menu":              "View menu",
+
+  "popular.title":               "Popular",
+
+  "order.status_new":            "New",
+  "order.status_cancelled":      "Order cancelled",
+
+  "cart.order_type":             "Order type",
+  "cart.delivery":               "Delivery",
+  "cart.takeaway":               "Takeaway",
+  "cart.table_delivery":         "Your order will be delivered to your table",
+  "cart.table_label":            "Table #{{n}}",
+  "cart.total":                  "Total",
+  "cart.submit":                 "Place order",
+  "cart.submitting":             "Submitting\u2026",
+  "cart.item_count":             "{{n}} item(s)",
+
+  "checkout.name_placeholder":    "Your name",
+  "checkout.phone_placeholder":   "+1 XXX XXX XXXX",
+  "checkout.address_placeholder": "Delivery address",
+  "checkout.comment_placeholder": "Comment (optional)",
+  "checkout.delivery_fee":        "Delivery fee",
+
+  "modal.add":                   "Add to cart",
+
+  "success.order_number":        "Order number",
+  "success.back_to_menu":        "Back to menu",
+  "success.dine_in":             "Your order has been accepted! We'll bring it to your table shortly",
+  "success.takeaway":            "We'll let you know when it's ready",
+  "success.delivery":            "Your order is on its way",
+
+  "error.not_found":             "Restaurant not found.\nPlease scan the QR code.",
+  "error.retry":                 "Try again",
+  "error.generic":               "Error: {{message}}",
 
   "telegram.action.delivery":    "be delivered",
   "telegram.action.takeaway":    "be ready for pickup",
