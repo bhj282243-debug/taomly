@@ -1396,7 +1396,7 @@ svg{display:block;}
       <div class="spl-name" id="splashName">TAOMLY</div>
     </div>
     <div class="spl-thread"></div>
-    <div class="spl-tag">Fine Dining Experience</div>
+    <div class="spl-tag" data-i18n="hero.tagline">Fine Dining Experience</div>
   </div>
 </div>
 
@@ -1422,7 +1422,7 @@ svg{display:block;}
       <div class="hero-rule"><div class="hero-rule-diamond"></div></div>
       <div class="hero-chips">
         <div class="hero-chip open">
-          <div class="dot"></div>Ochiq
+          <div class="dot"></div><span data-i18n="hero.open">Ochiq</span>
         </div>
         <div class="hero-chip" id="heroAddr" style="display:none">
           <svg class="icon" viewBox="0 0 24 24"><path d="M12 21s-7-7.5-7-11a7 7 0 1 1 14 0c0 3.5-7 11-7 11z"/><circle cx="12" cy="10" r="2"/></svg>
@@ -1437,7 +1437,7 @@ svg{display:block;}
     <div class="hero-bottom">
       <button class="hero-btn" onclick="enterMenu()">
         <svg class="icon" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2"/></svg>
-        Смотреть меню
+        <span data-i18n="hero.view_menu">Смотреть меню</span>
       </button>
     </div>
   </div>
@@ -1451,7 +1451,7 @@ svg{display:block;}
         <div class="rest-emb-L" id="restaurantLetter">T</div>
       </div>
       <div class="rest-info">
-        <div class="rest-name" id="restaurantName">Yuklanmoqda…</div>
+        <div class="rest-name" id="restaurantName" data-i18n="common.loading">Yuklanmoqda…</div>
         <div class="rest-addr" id="restaurantAddress" style="display:none">
           <svg class="icon" viewBox="0 0 24 24"><path d="M12 21s-7-7.5-7-11a7 7 0 1 1 14 0c0 3.5-7 11-7 11z"/><circle cx="12" cy="10" r="2"/></svg>
           <span id="restaurantAddressText"></span>
@@ -1467,7 +1467,7 @@ svg{display:block;}
       <div class="welcome-text" id="welcomeText"></div>
     </div>
     <div id="popularSection" style="display:none" class="pop-rail">
-      <div class="pop-brow">Популярное</div>
+      <div class="pop-brow" data-i18n="popular.title">Популярное</div>
       <div class="pop-scroll" id="popularScroll"></div>
     </div>
     <div class="cat-nav" id="categoriesNav"></div>
@@ -1489,19 +1489,19 @@ svg{display:block;}
     <button class="back-btn" onclick="closeCart()">
       <svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
     </button>
-    <span class="scr-title">Savat</span>
+    <span class="scr-title" data-i18n="menu.cart">Savat</span>
   </div>
   <div class="cart-list" id="cartItemsList"></div>
   <div class="sec-block" id="orderTypeSection">
-    <div class="sec-brow">Buyurtma turi</div>
+    <div class="sec-brow" data-i18n="cart.order_type">Buyurtma turi</div>
     <div class="type-grid">
       <div class="type-btn active" id="typeDelivery" onclick="selectType('delivery')">
         <div class="type-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2"/><circle cx="17" cy="19" r="2"/><path d="M4 19h2l1.5-9H17l3 6h-2M7.5 10L6 5H3"/></svg></div>
-        <div class="type-lbl">Yetkazib berish</div>
+        <div class="type-lbl" data-i18n="cart.delivery">Yetkazib berish</div>
       </div>
       <div class="type-btn" id="typeTakeaway" onclick="selectType('takeaway')">
         <div class="type-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M4 9h16l-1.5 11a1 1 0 0 1-1 .9H6.5a1 1 0 0 1-1-.9L4 9zM8 9V6a4 4 0 0 1 8 0v3"/></svg></div>
-        <div class="type-lbl">Olib ketish</div>
+        <div class="type-lbl" data-i18n="cart.takeaway">Olib ketish</div>
       </div>
     </div>
   </div>
@@ -1509,42 +1509,42 @@ svg{display:block;}
     <div class="tbl-ban-ico"><svg class="icon" viewBox="0 0 24 24"><path d="M3 9h18v10H3zM7 9V6a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v3"/></svg></div>
     <div>
       <div class="tbl-ban-name" id="tableBannerTitle">Stol №1</div>
-      <div class="tbl-ban-sub">Buyurtma stolga yetkaziladi</div>
+      <div class="tbl-ban-sub" data-i18n="cart.table_delivery">Buyurtma stolga yetkaziladi</div>
     </div>
   </div>
   <div class="form-sec">
-    <div class="form-field"><input class="form-input" type="text" id="clientName" placeholder="Ismingiz"/></div>
+    <div class="form-field"><input class="form-input" type="text" id="clientName" placeholder="Ismingiz" data-i18n-placeholder="checkout.name_placeholder"/></div>
     <div class="form-field"><input class="form-input" type="tel" id="clientPhone" placeholder="+998 XX XXX XX XX" value="+998"/></div>
-    <div class="form-field"><input class="form-input" type="text" id="clientAddress" placeholder="Manzil (yetkazib berish uchun)"/></div>
-    <div class="form-field"><textarea class="form-input form-textarea" id="clientComment" placeholder="Izoh (ixtiyoriy)"></textarea></div>
+    <div class="form-field"><input class="form-input" type="text" id="clientAddress" placeholder="Manzil (yetkazib berish uchun)" data-i18n-placeholder="checkout.address_placeholder"/></div>
+    <div class="form-field"><textarea class="form-input form-textarea" id="clientComment" placeholder="Izoh (ixtiyoriy)" data-i18n-placeholder="checkout.comment_placeholder"></textarea></div>
   </div>
   <div class="sum-card">
     <div class="sum-row"><span id="summaryCount">0 ta taom</span><span id="summarySubtotal">0</span></div>
     <div class="sum-row" id="deliveryFeeRow" style="display:none">
-      <span>Yetkazib berish</span><span id="deliveryFeeVal">0</span>
+      <span data-i18n="checkout.delivery_fee">Yetkazib berish</span><span id="deliveryFeeVal">0</span>
     </div>
     <div class="sum-row" id="minOrderRow" style="display:none;color:var(--ink4);font-size:12px;">
       <span id="minOrderText"></span>
     </div>
     <div class="sum-rule"></div>
-    <div class="sum-row total"><span>Jami</span><span class="sum-val" id="summaryTotal">0</span></div>
+    <div class="sum-row total"><span data-i18n="cart.total">Jami</span><span class="sum-val" id="summaryTotal">0</span></div>
   </div>
-  <button class="checkout-btn" id="checkoutBtn" onclick="submitOrder()">Buyurtma berish</button>
+  <button class="checkout-btn" id="checkoutBtn" onclick="submitOrder()" data-i18n="cart.submit">Buyurtma berish</button>
 </div>
 
 <!-- SUCCESS -->
 <div id="successScreen" class="screen">
   <div class="succ-gem"><svg class="icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>
-  <div class="succ-title">Buyurtma qabul qilindi</div>
+  <div class="succ-title" data-i18n="order.accepted">Buyurtma qabul qilindi</div>
   <div class="succ-sub" id="successSubtitle">Tez orada siz bilan bog'lanamiz.</div>
   <div class="succ-id">
-    <div class="succ-id-lbl">Buyurtma raqami</div>
+    <div class="succ-id-lbl" data-i18n="success.order_number">Buyurtma raqami</div>
     <div class="succ-id-val" id="successOrderId">#0000</div>
   </div>
   <div class="order-status-block" id="orderStatusBlock" style="display:none">
     <div class="status-steps" id="statusSteps"></div>
   </div>
-  <button class="back-menu-btn" onclick="backToMenu()">Menyuga qaytish</button>
+  <button class="back-menu-btn" onclick="backToMenu()" data-i18n="success.back_to_menu">Menyuga qaytish</button>
 </div>
 
 <!-- MODAL -->
@@ -1573,7 +1573,7 @@ svg{display:block;}
   <div class="cart-cap" onclick="openCart()">
     <div class="cart-left">
       <div class="cart-gem"><span id="cartCountBadge">0</span></div>
-      <span class="cart-lbl">Savat</span>
+      <span class="cart-lbl" data-i18n="menu.cart">Savat</span>
     </div>
     <span class="cart-tot" id="cartTotalBar">0</span>
     <div class="cart-arr"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
@@ -1610,6 +1610,51 @@ const _CURRENCY_FMT={
   AED:{pre:'AED ',suf:'',        dec:2},
 };
 function _getCurrency(){return (restaurant&&restaurant.currency)||'UZS';}
+
+// ── I18N ──────────────────────────────────────────────────────────────────────
+// PHASE 3.2: Frontend translation loader.
+// Language source: restaurant.language ONLY.
+// Currency (restaurant.currency) is independent — not affected here.
+window._i18n={};
+window._lang='uz';
+
+function t(key,vars){
+  const val=window._i18n[key]||key;
+  if(!vars)return val;
+  return val.replace(/\{\{(\w+)\}\}/g,(_,k)=>vars[k]!=null?vars[k]:'');
+}
+
+async function loadI18n(lang){
+  const allowed=['uz','ru','en'];
+  window._lang=allowed.includes(lang)?lang:'uz';
+  try{
+    const res=await fetch(`/i18n/${window._lang}.json`);
+    if(!res.ok)throw new Error('i18n fetch failed');
+    window._i18n=await res.json();
+  }catch(e){
+    // Fallback: keep whatever is already loaded (or empty = keys shown as-is)
+    console.warn('[i18n] Failed to load',window._lang,e.message);
+    if(window._lang!=='uz'){
+      // Try UZ fallback
+      try{const fb=await fetch('/i18n/uz.json');if(fb.ok)window._i18n=await fb.json();}
+      catch(_){}
+    }
+  }
+}
+
+function applyI18n(){
+  document.documentElement.lang=window._lang;
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key=el.getAttribute('data-i18n');
+    el.textContent=t(key);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{
+    const key=el.getAttribute('data-i18n-placeholder');
+    el.placeholder=t(key);
+  });
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function fmt(p){
   const c=_getCurrency();
   const f=_CURRENCY_FMT[c]||_CURRENCY_FMT.UZS;
@@ -1674,13 +1719,18 @@ function enterMenu(){
 async function loadMenu(){
   if(!restaurantSlug){
     const s=document.getElementById('splash');if(s)s.style.display='none';
-    document.body.insertAdjacentHTML('beforeend',`<div style="position:fixed;inset:0;z-index:9999;background:#F4F1EA;display:flex;align-items:center;justify-content:center;padding:32px;text-align:center"><div style="color:#7A5C10;font-size:15px;line-height:1.8">Restoran topilmadi.<br>Iltimos, QR-kodni skanerlang.<br><span style="font-size:48px;display:block;margin:18px 0">📷</span><span style="font-size:13px;opacity:.7">Restaurant not found — please scan the QR code</span></div></div>`);
+    // i18n не загружен — используем UZ fallback из JSON напрямую
+    const msg=t('error.not_found')||'Restoran topilmadi.\nIltimos, QR-kodni skanerlang.';
+    const retry=t('error.retry')||'Qayta urinish';
+    document.body.insertAdjacentHTML('beforeend',`<div style="position:fixed;inset:0;z-index:9999;background:#F4F1EA;display:flex;align-items:center;justify-content:center;padding:32px;text-align:center"><div style="color:#7A5C10;font-size:15px;line-height:1.8">${esc(msg).replace('\n','<br>')}<br><span style="font-size:48px;display:block;margin:18px 0">📷</span></div></div>`);
     return;
   }
   try{
     const res=await fetch(`${API_BASE}/api/restaurants/${restaurantSlug}`);
-    if(!res.ok)throw new Error('Server xatosi');
+    if(!res.ok)throw new Error(t('error.server')||'Server xatosi');
     restaurant=await res.json();
+    await loadI18n(restaurant.language);
+    applyI18n();
     applyBrandTheme(restaurant);
     document.getElementById('restaurantName').textContent=restaurant.name;
     const lw=document.getElementById('restaurantLogo');
@@ -1688,7 +1738,7 @@ async function loadMenu(){
     else{const L=esc((restaurant.name||'T')[0].toUpperCase());lw.innerHTML=`<div class="rest-emb-L">${L}</div>`;}
     if(restaurant.address){document.getElementById('restaurantAddressText').textContent=restaurant.address;document.getElementById('restaurantAddress').style.display='flex';}
     if(restaurant.welcome_text){document.getElementById('welcomeText').textContent=restaurant.welcome_text;document.getElementById('welcomeLine').style.display='block';}
-    if(tableNumber){document.getElementById('tableBadgeText').textContent='Stol №'+tableNumber;document.getElementById('tableBadge').style.display='inline-flex';await resolveTableId();}
+    if(tableNumber){document.getElementById('tableBadgeText').textContent=t('cart.table_label',{n:tableNumber});document.getElementById('tableBadge').style.display='inline-flex';await resolveTableId();}
     renderPopular();renderCategories();renderMenu();
     setTimeout(()=>{
       document.getElementById('splash').classList.add('out');
@@ -1700,7 +1750,8 @@ async function loadMenu(){
     },800);
   }catch(e){
     const s=document.getElementById('splash');if(s)s.style.display='none';
-    document.body.insertAdjacentHTML('beforeend',`<div style="position:fixed;inset:0;z-index:9999;background:#F4F1EA;display:flex;align-items:center;justify-content:center;padding:32px;text-align:center"><div style="color:#7A5C10;font-size:15px;line-height:1.8">${e.message}<br><br><button onclick="location.reload()" style="margin-top:16px;padding:12px 32px;background:#7A5C10;color:#FAF8F3;border:none;border-radius:100px;font-size:14px;font-weight:600;cursor:pointer">Qayta urinish</button></div></div>`);
+    const retry=t('error.retry')||'Qayta urinish';
+    document.body.insertAdjacentHTML('beforeend',`<div style="position:fixed;inset:0;z-index:9999;background:#F4F1EA;display:flex;align-items:center;justify-content:center;padding:32px;text-align:center"><div style="color:#7A5C10;font-size:15px;line-height:1.8">${esc(e.message)}<br><br><button onclick="location.reload()" style="margin-top:16px;padding:12px 32px;background:#7A5C10;color:#FAF8F3;border:none;border-radius:100px;font-size:14px;font-weight:600;cursor:pointer">${esc(retry)}</button></div></div>`);
   }
 }
 
@@ -1741,7 +1792,7 @@ function renderMenu(){
   (restaurant.categories||[]).forEach(cat=>{
     if(!cat.products||!cat.products.length)return;
     const sec=document.createElement('div');sec.className='cat-sec';sec.id='cat-'+cat.id;
-    sec.innerHTML=`<div class="cat-head"><div class="cat-title">${esc(cat.name)}<span class="cat-cnt">${cat.products.length} ta</span></div></div><div class="prod-grid" id="grid-${cat.id}"></div>`;
+    sec.innerHTML=`<div class="cat-head"><div class="cat-title">${esc(cat.name)}<span class="cat-cnt">${t('menu.product_count',{n:cat.products.length})}</span></div></div><div class="prod-grid" id="grid-${cat.id}"></div>`;
     c.appendChild(sec);
     const grid=sec.querySelector('#grid-'+cat.id);
     cat.products.forEach(p=>grid.appendChild(makeCard(p)));
@@ -1791,7 +1842,7 @@ function makeCard(p){
         <div class="pphoto-ph">
           <div class="pphoto-ph-center">
             <div class="ph-crest"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a4 4 0 0 1 0 8M6 4v16M6 4c0 2.5 2.5 2.5 2.5 5S6 11.5 6 14"/></svg></div>
-            <div class="ph-label">Fine Dining</div>
+            <div class="ph-label">${t('menu.fine_dining')}</div>
           </div>
         </div>
         <div class="pphoto-overlay"></div>${bh}
@@ -1858,7 +1909,7 @@ function openProductModal(id){
 function refreshModalCtrl(){
   const id=productModalCurrentId,p=findProduct(id);if(!p)return;
   const qty=cart[id]?.qty||0,ctrl=document.getElementById('productModalCtrl');
-  if(qty===0){ctrl.innerHTML=`<button class="modal-add-btn" onclick="addItem(${id});refreshModalCtrl()"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Qo'shish</button>`;}
+  if(qty===0){ctrl.innerHTML=`<button class="modal-add-btn" onclick="addItem(${id});refreshModalCtrl()"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> ${t('modal.add')}</button>`;}
   else{ctrl.innerHTML=`<div class="modal-qty"><button class="qty-ring" style="width:42px;height:42px" onclick="changeQty(${id},-1)"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button><span class="qty-digit" style="font-size:22px;min-width:28px">${qty}</span><button class="qty-ring" style="width:42px;height:42px" onclick="changeQty(${id},1)"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div>`;}
 }
 function closeProductModal(){document.getElementById('productModalOverlay').classList.remove('active');productModalCurrentId=null;}
@@ -1910,7 +1961,7 @@ function _updateDeliveryRow(){
   if(minRow){
     if(min>0&&total<min){
       document.getElementById('minOrderText').textContent=
-        `Minimal buyurtma: ${fmt(min)} (yana ${fmt(min-total)} qo'shing)`;
+        t('validation.minimum_order_hint',{amount:fmt(min),remaining:fmt(min-total)});
       minRow.style.display='flex';
     }else{
       minRow.style.display='none';
@@ -1959,7 +2010,7 @@ function renderCart(){
 
     list.appendChild(div);
   });
-  document.getElementById('summaryCount').textContent=cartCount()+' ta taom';
+  document.getElementById('summaryCount').textContent=t('cart.item_count',{n:cartCount()});
   document.getElementById('summarySubtotal').textContent=fmt(cartTotal());
   document.getElementById('summaryTotal').textContent=fmt(cartTotal());
   _updateDeliveryRow();
@@ -1969,7 +2020,7 @@ function renderCart(){
     document.getElementById('clientName').style.display='none';
     document.getElementById('clientPhone').style.display='none';
     document.getElementById('tableBanner').style.display='flex';
-    document.getElementById('tableBannerTitle').textContent='Stol №'+tableNumber;
+    document.getElementById('tableBannerTitle').textContent=t('cart.table_label',{n:tableNumber});
   }else{
     document.getElementById('orderTypeSection').style.display='block';
     document.getElementById('tableBanner').style.display='none';
@@ -1987,37 +2038,41 @@ async function submitOrder(){
   const phone=document.getElementById('clientPhone').value.trim();
   const address=document.getElementById('clientAddress').value.trim();
   const comment=document.getElementById('clientComment').value.trim();
-  if(orderType!=='dine_in'){if(!name){showToast('Ismingizni kiriting');return;}if(!phone||phone==='+998'){showToast('Telefon raqamingizni kiriting');return;}}
-  if(orderType==='delivery'&&!address){showToast('Manzilni kiriting');return;}
+  if(orderType!=='dine_in'){if(!name){showToast(t('validation.name_required'));return;}if(!phone||phone==='+998'){showToast(t('validation.phone_required'));return;}}
+  if(orderType==='delivery'&&!address){showToast(t('validation.address_required'));return;}
   // Проверка минимальной суммы заказа
   const minAmt=restaurant?.min_order_amount||0;
   if(minAmt>0&&cartTotal()<minAmt){
-    showToast(`Minimal buyurtma summasi: ${fmt(minAmt)}`);return;
+    showToast(t('validation.minimum_order',{amount:fmt(minAmt)}));return;
   }
   const tg=window.Telegram?.WebApp;
   const initData=tg?.initData;
-  btn.disabled=true;btn.textContent='Yuborilmoqda…';
+  btn.disabled=true;btn.textContent=t('cart.submitting');
   const payload={client_name:name||null,client_phone:orderType==='dine_in'?null:(phone||null),order_type:orderType,address:orderType==='delivery'?address:null,table_id:orderType==='dine_in'?tableDbId:null,comment:comment||null,items:cartItems().map(i=>({product_id:i.id,quantity:i.qty}))};
   try{
     const headers={'Content-Type':'application/json','X-Restaurant-Id':String(restaurant.id)};
     if(initData)headers['X-Telegram-Init-Data']=initData;
     const res=await fetch(`${API_BASE}/api/orders/`,{method:'POST',headers,body:JSON.stringify(payload)});
-    if(!res.ok){const e=await res.json();const msg=Array.isArray(e.detail)?e.detail.map(x=>x.msg||JSON.stringify(x)).join(', '):(typeof e.detail==='string'?e.detail:JSON.stringify(e.detail)||'Xato');throw new Error(msg);}
+    if(!res.ok){const e=await res.json();const msg=Array.isArray(e.detail)?e.detail.map(x=>x.msg||JSON.stringify(x)).join(', '):(typeof e.detail==='string'?e.detail:JSON.stringify(e.detail)||t('common.error'));throw new Error(msg);}
     const order=await res.json();showSuccess(order.id);
-  }catch(e){showToast('Xato: '+e.message);btn.disabled=false;btn.textContent='Buyurtma berish';}
+  }catch(e){showToast(t('error.generic',{message:e.message}));btn.disabled=false;btn.textContent=t('cart.submit');}
 }
 
 // ── Live Order Status ──────────────────────────────────────────────
 const STATUS_STEPS_DELIVERY  = ['new','preparing','delivering','completed'];
 const STATUS_STEPS_TAKEAWAY  = ['new','preparing','completed'];
 const STATUS_STEPS_DINE      = ['new','preparing','completed'];
-const STATUS_LABELS = {
-  new:'Yangi',
-  preparing:'Tayyorlanmoqda',
-  delivering:'Yetkazilmoqda',
-  completed:'Tayyor',
-  cancelled:'Bekor qilindi',
-};
+
+// STATUS_LABELS — пересоздаётся после loadI18n() чтобы использовать текущий язык
+function _getStatusLabels(){
+  return {
+    new:        t('order.status_new'),
+    preparing:  t('order.preparing'),
+    delivering: t('order.delivering'),
+    completed:  t('order.ready'),
+    cancelled:  t('order.cancelled'),
+  };
+}
 
 let _pollingTimer=null,_pollingOrderId=null,_pollingHeaders=null;
 
@@ -2040,19 +2095,20 @@ function _renderStatusSteps(currentStatus,type){
   const container=document.getElementById('statusSteps');
   if(!block||!container)return;
   if(currentStatus==='cancelled'){
-    container.innerHTML=`<div class="status-cancelled">Buyurtma bekor qilindi</div>`;
+    container.innerHTML=`<div class="status-cancelled">${t('order.status_cancelled')}</div>`;
     block.style.display='block';
     return;
   }
   const steps=_getStepsForType(type);
   const currentIdx=steps.indexOf(_mapStatus(currentStatus,type));
+  const labels=_getStatusLabels();
   let html='';
   steps.forEach((s,i)=>{
     let cls='status-step';
     if(i<currentIdx)cls+=' done';
     else if(i===currentIdx)cls+=' active';
     const check=`<svg class="step-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>`;
-    html+=`<div class="${cls}"><div class="step-dot"></div><span class="step-label">${STATUS_LABELS[s]||s}</span>${check}</div>`;
+    html+=`<div class="${cls}"><div class="step-dot"></div><span class="step-label">${labels[s]||s}</span>${check}</div>`;
   });
   container.innerHTML=html;
   block.style.display='block';
@@ -2075,7 +2131,7 @@ async function _pollOrderStatus(){
 
 function showSuccess(orderId){
   document.getElementById('successOrderId').textContent='#'+String(orderId).padStart(4,'0');
-  const msgs={dine_in:'Buyurtmangiz qabul qilindi! Tez orada stolga yetkaziladi',takeaway:"Tayyor bo'lganda xabar beramiz",delivery:'Tez orada yetkaziladi'};
+  const msgs={dine_in:t('success.dine_in'),takeaway:t('success.takeaway'),delivery:t('success.delivery')};
   document.getElementById('successSubtitle').textContent=msgs[orderType]||msgs.delivery;
   document.getElementById('cartScreen').classList.remove('active');
   document.getElementById('successScreen').classList.add('active');
