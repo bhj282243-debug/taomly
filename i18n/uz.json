@@ -24,11 +24,48 @@
   "order.cancelled":  "Bekor qilindi",
   "order.number":     "Buyurtma #{{id}}",
 
-  "validation.name_required":    "Ism kiritish shart",
-  "validation.phone_required":   "Telefon raqam kiritish shart",
-  "validation.address_required": "Manzil kiritish shart",
+  "validation.name_required":    "Ismingizni kiriting",
+  "validation.phone_required":   "Telefon raqamingizni kiriting",
+  "validation.address_required": "Manzilni kiriting",
   "validation.minimum_order":    "Minimal buyurtma summasi: {{amount}}",
   "validation.generic":          "Ma'lumotlarni tekshiring",
+
+  "hero.tagline":                "Restoran tajribasi",
+  "hero.open":                   "Ochiq",
+  "hero.view_menu":              "Menuni ko'rish",
+
+  "popular.title":               "Mashhurlar",
+
+  "order.status_new":            "Yangi",
+  "order.status_cancelled":      "Buyurtma bekor qilindi",
+
+  "cart.order_type":             "Buyurtma turi",
+  "cart.delivery":               "Yetkazib berish",
+  "cart.takeaway":               "Olib ketish",
+  "cart.table_delivery":         "Buyurtma stolga yetkaziladi",
+  "cart.table_label":            "Stol \u2116{{n}}",
+  "cart.total":                  "Jami",
+  "cart.submit":                 "Buyurtma berish",
+  "cart.submitting":             "Yuborilmoqda\u2026",
+  "cart.item_count":             "{{n}} ta taom",
+
+  "checkout.name_placeholder":    "Ismingiz",
+  "checkout.phone_placeholder":   "+998 XX XXX XX XX",
+  "checkout.address_placeholder": "Manzil (yetkazib berish uchun)",
+  "checkout.comment_placeholder": "Izoh (ixtiyoriy)",
+  "checkout.delivery_fee":        "Yetkazib berish",
+
+  "modal.add":                   "Qo\u2019shish",
+
+  "success.order_number":        "Buyurtma raqami",
+  "success.back_to_menu":        "Menyuga qaytish",
+  "success.dine_in":             "Buyurtmangiz qabul qilindi! Tez orada stolga yetkaziladi",
+  "success.takeaway":            "Tayyor bo\u2019lganda xabar beramiz",
+  "success.delivery":            "Tez orada yetkaziladi",
+
+  "error.not_found":             "Restoran topilmadi.\nIltimos, QR-kodni skanerlang.",
+  "error.retry":                 "Qayta urinish",
+  "error.generic":               "Xato: {{message}}",
 
   "telegram.action.delivery":    "yetkazib beriladi",
   "telegram.action.takeaway":    "olib ketishingiz mumkin",
