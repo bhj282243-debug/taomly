@@ -63,6 +63,7 @@ _SAFE_TZ_RE_SETTINGS = __import__("re").compile(r"^[A-Za-z_]+/[A-Za-z_/]+$|^UTC$
 
 
 _SUPPORTED_CURRENCIES = {"UZS", "KZT", "RUB", "USD", "TRY", "AED"}
+_SUPPORTED_LANGUAGES  = {"uz", "ru", "en"}
 
 
 class RestaurantSettingsUpdate(BaseModel):
@@ -71,6 +72,7 @@ class RestaurantSettingsUpdate(BaseModel):
     min_order_amount: Optional[int] = None
     timezone:         Optional[str] = None
     currency:         Optional[str] = None
+    language:         Optional[str] = None
 
 
 # ──────────────────────────────────────────
@@ -90,6 +92,7 @@ def get_restaurant_settings(
         min_order_amount=restaurant.min_order_amount or 0,
         timezone=getattr(restaurant, "timezone", None) or "Asia/Tashkent",
         currency=getattr(restaurant, "currency", None) or "UZS",
+        language=getattr(restaurant, "language", None) or "uz",
     )
 
 
@@ -144,18 +147,31 @@ def update_restaurant_settings(
             )
         restaurant.currency = cur
 
+    if data.language is not None:
+        lang = data.language.strip().lower()
+        if lang not in _SUPPORTED_LANGUAGES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Неподдерживаемый язык '{lang}'. "
+                    f"Допустимые: {', '.join(sorted(_SUPPORTED_LANGUAGES))}"
+                ),
+            )
+        restaurant.language = lang
+
     db.commit()
     db.refresh(restaurant)
 
     logger.info(
         "Restaurant settings updated: slug=%s working_hours=%s "
-        "delivery_fee=%s min_order_amount=%s timezone=%s currency=%s",
+        "delivery_fee=%s min_order_amount=%s timezone=%s currency=%s language=%s",
         restaurant.slug,
         restaurant.working_hours,
         restaurant.delivery_fee,
         restaurant.min_order_amount,
         restaurant.timezone,
         restaurant.currency,
+        getattr(restaurant, "language", "uz"),
     )
 
     return RestaurantSettingsUpdateResponse(
@@ -165,6 +181,7 @@ def update_restaurant_settings(
         min_order_amount=restaurant.min_order_amount or 0,
         timezone=getattr(restaurant, "timezone", None) or "Asia/Tashkent",
         currency=getattr(restaurant, "currency", None) or "UZS",
+        language=getattr(restaurant, "language", None) or "uz",
     )
 
 
@@ -224,6 +241,8 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
         "min_order_amount": restaurant.min_order_amount or 0,
         # Валюта ресторана: UZS, KZT, RUB, USD, TRY, AED
         "currency": getattr(restaurant, "currency", None) or "UZS",
+        # Язык клиентского UI: uz, ru, en
+        "language": getattr(restaurant, "language", None) or "uz",
         # telegram_bot_token_encrypted намеренно не включён
         "categories": [
             {
