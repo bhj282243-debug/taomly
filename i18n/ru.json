@@ -1,0 +1,40 @@
+{
+  "common.loading":  "Загрузка...",
+  "common.save":     "Сохранить",
+  "common.cancel":   "Отмена",
+  "common.close":    "Закрыть",
+  "common.error":    "Произошла ошибка",
+  "common.success":  "Успешно",
+  "common.back":     "Назад",
+  "common.next":     "Далее",
+  "common.yes":      "Да",
+  "common.no":       "Нет",
+
+  "menu.loading":    "Загружаем меню...",
+  "menu.unavailable": "Недоступно",
+  "menu.add":        "Добавить в корзину",
+  "menu.cart":       "Корзина",
+  "menu.empty":      "Корзина пуста",
+
+  "order.accepted":   "Заказ принят",
+  "order.preparing":  "Готовится",
+  "order.ready":      "Готов",
+  "order.delivering": "Доставляется",
+  "order.completed":  "Доставлен",
+  "order.cancelled":  "Отменён",
+  "order.number":     "Заказ #{{id}}",
+
+  "validation.name_required":    "Введите имя",
+  "validation.phone_required":   "Введите номер телефона",
+  "validation.address_required": "Введите адрес доставки",
+  "validation.minimum_order":    "Минимальная сумма заказа: {{amount}}",
+  "validation.generic":          "Проверьте введённые данные",
+
+  "telegram.new_order":       "🆕 Новый заказ #{{id}}\n{{separator}}\nТип: {{type}}\nСумма: {{amount}}\n{{details}}",
+  "telegram.order_accepted":  "✅ Ваш заказ принят!\n{{separator}}\nЗаказ #{{id}} — {{amount}}\nСкоро {{action}} 🙏",
+  "telegram.order_preparing": "👨‍🍳 Ваш заказ готовится!\n{{separator}}\nЗаказ #{{id}} — {{amount}}\nПодождите немного 🙏",
+  "telegram.order_ready":     "🔔 Ваш заказ готов!\n{{separator}}\nЗаказ #{{id}} — {{amount}}\n{{detail}}",
+  "telegram.order_delivering":"🚗 Курьер в пути!\n{{separator}}\nЗаказ #{{id}} — {{amount}}\nСкоро будет у вас 📍",
+  "telegram.order_completed": "🎉 Заказ доставлен!\n{{separator}}\nЗаказ #{{id}} — {{amount}}\nСпасибо! Приходите снова 🙏",
+  "telegram.order_cancelled": "❌ Заказ отменён.\n{{separator}}\nЗаказ #{{id}} — {{amount}}{{reason}}\nПриносим извинения 🙏"
+}
