@@ -30,6 +30,18 @@
   "validation.minimum_order":    "Минимальная сумма заказа: {{amount}}",
   "validation.generic":          "Проверьте введённые данные",
 
+  "telegram.action.delivery":    "будет доставлен",
+  "telegram.action.takeaway":    "можно забрать",
+  "telegram.action.dine_in":     "готовится",
+  "telegram.action.default":     "готовится",
+
+  "telegram.ready_detail.delivery": "Курьер скоро выедет 🚗",
+  "telegram.ready_detail.takeaway": "Можно забирать! 🛍",
+  "telegram.ready_detail.dine_in":  "Принесём к вашему столику! 🍽",
+  "telegram.ready_detail.default":  "Готов!",
+
+  "telegram.cancelled_reason":   "\nПричина: {{comment}}",
+
   "telegram.new_order":       "🆕 Новый заказ #{{id}}\n{{separator}}\nТип: {{type}}\nСумма: {{amount}}\n{{details}}",
   "telegram.order_accepted":  "✅ Ваш заказ принят!\n{{separator}}\nЗаказ #{{id}} — {{amount}}\nСкоро {{action}} 🙏",
   "telegram.order_preparing": "👨‍🍳 Ваш заказ готовится!\n{{separator}}\nЗаказ #{{id}} — {{amount}}\nПодождите немного 🙏",
