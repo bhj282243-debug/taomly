@@ -30,6 +30,18 @@
   "validation.minimum_order":    "Minimum order amount: {{amount}}",
   "validation.generic":          "Please check your input",
 
+  "telegram.action.delivery":    "be delivered",
+  "telegram.action.takeaway":    "be ready for pickup",
+  "telegram.action.dine_in":     "be prepared",
+  "telegram.action.default":     "be prepared",
+
+  "telegram.ready_detail.delivery": "Your courier will be on the way shortly 🚗",
+  "telegram.ready_detail.takeaway": "You can pick it up now! 🛍",
+  "telegram.ready_detail.dine_in":  "We'll bring it to your table! 🍽",
+  "telegram.ready_detail.default":  "Ready!",
+
+  "telegram.cancelled_reason":   "\nReason: {{comment}}",
+
   "telegram.new_order":       "🆕 New order #{{id}}\n{{separator}}\nType: {{type}}\nTotal: {{amount}}\n{{details}}",
   "telegram.order_accepted":  "✅ Your order has been accepted!\n{{separator}}\nOrder #{{id}} — {{amount}}\n{{action}} soon 🙏",
   "telegram.order_preparing": "👨‍🍳 Your order is being prepared!\n{{separator}}\nOrder #{{id}} — {{amount}}\nWon't be long 🙏",
