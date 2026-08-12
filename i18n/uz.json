@@ -1,0 +1,40 @@
+{
+  "common.loading":  "Yuklanmoqda...",
+  "common.save":     "Saqlash",
+  "common.cancel":   "Bekor qilish",
+  "common.close":    "Yopish",
+  "common.error":    "Xato yuz berdi",
+  "common.success":  "Muvaffaqiyatli",
+  "common.back":     "Orqaga",
+  "common.next":     "Keyingi",
+  "common.yes":      "Ha",
+  "common.no":       "Yo'q",
+
+  "menu.loading":    "Menyu yuklanmoqda...",
+  "menu.unavailable": "Mavjud emas",
+  "menu.add":        "Savatga qo'shish",
+  "menu.cart":       "Savat",
+  "menu.empty":      "Savat bo'sh",
+
+  "order.accepted":   "Buyurtma qabul qilindi",
+  "order.preparing":  "Tayyorlanmoqda",
+  "order.ready":      "Tayyor",
+  "order.delivering": "Yetkazilmoqda",
+  "order.completed":  "Yetkazildi",
+  "order.cancelled":  "Bekor qilindi",
+  "order.number":     "Buyurtma #{{id}}",
+
+  "validation.name_required":    "Ism kiritish shart",
+  "validation.phone_required":   "Telefon raqam kiritish shart",
+  "validation.address_required": "Manzil kiritish shart",
+  "validation.minimum_order":    "Minimal buyurtma summasi: {{amount}}",
+  "validation.generic":          "Ma'lumotlarni tekshiring",
+
+  "telegram.new_order":       "🆕 Yangi buyurtma #{{id}}\n{{separator}}\nTuri: {{type}}\nSumma: {{amount}}\n{{details}}",
+  "telegram.order_accepted":  "✅ Buyurtmangiz qabul qilindi!\n{{separator}}\nBuyurtma #{{id}} — {{amount}}\nTez orada {{action}} 🙏",
+  "telegram.order_preparing": "👨‍🍳 Buyurtmangiz tayyorlanmoqda!\n{{separator}}\nBuyurtma #{{id}} — {{amount}}\nBiroz kuting 🙏",
+  "telegram.order_ready":     "🔔 Buyurtmangiz tayyor!\n{{separator}}\nBuyurtma #{{id}} — {{amount}}\n{{detail}}",
+  "telegram.order_delivering":"🚗 Kuryer yo'lda!\n{{separator}}\nBuyurtma #{{id}} — {{amount}}\nTez orada yetib boradi 📍",
+  "telegram.order_completed": "🎉 Buyurtma yetkazildi!\n{{separator}}\nBuyurtma #{{id}} — {{amount}}\nRahmat! Yana tashrif buyuring 🙏",
+  "telegram.order_cancelled": "❌ Buyurtma bekor qilindi.\n{{separator}}\nBuyurtma #{{id}} — {{amount}}{{reason}}\nUzr so'raymiz 🙏"
+}
