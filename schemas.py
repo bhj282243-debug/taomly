@@ -393,6 +393,9 @@ class TokenResponse(BaseModel):
 # ──────────────────────────────────────────
 # RESTAURANT — создание (Agency Owner)
 # ──────────────────────────────────────────
+_SUPPORTED_LANGUAGES = {"uz", "ru", "en"}
+
+
 class RestaurantCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     slug: str = Field(..., min_length=2, max_length=100)
@@ -410,6 +413,9 @@ class RestaurantCreate(BaseModel):
 
     telegram_bot_token: Optional[str] = None
     telegram_dispatcher_id: Optional[int] = Field(None, gt=0)
+
+    # Язык клиентского UI: uz / ru / en. Default: uz.
+    language: Optional[str] = Field("uz", pattern=r"^(uz|ru|en)$")
 
     @field_validator("slug")
     @classmethod
@@ -457,6 +463,9 @@ class RestaurantUpdate(BaseModel):
 
     telegram_bot_token: Optional[str] = None
     telegram_dispatcher_id: Optional[int] = Field(None, gt=0)
+
+    # Язык клиентского UI: uz / ru / en.
+    language: Optional[str] = Field(None, pattern=r"^(uz|ru|en)$")
 
     @field_validator("primary_color", "secondary_color", "accent_color", mode="before")
     @classmethod
@@ -662,6 +671,9 @@ class RestaurantSettingsResponse(BaseModel):
     # currency — валюта ресторана для отображения цен.
     # Дефолт "UZS" обеспечивает обратную совместимость.
     currency:         str = "UZS"
+    # language — язык клиентского UI и Telegram-уведомлений.
+    # Допустимые значения: uz, ru, en. Дефолт "uz".
+    language:         str = "uz"
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -717,6 +729,9 @@ class RestaurantPublicResponse(BaseModel):
     # Валюта ресторана для форматирования цен на фронтенде.
     # Дефолт "UZS" обеспечивает обратную совместимость.
     currency:               str = "UZS"
+    # Язык клиентского UI. Фронтенд загружает /i18n/{language}.json.
+    # Дефолт "uz" обеспечивает обратную совместимость.
+    language:               str = "uz"
     # Menu (only available products, grouped by category)
     categories:             List[CategoryPublicResponse]
     # telegram_bot_token_encrypted намеренно отсутствует — защита токена
