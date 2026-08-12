@@ -30,6 +30,18 @@
   "validation.minimum_order":    "Minimal buyurtma summasi: {{amount}}",
   "validation.generic":          "Ma'lumotlarni tekshiring",
 
+  "telegram.action.delivery":    "yetkazib beriladi",
+  "telegram.action.takeaway":    "olib ketishingiz mumkin",
+  "telegram.action.dine_in":     "tayyorlanmoqda",
+  "telegram.action.default":     "tayyorlanmoqda",
+
+  "telegram.ready_detail.delivery": "Kuryer tez orada yo'lga chiqadi 🚗",
+  "telegram.ready_detail.takeaway": "Olib ketishingiz mumkin! 🛍",
+  "telegram.ready_detail.dine_in":  "Stolingizga olib kelinadi! 🍽",
+  "telegram.ready_detail.default":  "Tayyor!",
+
+  "telegram.cancelled_reason":   "\nSabab: {{comment}}",
+
   "telegram.new_order":       "🆕 Yangi buyurtma #{{id}}\n{{separator}}\nTuri: {{type}}\nSumma: {{amount}}\n{{details}}",
   "telegram.order_accepted":  "✅ Buyurtmangiz qabul qilindi!\n{{separator}}\nBuyurtma #{{id}} — {{amount}}\nTez orada {{action}} 🙏",
   "telegram.order_preparing": "👨‍🍳 Buyurtmangiz tayyorlanmoqda!\n{{separator}}\nBuyurtma #{{id}} — {{amount}}\nBiroz kuting 🙏",
