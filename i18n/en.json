@@ -1,0 +1,40 @@
+{
+  "common.loading":  "Loading...",
+  "common.save":     "Save",
+  "common.cancel":   "Cancel",
+  "common.close":    "Close",
+  "common.error":    "Something went wrong",
+  "common.success":  "Success",
+  "common.back":     "Back",
+  "common.next":     "Next",
+  "common.yes":      "Yes",
+  "common.no":       "No",
+
+  "menu.loading":    "Loading menu...",
+  "menu.unavailable": "Unavailable",
+  "menu.add":        "Add to cart",
+  "menu.cart":       "Cart",
+  "menu.empty":      "Your cart is empty",
+
+  "order.accepted":   "Order accepted",
+  "order.preparing":  "Preparing",
+  "order.ready":      "Ready",
+  "order.delivering": "On the way",
+  "order.completed":  "Delivered",
+  "order.cancelled":  "Cancelled",
+  "order.number":     "Order #{{id}}",
+
+  "validation.name_required":    "Name is required",
+  "validation.phone_required":   "Phone number is required",
+  "validation.address_required": "Delivery address is required",
+  "validation.minimum_order":    "Minimum order amount: {{amount}}",
+  "validation.generic":          "Please check your input",
+
+  "telegram.new_order":       "🆕 New order #{{id}}\n{{separator}}\nType: {{type}}\nTotal: {{amount}}\n{{details}}",
+  "telegram.order_accepted":  "✅ Your order has been accepted!\n{{separator}}\nOrder #{{id}} — {{amount}}\n{{action}} soon 🙏",
+  "telegram.order_preparing": "👨‍🍳 Your order is being prepared!\n{{separator}}\nOrder #{{id}} — {{amount}}\nWon't be long 🙏",
+  "telegram.order_ready":     "🔔 Your order is ready!\n{{separator}}\nOrder #{{id}} — {{amount}}\n{{detail}}",
+  "telegram.order_delivering":"🚗 Your courier is on the way!\n{{separator}}\nOrder #{{id}} — {{amount}}\nArriving soon 📍",
+  "telegram.order_completed": "🎉 Order delivered!\n{{separator}}\nOrder #{{id}} — {{amount}}\nThank you! Come back soon 🙏",
+  "telegram.order_cancelled": "❌ Order cancelled.\n{{separator}}\nOrder #{{id}} — {{amount}}{{reason}}\nWe're sorry for the inconvenience 🙏"
+}
