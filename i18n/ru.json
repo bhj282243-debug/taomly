@@ -24,11 +24,48 @@
   "order.cancelled":  "Отменён",
   "order.number":     "Заказ #{{id}}",
 
-  "validation.name_required":    "Введите имя",
+  "validation.name_required":    "Введите ваше имя",
   "validation.phone_required":   "Введите номер телефона",
   "validation.address_required": "Введите адрес доставки",
   "validation.minimum_order":    "Минимальная сумма заказа: {{amount}}",
   "validation.generic":          "Проверьте введённые данные",
+
+  "hero.tagline":                "Ресторанный опыт",
+  "hero.open":                   "Открыто",
+  "hero.view_menu":              "Смотреть меню",
+
+  "popular.title":               "Популярное",
+
+  "order.status_new":            "Новый",
+  "order.status_cancelled":      "Заказ отменён",
+
+  "cart.order_type":             "Тип заказа",
+  "cart.delivery":               "Доставка",
+  "cart.takeaway":               "Самовывоз",
+  "cart.table_delivery":         "Заказ будет доставлен к вашему столику",
+  "cart.table_label":            "Стол №{{n}}",
+  "cart.total":                  "Итого",
+  "cart.submit":                 "Оформить заказ",
+  "cart.submitting":             "Отправка\u2026",
+  "cart.item_count":             "{{n}} блюдо",
+
+  "checkout.name_placeholder":    "Ваше имя",
+  "checkout.phone_placeholder":   "+7 XXX XXX XX XX",
+  "checkout.address_placeholder": "Адрес доставки",
+  "checkout.comment_placeholder": "Комментарий (необязательно)",
+  "checkout.delivery_fee":        "Доставка",
+
+  "modal.add":                   "Добавить",
+
+  "success.order_number":        "Номер заказа",
+  "success.back_to_menu":        "Вернуться в меню",
+  "success.dine_in":             "Ваш заказ принят! Скоро принесём к столику",
+  "success.takeaway":            "Сообщим, когда будет готово",
+  "success.delivery":            "Скоро доставим",
+
+  "error.not_found":             "Ресторан не найден.\nПожалуйста, отсканируйте QR-код.",
+  "error.retry":                 "Повторить",
+  "error.generic":               "Ошибка: {{message}}",
 
   "telegram.action.delivery":    "будет доставлен",
   "telegram.action.takeaway":    "можно забрать",
