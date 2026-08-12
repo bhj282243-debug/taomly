@@ -20,6 +20,7 @@ from config import settings
 import telebot
 
 from auth import decrypt_token
+from i18n import t as _t
 from utils import format_price as _fmt_price
 
 logger = logging.getLogger(__name__)
@@ -409,79 +410,94 @@ def notify_client_accepted(order, restaurant) -> None:
     Multi-Tenant: использует бот конкретного ресторана.
     Вызывается через BackgroundTasks — не блокирует HTTP-ответ.
     """
-    order_type_labels = {
-        "delivery": "yetkazib beriladi",
-        "takeaway": "olib ketishingiz mumkin",
-        "dine_in":  "tayyorlanmoqda",
-    }
-    action = order_type_labels.get(order.order_type, "tayyorlanmoqda")
-    text = (
-        f"✅ Buyurtmangiz qabul qilindi!\n"
-        f"{'─' * 28}\n"
-        f"Buyurtma #{order.id} — {_fmt_price(int(order.total_amount), getattr(restaurant, 'currency', None) or 'UZS')}\n"
-        f"Tez orada {action} 🙏"
+    lang = getattr(restaurant, "language", "uz") or "uz"
+    order_type = getattr(order, "order_type", None) or "default"
+    action_key = f"telegram.action.{order_type}"
+    action = _t(action_key, lang)
+    if action == action_key:  # ключ не найден → fallback
+        action = _t("telegram.action.default", lang)
+    text = _t(
+        "telegram.order_accepted",
+        lang,
+        separator="─" * 28,
+        id=order.id,
+        amount=_fmt_price(int(order.total_amount), getattr(restaurant, "currency", None) or "UZS"),
+        action=action,
     )
     _notify_client(order, restaurant, text, "notify_client_accepted")
 
 
 def notify_client_preparing(order, restaurant) -> None:
     """Клиенту: заказ готовится."""
-    text = (
-        f"👨\u200d🍳 Buyurtmangiz tayyorlanmoqda!\n"
-        f"{'─' * 28}\n"
-        f"Buyurtma #{order.id} — {_fmt_price(int(order.total_amount), getattr(restaurant, 'currency', None) or 'UZS')}\n"
-        f"Biroz kuting 🙏"
+    lang = getattr(restaurant, "language", "uz") or "uz"
+    text = _t(
+        "telegram.order_preparing",
+        lang,
+        separator="─" * 28,
+        id=order.id,
+        amount=_fmt_price(int(order.total_amount), getattr(restaurant, "currency", None) or "UZS"),
     )
     _notify_client(order, restaurant, text, "notify_client_preparing")
 
 
 def notify_client_ready(order, restaurant) -> None:
     """Клиенту: заказ готов."""
-    labels = {
-        "delivery":  "Kuryer tez orada yo'lga chiqadi 🚗",
-        "takeaway":  "Olib ketishingiz mumkin! 🛍",
-        "dine_in":   "Stolingizga olib kelinadi! 🍽",
-    }
-    detail = labels.get(order.order_type, "Tayyor!")
-    text = (
-        f"🔔 Buyurtmangiz tayyor!\n"
-        f"{'─' * 28}\n"
-        f"Buyurtma #{order.id} — {_fmt_price(int(order.total_amount), getattr(restaurant, 'currency', None) or 'UZS')}\n"
-        f"{detail}"
+    lang = getattr(restaurant, "language", "uz") or "uz"
+    order_type = getattr(order, "order_type", None) or "default"
+    detail_key = f"telegram.ready_detail.{order_type}"
+    detail = _t(detail_key, lang)
+    if detail == detail_key:  # ключ не найден → fallback
+        detail = _t("telegram.ready_detail.default", lang)
+    text = _t(
+        "telegram.order_ready",
+        lang,
+        separator="─" * 28,
+        id=order.id,
+        amount=_fmt_price(int(order.total_amount), getattr(restaurant, "currency", None) or "UZS"),
+        detail=detail,
     )
     _notify_client(order, restaurant, text, "notify_client_ready")
 
 
 def notify_client_delivering(order, restaurant) -> None:
     """Клиенту: курьер в пути."""
-    text = (
-        f"🚗 Kuryer yo'lda!\n"
-        f"{'─' * 28}\n"
-        f"Buyurtma #{order.id} — {_fmt_price(int(order.total_amount), getattr(restaurant, 'currency', None) or 'UZS')}\n"
-        f"Tez orada yetib boradi 📍"
+    lang = getattr(restaurant, "language", "uz") or "uz"
+    text = _t(
+        "telegram.order_delivering",
+        lang,
+        separator="─" * 28,
+        id=order.id,
+        amount=_fmt_price(int(order.total_amount), getattr(restaurant, "currency", None) or "UZS"),
     )
     _notify_client(order, restaurant, text, "notify_client_delivering")
 
 
 def notify_client_completed(order, restaurant) -> None:
     """Клиенту: заказ доставлен / завершён."""
-    text = (
-        f"🎉 Buyurtma yetkazildi!\n"
-        f"{'─' * 28}\n"
-        f"Buyurtma #{order.id} — {_fmt_price(int(order.total_amount), getattr(restaurant, 'currency', None) or 'UZS')}\n"
-        f"Rahmat! Yana tashrif buyuring 🙏"
+    lang = getattr(restaurant, "language", "uz") or "uz"
+    text = _t(
+        "telegram.order_completed",
+        lang,
+        separator="─" * 28,
+        id=order.id,
+        amount=_fmt_price(int(order.total_amount), getattr(restaurant, "currency", None) or "UZS"),
     )
     _notify_client(order, restaurant, text, "notify_client_completed")
 
 
 def notify_client_cancelled(order, restaurant, comment: str = "") -> None:
     """Клиенту: заказ отменён."""
-    reason = f"\nSabab: {comment}" if comment and comment.strip() else ""
-    text = (
-        f"❌ Buyurtma bekor qilindi.\n"
-        f"{'─' * 28}\n"
-        f"Buyurtma #{order.id} — {_fmt_price(int(order.total_amount), getattr(restaurant, 'currency', None) or 'UZS')}"
-        f"{reason}\n"
-        f"Uzr so'raymiz 🙏"
+    lang = getattr(restaurant, "language", "uz") or "uz"
+    if comment and comment.strip():
+        reason = _t("telegram.cancelled_reason", lang, comment=comment.strip())
+    else:
+        reason = ""
+    text = _t(
+        "telegram.order_cancelled",
+        lang,
+        separator="─" * 28,
+        id=order.id,
+        amount=_fmt_price(int(order.total_amount), getattr(restaurant, "currency", None) or "UZS"),
+        reason=reason,
     )
     _notify_client(order, restaurant, text, "notify_client_cancelled")
