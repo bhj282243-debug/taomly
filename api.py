@@ -252,6 +252,12 @@ if os.path.exists("static"):
 else:
     logger.warning("Папка static/ не найдена")
 
+# i18n JSON файлы — доступны фронтенду по /i18n/{lang}.json
+if os.path.exists("i18n"):
+    app.mount("/i18n", StaticFiles(directory="i18n"), name="i18n")
+else:
+    logger.warning("Папка i18n/ не найдена — переводы недоступны через HTTP")
+
 
 # ──────────────────────────────────────────
 # СЛУЖЕБНЫЕ ЭНДПОИНТЫ
