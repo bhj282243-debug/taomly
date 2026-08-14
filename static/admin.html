@@ -394,8 +394,8 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 <div id="newOrderToast">
   <div class="not-ring"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
   <div class="not-text">
-    <div class="not-title" id="notTitle">Yangi buyurtma!</div>
-    <div class="not-sub" id="notSub">Buyurtmalar bo'limiga o'ting</div>
+    <div class="not-title" id="notTitle" data-i18n="admin.notification.new_order_single">Yangi buyurtma!</div>
+    <div class="not-sub" id="notSub" data-i18n="admin.notification.go_to_orders">Buyurtmalar bo'limiga o'ting</div>
   </div>
 </div>
 
@@ -405,21 +405,21 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
     <svg viewBox="0 0 24 24"><path d="M5 3v18M5 3c0 3 3 3 3 6s-3 3-3 6M19 3v18M19 8h-3a2 2 0 0 0 0 4h3"/></svg>
   </div>
   <div class="login-title">Taomly Admin</div>
-  <div class="login-sub">Boshqaruv paneli</div>
+  <div class="login-sub" data-i18n="admin.login.subtitle">Boshqaruv paneli</div>
   <div class="login-card">
-    <label class="login-label">Restaurant slug</label>
+    <label class="login-label" data-i18n="admin.login.slug_label">Restaurant slug</label>
     <input class="login-input" type="text" id="slugInput" placeholder="chinar" autocomplete="off"/>
-    <label class="login-label">Parol</label>
+    <label class="login-label" data-i18n="admin.login.password_label">Parol</label>
     <input class="login-input pass" type="password" id="passwordInput" placeholder="••••••••"/>
-    <button class="login-btn" id="loginBtn" onclick="doLogin()">Kirish</button>
+    <button class="login-btn" id="loginBtn" onclick="doLogin()" data-i18n="admin.login.submit">Kirish</button>
     <div class="login-error" id="loginError"></div>
   </div>
 </div>
 
 <!-- ERROR -->
 <div class="error-screen" id="errorScreen" style="display:none;">
-  <h2>Restoran topilmadi</h2>
-  <p>Slug noto'g'ri yoki restoran mavjud emas.</p>
+  <h2 data-i18n="admin.error.not_found_title">Restoran topilmadi</h2>
+  <p data-i18n="admin.error.not_found_sub">Slug noto'g'ri yoki restoran mavjud emas.</p>
 </div>
 
 <!-- MAIN APP -->
@@ -430,7 +430,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
       <span class="header-slug" id="headerSlug"></span>
     </div>
     <div class="header-right">
-      <button class="hdr-btn" onclick="refreshCurrent()" title="Yangilash">
+      <button class="hdr-btn" onclick="refreshCurrent()" data-i18n-title="admin.header.refresh" title="Yangilash">
         <svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
       </button>
       <button class="hdr-btn sound-btn" id="soundBtn" onclick="toggleSound()">
@@ -440,33 +440,33 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
           <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
         </svg>
       </button>
-      <button class="logout-btn" onclick="doLogout()">Chiqish</button>
+      <button class="logout-btn" onclick="doLogout()" data-i18n="admin.header.logout">Chiqish</button>
     </div>
   </div>
 
   <div class="main-tabs">
-    <div class="main-tab active" id="mtab-orders" onclick="switchPage('orders')">Buyurtmalar<span class="tab-count" id="newOrderCount"></span><span class="tab-dot" id="ordersDot"></span></div>
-    <div class="main-tab" id="mtab-menu" onclick="switchPage('menu')">Menyu</div>
-    <div class="main-tab" id="mtab-analytics" onclick="switchPage('analytics')">Analitika</div>
+    <div class="main-tab active" id="mtab-orders" onclick="switchPage('orders')"><span data-i18n="admin.tabs.orders">Buyurtmalar</span><span class="tab-count" id="newOrderCount"></span><span class="tab-dot" id="ordersDot"></span></div>
+    <div class="main-tab" id="mtab-menu" onclick="switchPage('menu')" data-i18n="admin.tabs.menu">Menyu</div>
+    <div class="main-tab" id="mtab-analytics" onclick="switchPage('analytics')" data-i18n="admin.tabs.analytics">Analitika</div>
     <div class="main-tab" id="mtab-qr" onclick="switchPage('qr')">QR</div>
-    <div class="main-tab" id="mtab-billing" onclick="switchPage('billing')">Tarif</div>
-    <div class="main-tab" id="mtab-settings" onclick="switchPage('settings')">Sozlamalar</div>
+    <div class="main-tab" id="mtab-billing" onclick="switchPage('billing')" data-i18n="admin.tabs.billing">Tarif</div>
+    <div class="main-tab" id="mtab-settings" onclick="switchPage('settings')" data-i18n="admin.tabs.settings">Sozlamalar</div>
   </div>
 
   <!-- ORDERS PAGE -->
   <div class="page active" id="page-orders">
     <div class="stats-bar" id="ordersStatsBar">
-      <div class="stats-bar-card"><div class="stats-bar-val" id="sBarNew">—</div><div class="stats-bar-label">Yangi</div></div>
-      <div class="stats-bar-card"><div class="stats-bar-val" id="sBarActive">—</div><div class="stats-bar-label">Faol</div></div>
-      <div class="stats-bar-card"><div class="stats-bar-val" id="sBarToday">—</div><div class="stats-bar-label">Bugun</div></div>
-      <div class="stats-bar-card"><div class="stats-bar-val" id="sBarRevenue">—</div><div class="stats-bar-label">Daromad</div></div>
+      <div class="stats-bar-card"><div class="stats-bar-val" id="sBarNew">—</div><div class="stats-bar-label" data-i18n="order.status_new">Yangi</div></div>
+      <div class="stats-bar-card"><div class="stats-bar-val" id="sBarActive">—</div><div class="stats-bar-label" data-i18n="admin.stats.active">Faol</div></div>
+      <div class="stats-bar-card"><div class="stats-bar-val" id="sBarToday">—</div><div class="stats-bar-label" data-i18n="admin.stats.today">Bugun</div></div>
+      <div class="stats-bar-card"><div class="stats-bar-val" id="sBarRevenue">—</div><div class="stats-bar-label" data-i18n="admin.stats.revenue">Daromad</div></div>
     </div>
     <div class="tabs">
-      <div class="tab active" onclick="filterOrders('active')" id="tab-active">Faol<span class="tab-count" id="activeOrderCount"></span></div>
-      <div class="tab" onclick="filterOrders('done')" id="tab-done">Bajarildi</div>
+      <div class="tab active" onclick="filterOrders('active')" id="tab-active"><span data-i18n="admin.stats.active">Faol</span><span class="tab-count" id="activeOrderCount"></span></div>
+      <div class="tab" onclick="filterOrders('done')" id="tab-done" data-i18n="admin.orders.done_tab">Bajarildi</div>
     </div>
     <div class="content" id="orders-content">
-      <div class="loading"><div class="spinner"></div>Yuklanmoqda...</div>
+      <div class="loading"><div class="spinner"></div><span data-i18n="common.loading">Yuklanmoqda...</span></div>
     </div>
   </div>
 
@@ -475,14 +475,14 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
     <div class="menu-content">
       <div class="menu-header">
         <button class="add-product-btn secondary" id="addCategoryBtn" onclick="openAddCategoryModal()" style="display:none;">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Kategoriya
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> <span data-i18n="admin.menu.add_category_short">Kategoriya</span>
         </button>
         <button class="add-product-btn primary" onclick="openAddModal()">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Yangi taom
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> <span data-i18n="admin.menu.add_product">Yangi taom</span>
         </button>
       </div>
       <div id="menu-content">
-        <div class="loading"><div class="spinner"></div>Yuklanmoqda...</div>
+        <div class="loading"><div class="spinner"></div><span data-i18n="common.loading">Yuklanmoqda...</span></div>
       </div>
     </div>
   </div>
@@ -491,34 +491,34 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
   <div class="page" id="page-analytics">
     <div class="analytics-content">
       <div class="period-tabs" id="period-tabs-row">
-        <button class="period-tab" id="ptab-today" onclick="setPeriod('today')">Bugun</button>
-        <button class="period-tab" id="ptab-7d" onclick="setPeriod('7d')">7 kun</button>
-        <button class="period-tab active" id="ptab-30d" onclick="setPeriod('30d')">30 kun</button>
-        <button class="period-tab" id="ptab-90d" onclick="setPeriod('90d')">90 kun</button>
-        <button class="period-tab" id="ptab-this_month" onclick="setPeriod('this_month')">Bu oy</button>
+        <button class="period-tab" id="ptab-today" onclick="setPeriod('today')" data-i18n="admin.analytics.period_today">Bugun</button>
+        <button class="period-tab" id="ptab-7d" onclick="setPeriod('7d')" data-i18n="admin.analytics.period_7d">7 kun</button>
+        <button class="period-tab active" id="ptab-30d" onclick="setPeriod('30d')" data-i18n="admin.analytics.period_30d">30 kun</button>
+        <button class="period-tab" id="ptab-90d" onclick="setPeriod('90d')" data-i18n="admin.analytics.period_90d">90 kun</button>
+        <button class="period-tab" id="ptab-this_month" onclick="setPeriod('this_month')" data-i18n="admin.analytics.period_this_month">Bu oy</button>
       </div>
       <div id="analytics-loading" style="display:none;text-align:center;padding:20px 0;color:var(--iv4);font-size:13px;">
-        <div class="spinner" style="margin-bottom:8px;"></div>Yuklanmoqda…
+        <div class="spinner" style="margin-bottom:8px;"></div><span data-i18n="common.loading">Yuklanmoqda…</span>
       </div>
       <div class="kpi-grid" id="analytics-kpi">
-        <div class="kpi-card"><div class="kpi-label">Tushum</div><div class="kpi-value accent" id="kpi-revenue">—</div><div class="kpi-sub" id="kpi-revenue-sub"></div></div>
-        <div class="kpi-card"><div class="kpi-label">Buyurtmalar</div><div class="kpi-value" id="kpi-orders">—</div><div class="kpi-sub" id="kpi-orders-sub"></div></div>
-        <div class="kpi-card"><div class="kpi-label">O'rtacha chek</div><div class="kpi-value" id="kpi-avg">—</div><div class="kpi-sub">bajarilgan</div></div>
-        <div class="kpi-card"><div class="kpi-label">Qayta mijozlar</div><div class="kpi-value" id="kpi-returning">—</div><div class="kpi-sub" id="kpi-returning-sub"></div></div>
+        <div class="kpi-card"><div class="kpi-label" data-i18n="admin.analytics.revenue">Tushum</div><div class="kpi-value accent" id="kpi-revenue">—</div><div class="kpi-sub" id="kpi-revenue-sub"></div></div>
+        <div class="kpi-card"><div class="kpi-label" data-i18n="admin.tabs.orders">Buyurtmalar</div><div class="kpi-value" id="kpi-orders">—</div><div class="kpi-sub" id="kpi-orders-sub"></div></div>
+        <div class="kpi-card"><div class="kpi-label" data-i18n="admin.analytics.avg_check">O'rtacha chek</div><div class="kpi-value" id="kpi-avg">—</div><div class="kpi-sub" data-i18n="admin.analytics.completed_sub">bajarilgan</div></div>
+        <div class="kpi-card"><div class="kpi-label" data-i18n="admin.analytics.returning">Qayta mijozlar</div><div class="kpi-value" id="kpi-returning">—</div><div class="kpi-sub" id="kpi-returning-sub"></div></div>
       </div>
-      <div class="section-title">Buyurtmalar holati</div>
+      <div class="section-title" data-i18n="admin.analytics.order_status_title">Buyurtmalar holati</div>
       <div class="analytics-card"><div class="status-grid" id="status-grid"></div></div>
-      <div class="section-title">Top 10 taom</div>
-      <div class="analytics-card"><div id="top-dishes-content"><div class="empty" style="padding:16px">Ma'lumot yo'q</div></div></div>
-      <div class="section-title">Buyurtma turi</div>
+      <div class="section-title" data-i18n="admin.analytics.top_dishes_title">Top 10 taom</div>
+      <div class="analytics-card"><div id="top-dishes-content"><div class="empty" style="padding:16px" data-i18n="admin.analytics.no_data">Ma'lumot yo'q</div></div></div>
+      <div class="section-title" data-i18n="admin.analytics.order_type_title">Buyurtma turi</div>
       <div class="analytics-card"><div class="type-rows" id="type-rows"></div></div>
-      <div class="section-title">Eng band soatlar</div>
+      <div class="section-title" data-i18n="admin.analytics.peak_hours_title">Eng band soatlar</div>
       <div class="analytics-card">
         <div class="hours-chart" id="hours-chart"></div>
         <div style="font-size:11px;color:var(--iv4);text-align:center;margin-top:8px" id="peak-label"></div>
       </div>
       <div id="daily-section">
-        <div class="section-title" id="daily-title">Kunlik sotuvlar</div>
+        <div class="section-title" id="daily-title" data-i18n="admin.analytics.daily_title">Kunlik sotuvlar</div>
         <div class="analytics-card"><div class="bar-chart" id="daily-chart"></div></div>
       </div>
     </div>
@@ -528,40 +528,40 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
   <div class="page" id="page-qr">
     <div class="qr-content">
       <div class="qr-type-tabs">
-        <button class="qr-type-btn active" id="qrtab-tables" onclick="switchQrTab('tables')">Stollar</button>
-        <button class="qr-type-btn" id="qrtab-takeaway" onclick="switchQrTab('takeaway')">Olib ketish</button>
-        <button class="qr-type-btn" id="qrtab-delivery" onclick="switchQrTab('delivery')">Yetkazib berish</button>
+        <button class="qr-type-btn active" id="qrtab-tables" onclick="switchQrTab('tables')" data-i18n="admin.qr.tab_tables">Stollar</button>
+        <button class="qr-type-btn" id="qrtab-takeaway" onclick="switchQrTab('takeaway')" data-i18n="admin.qr.tab_takeaway">Olib ketish</button>
+        <button class="qr-type-btn" id="qrtab-delivery" onclick="switchQrTab('delivery')" data-i18n="admin.qr.tab_delivery">Yetkazib berish</button>
       </div>
       <div class="qr-tab-panel active" id="qrpanel-tables">
-        <div class="section-title" style="padding:16px 16px 0">Stol QR-kodlari</div>
-        <div class="qr-hint">Har bir stol uchun QR-kod yarating.</div>
+        <div class="section-title" style="padding:16px 16px 0" data-i18n="admin.qr.tables_title">Stol QR-kodlari</div>
+        <div class="qr-hint" data-i18n="admin.qr.tables_hint">Har bir stol uchun QR-kod yarating.</div>
         <div class="qr-add-row">
-          <input class="qr-input" type="text" id="newTableNumber" placeholder="Stol raqami (1, 2, VIP...)" maxlength="20"/>
-          <button class="qr-gen-btn" onclick="generateTableQR()">Yaratish</button>
+          <input class="qr-input" type="text" id="newTableNumber" data-i18n-placeholder="admin.qr.table_placeholder" placeholder="Stol raqami (1, 2, VIP...)" maxlength="20"/>
+          <button class="qr-gen-btn" onclick="generateTableQR()" data-i18n="admin.qr.generate_btn">Yaratish</button>
         </div>
         <div id="qr-tables-list" class="qr-list"></div>
       </div>
       <div class="qr-tab-panel" id="qrpanel-takeaway">
-        <div class="section-title" style="padding:16px 16px 0">Olib ketish QR-kodi</div>
-        <div class="qr-hint">Kassaga yoki do'kon oynasiga joylashtiring.</div>
+        <div class="section-title" style="padding:16px 16px 0" data-i18n="admin.qr.takeaway_title">Olib ketish QR-kodi</div>
+        <div class="qr-hint" data-i18n="admin.qr.takeaway_hint">Kassaga yoki do'kon oynasiga joylashtiring.</div>
         <div class="qr-single-container">
           <div class="qr-card">
             <div class="qr-canvas-wrap" id="qr-takeaway-canvas"></div>
-            <div class="qr-label">Olib ketish</div>
+            <div class="qr-label" data-i18n="admin.qr.tab_takeaway">Olib ketish</div>
             <div class="qr-url-text" id="qr-takeaway-url"></div>
-            <button class="qr-download-btn" onclick="downloadQR('qr-takeaway-canvas','takeaway')">↓ PNG yuklab olish</button>
+            <button class="qr-download-btn" onclick="downloadQR('qr-takeaway-canvas','takeaway')" data-i18n="admin.qr.download_btn">↓ PNG yuklab olish</button>
           </div>
         </div>
       </div>
       <div class="qr-tab-panel" id="qrpanel-delivery">
-        <div class="section-title" style="padding:16px 16px 0">Yetkazib berish QR-kodi</div>
-        <div class="qr-hint">Reklama materiallari uchun.</div>
+        <div class="section-title" style="padding:16px 16px 0" data-i18n="admin.qr.delivery_title">Yetkazib berish QR-kodi</div>
+        <div class="qr-hint" data-i18n="admin.qr.delivery_hint">Reklama materiallari uchun.</div>
         <div class="qr-single-container">
           <div class="qr-card">
             <div class="qr-canvas-wrap" id="qr-delivery-canvas"></div>
-            <div class="qr-label">Yetkazib berish</div>
+            <div class="qr-label" data-i18n="admin.qr.tab_delivery">Yetkazib berish</div>
             <div class="qr-url-text" id="qr-delivery-url"></div>
-            <button class="qr-download-btn" onclick="downloadQR('qr-delivery-canvas','delivery')">↓ PNG yuklab olish</button>
+            <button class="qr-download-btn" onclick="downloadQR('qr-delivery-canvas','delivery')" data-i18n="admin.qr.download_btn">↓ PNG yuklab olish</button>
           </div>
         </div>
       </div>
@@ -573,36 +573,32 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
     <div class="analytics-content">
       <div class="billing-card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-          <div style="font-size:13px;font-weight:600;color:var(--ivory)">Joriy tarif</div>
+          <div style="font-size:13px;font-weight:600;color:var(--ivory)" data-i18n="admin.billing.current_plan">Joriy tarif</div>
           <div id="billing-badge" style="padding:4px 14px;border-radius:100px;font-size:11.5px;font-weight:600;background:rgba(212,175,55,0.12);color:var(--g2);border:1px solid var(--gl)">—</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
-          <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--iv4)">Narxi</span><span id="billing-price" style="color:var(--ivory)">—</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--iv4)">Ulangan sana</span><span id="billing-started" style="color:var(--ivory)">—</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--iv4)">Muddati</span><span id="billing-expires" style="color:var(--ivory)">Muddatsiz</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--iv4)" data-i18n="admin.billing.price_label">Narxi</span><span id="billing-price" style="color:var(--ivory)">—</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--iv4)" data-i18n="admin.billing.started_label">Ulangan sana</span><span id="billing-started" style="color:var(--ivory)">—</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--iv4)" data-i18n="admin.billing.expires_label">Muddati</span><span id="billing-expires" style="color:var(--ivory)" data-i18n="admin.billing.no_expiry">Muddatsiz</span></div>
         </div>
         <div style="margin-bottom:12px;">
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--iv4);margin-bottom:5px;"><span>Buyurtmalar (bu oy)</span><span id="orders-usage-label">—</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--iv4);margin-bottom:5px;"><span data-i18n="admin.billing.orders_usage">Buyurtmalar (bu oy)</span><span id="orders-usage-label">—</span></div>
           <div style="background:rgba(247,245,240,0.05);border-radius:6px;height:6px;"><div id="orders-bar" style="height:100%;border-radius:6px;background:var(--g2);transition:width .5s;width:0%"></div></div>
         </div>
         <div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--iv4);margin-bottom:5px;"><span>Mahsulotlar</span><span id="products-usage-label">—</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--iv4);margin-bottom:5px;"><span data-i18n="admin.billing.products_usage">Mahsulotlar</span><span id="products-usage-label">—</span></div>
           <div style="background:rgba(247,245,240,0.05);border-radius:6px;height:6px;"><div id="products-bar" style="height:100%;border-radius:6px;background:var(--g3);transition:width .5s;width:0%"></div></div>
         </div>
       </div>
-      <div class="section-title">Tariflar</div>
+      <div class="section-title" data-i18n="admin.billing.plans_title">Tariflar</div>
       <div id="billing-plans-list"></div>
-      <div class="section-title" style="margin-top:4px">Obuna tasdiq (PDF)</div>
+      <div class="section-title" style="margin-top:4px" data-i18n="admin.billing.invoice_title">Obuna tasdiq (PDF)</div>
       <div class="billing-card">
-        <div style="font-size:12px;color:var(--iv4);margin-bottom:14px;">Joriy tarif bo'yicha hujjatni yuklash</div>
+        <div style="font-size:12px;color:var(--iv4);margin-bottom:14px;" data-i18n="admin.billing.invoice_hint">Joriy tarif bo'yicha hujjatni yuklash</div>
         <div style="display:flex;gap:8px;align-items:center;">
           <select id="invoice-month" style="flex:1;padding:12px 14px;border-radius:100px;border:1px solid rgba(247,245,240,0.09);background:rgba(5,5,5,0.6);color:var(--ivory);font-family:'Inter',sans-serif;font-size:13px;outline:none;">
-            <option value="1">Yanvar</option><option value="2">Fevral</option><option value="3">Mart</option>
-            <option value="4">Aprel</option><option value="5">May</option><option value="6">Iyun</option>
-            <option value="7">Iyul</option><option value="8">Avgust</option><option value="9">Sentabr</option>
-            <option value="10">Oktabr</option><option value="11">Noyabr</option><option value="12">Dekabr</option>
           </select>
-          <button onclick="downloadInvoice()" style="padding:12px 20px;border-radius:100px;border:none;background:var(--gs);color:var(--obs);font-weight:700;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;">PDF yuklash</button>
+          <button onclick="downloadInvoice()" data-i18n="admin.billing.download_pdf" style="padding:12px 20px;border-radius:100px;border:none;background:var(--gs);color:var(--obs);font-weight:700;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;">PDF yuklash</button>
         </div>
       </div>
     </div>
@@ -613,29 +609,29 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
     <div class="analytics-content">
 
       <!-- Рабочие часы -->
-      <div class="section-title" style="margin-bottom:10px">Ish vaqti</div>
+      <div class="section-title" style="margin-bottom:10px" data-i18n="admin.settings.working_hours_title">Ish vaqti</div>
       <div class="billing-card">
         <div style="font-size:12px;color:var(--iv4);margin-bottom:12px;line-height:1.6;">
-          Mijoz menyu ochganida ko'rinadigan ish vaqti.<br>
-          <span style="color:var(--iv3)">Masalan: Dush-Yak 10:00–22:00 · Dam 11:00–23:00</span>
+          <span data-i18n="admin.settings.working_hours_hint">Mijoz menyu ochganida ko'rinadigan ish vaqti.</span><br>
+          <span style="color:var(--iv3)" data-i18n="admin.settings.working_hours_example">Masalan: Dush-Yak 10:00–22:00 · Dam 11:00–23:00</span>
         </div>
-        <input class="modal-input" type="text" id="settingsWorkingHours" placeholder="09:00-23:00" autocomplete="off" style="margin-bottom:0"/>
+        <input class="modal-input" type="text" id="settingsWorkingHours" data-i18n-placeholder="admin.settings.working_hours_placeholder" placeholder="09:00-23:00" autocomplete="off" style="margin-bottom:0"/>
       </div>
 
       <!-- Доставка -->
-      <div class="section-title" style="margin-top:20px;margin-bottom:10px">Yetkazib berish</div>
+      <div class="section-title" style="margin-top:20px;margin-bottom:10px" data-i18n="admin.qr.tab_delivery">Yetkazib berish</div>
       <div class="billing-card">
         <div style="display:flex;flex-direction:column;gap:14px;">
           <div>
-            <div style="font-size:11px;font-weight:600;color:var(--iv3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">Yetkazish narxi (so'm)</div>
-            <div style="font-size:12px;color:var(--iv4);margin-bottom:10px;line-height:1.5;">0 kiritsangiz — yetkazish bepul deb ko'rsatiladi.</div>
+            <div style="font-size:11px;font-weight:600;color:var(--iv3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;" data-i18n="admin.settings.delivery_fee_label">Yetkazish narxi (so'm)</div>
+            <div style="font-size:12px;color:var(--iv4);margin-bottom:10px;line-height:1.5;" data-i18n="admin.settings.delivery_fee_hint">0 kiritsangiz — yetkazish bepul deb ko'rsatiladi.</div>
             <input class="modal-input" type="number" id="settingsDeliveryFee"
               placeholder="0" min="0" step="1000" style="margin-bottom:0"/>
           </div>
           <div style="height:1px;background:rgba(247,245,240,0.05);"></div>
           <div>
-            <div style="font-size:11px;font-weight:600;color:var(--iv3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">Minimal buyurtma summasi (so'm)</div>
-            <div style="font-size:12px;color:var(--iv4);margin-bottom:10px;line-height:1.5;">0 kiritsangiz — cheklov yo'q.</div>
+            <div style="font-size:11px;font-weight:600;color:var(--iv3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;" data-i18n="admin.settings.min_order_label">Minimal buyurtma summasi (so'm)</div>
+            <div style="font-size:12px;color:var(--iv4);margin-bottom:10px;line-height:1.5;" data-i18n="admin.settings.min_order_hint">0 kiritsangiz — cheklov yo'q.</div>
             <input class="modal-input" type="number" id="settingsMinOrder"
               placeholder="0" min="0" step="1000" style="margin-bottom:0"/>
           </div>
@@ -647,7 +643,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
         onclick="saveSettings()"
         style="width:100%;margin-top:24px;border-radius:100px;">
         <svg class="icon" viewBox="0 0 24 24" style="width:15px;height:15px;stroke-width:2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        Saqlash
+        <span data-i18n="common.save">Saqlash</span>
       </button>
 
     </div>
@@ -659,11 +655,11 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 <div class="modal-overlay" id="addCategoryModal">
   <div class="modal">
     <div class="modal-grip"></div>
-    <div class="modal-title">Yangi kategoriya</div>
-    <input class="modal-input" type="text" id="newCategoryName" placeholder="Kategoriya nomi"/>
+    <div class="modal-title" data-i18n="admin.modal.add_category_title">Yangi kategoriya</div>
+    <input class="modal-input" type="text" id="newCategoryName" data-i18n-placeholder="admin.modal.category_name_placeholder" placeholder="Kategoriya nomi"/>
     <div class="modal-btns">
-      <button class="modal-btn modal-btn-cancel" onclick="closeModal('addCategoryModal')">Bekor</button>
-      <button class="modal-btn modal-btn-save" onclick="saveNewCategory()">Qo'shish</button>
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal('addCategoryModal')" data-i18n="common.cancel">Bekor</button>
+      <button class="modal-btn modal-btn-save" onclick="saveNewCategory()" data-i18n="admin.modal.add_btn">Qo'shish</button>
     </div>
   </div>
 </div>
@@ -672,28 +668,28 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 <div class="modal-overlay" id="editProductModal">
   <div class="modal">
     <div class="modal-grip"></div>
-    <div class="modal-title">Taomni tahrirlash</div>
-    <input class="modal-input" type="text" id="editProductName" placeholder="Taom nomi"/>
-    <input class="modal-input" type="number" id="editProductPrice" placeholder="Narxi (so'm)"/>
-    <textarea class="modal-input modal-textarea" id="editProductDesc" placeholder="Tavsif (ixtiyoriy)"></textarea>
+    <div class="modal-title" data-i18n="admin.modal.edit_product_title">Taomni tahrirlash</div>
+    <input class="modal-input" type="text" id="editProductName" data-i18n-placeholder="admin.modal.product_name_placeholder" placeholder="Taom nomi"/>
+    <input class="modal-input" type="number" id="editProductPrice" data-i18n-placeholder="admin.modal.product_price_placeholder" placeholder="Narxi (so'm)"/>
+    <textarea class="modal-input modal-textarea" id="editProductDesc" data-i18n-placeholder="admin.modal.product_desc_placeholder" placeholder="Tavsif (ixtiyoriy)"></textarea>
     <div class="photo-upload-wrap">
       <div class="photo-preview" id="editPhotoPreview">
         <div class="photo-preview-empty" id="editPhotoEmpty">
           <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-          <span>Rasm yo'q</span>
+          <span data-i18n="admin.modal.no_photo">Rasm yo'q</span>
         </div>
         <img id="editPhotoImg" src="" alt="" style="display:none">
       </div>
       <div class="photo-uploading" id="editPhotoLoading">
         <div class="photo-spin"></div>
-        <span>Yuklanmoqda...</span>
+        <span data-i18n="common.loading">Yuklanmoqda...</span>
       </div>
       <div class="photo-btns">
         <button class="photo-upload-btn" id="editPhotoUploadBtn" onclick="triggerPhotoUpload()">
           <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Rasm yuklash
+          <span data-i18n="admin.modal.upload_photo_btn">Rasm yuklash</span>
         </button>
-        <button class="photo-clear-btn" id="editPhotoClearBtn" onclick="clearPhoto()" style="display:none" title="Rasmni o'chirish">
+        <button class="photo-clear-btn" id="editPhotoClearBtn" onclick="clearPhoto()" style="display:none" data-i18n-title="admin.modal.clear_photo_title" title="Rasmni o'chirish">
           <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -706,14 +702,14 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
     </div>
     <div class="modal-toggle-row">
       <div>
-        <div class="modal-toggle-label">Mashhur taom ⭐</div>
-        <div class="modal-toggle-sub">"Mashhur" bo'limida ko'rsatish</div>
+        <div class="modal-toggle-label" data-i18n="admin.modal.popular_label">Mashhur taom ⭐</div>
+        <div class="modal-toggle-sub" data-i18n="admin.modal.popular_sub">"Mashhur" bo'limida ko'rsatish</div>
       </div>
       <button class="toggle-btn off" id="editProductPopular" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button>
     </div>
     <div class="modal-btns">
-      <button class="modal-btn modal-btn-cancel" onclick="closeModal('editProductModal')">Bekor</button>
-      <button class="modal-btn modal-btn-save" onclick="saveEditProduct()">Saqlash</button>
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal('editProductModal')" data-i18n="common.cancel">Bekor</button>
+      <button class="modal-btn modal-btn-save" onclick="saveEditProduct()" data-i18n="common.save">Saqlash</button>
     </div>
   </div>
 </div>
@@ -722,14 +718,14 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 <div class="modal-overlay" id="addProductModal">
   <div class="modal">
     <div class="modal-grip"></div>
-    <div class="modal-title">Yangi taom</div>
+    <div class="modal-title" data-i18n="admin.modal.add_product_title">Yangi taom</div>
     <select class="modal-select" id="newProductCategory"></select>
-    <input class="modal-input" type="text" id="newProductName" placeholder="Taom nomi"/>
-    <input class="modal-input" type="number" id="newProductPrice" placeholder="Narxi (so'm)"/>
-    <textarea class="modal-input modal-textarea" id="newProductDesc" placeholder="Tavsif (ixtiyoriy)"></textarea>
+    <input class="modal-input" type="text" id="newProductName" data-i18n-placeholder="admin.modal.product_name_placeholder" placeholder="Taom nomi"/>
+    <input class="modal-input" type="number" id="newProductPrice" data-i18n-placeholder="admin.modal.product_price_placeholder" placeholder="Narxi (so'm)"/>
+    <textarea class="modal-input modal-textarea" id="newProductDesc" data-i18n-placeholder="admin.modal.product_desc_placeholder" placeholder="Tavsif (ixtiyoriy)"></textarea>
     <div class="modal-btns">
-      <button class="modal-btn modal-btn-cancel" onclick="closeModal('addProductModal')">Bekor</button>
-      <button class="modal-btn modal-btn-save" onclick="saveNewProduct()">Qo'shish</button>
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal('addProductModal')" data-i18n="common.cancel">Bekor</button>
+      <button class="modal-btn modal-btn-save" onclick="saveNewProduct()" data-i18n="admin.modal.add_btn">Qo'shish</button>
     </div>
   </div>
 </div>
@@ -740,11 +736,11 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
     <div class="confirm-icon">
       <svg class="icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
     </div>
-    <div class="confirm-title" id="confirmTitle">O'chirishni tasdiqlang</div>
-    <div class="confirm-sub" id="confirmSub">Bu amalni bekor qilib bo'lmaydi.</div>
+    <div class="confirm-title" id="confirmTitle" data-i18n="admin.confirm.delete_title">O'chirishni tasdiqlang</div>
+    <div class="confirm-sub" id="confirmSub" data-i18n="admin.confirm.delete_sub">Bu amalni bekor qilib bo'lmaydi.</div>
     <div class="confirm-btns">
-      <button class="confirm-btn-cancel" onclick="closeModal('confirmModal')">Bekor</button>
-      <button class="confirm-btn-del" id="confirmOkBtn">O'chirish</button>
+      <button class="confirm-btn-cancel" onclick="closeModal('confirmModal')" data-i18n="common.cancel">Bekor</button>
+      <button class="confirm-btn-del" id="confirmOkBtn" data-i18n="admin.confirm.delete_btn">O'chirish</button>
     </div>
   </div>
 </div>
@@ -757,6 +753,49 @@ let AUTH_TOKEN=null,RESTAURANT_ID=null,RESTAURANT_SLUG=null,RESTAURANT_CURRENCY=
 let allOrders=[],prevNewCount=0,soundEnabled=localStorage.getItem('taomly_sound')==='true';
 let currentFilter='active',currentPage='orders',menuData=null,editingProductId=null,analyticsPeriod='30d';
 let qrTables=[],qrCurrentTab='tables',qrPageInitialized=false;
+
+// ── i18n ──
+let _i18nData={};
+function t(key,vars){
+  let s=_i18nData[key]||key;
+  if(vars)Object.keys(vars).forEach(k=>{s=s.replace(new RegExp('\\{\\{'+k+'\\}\\}','g'),vars[k]);});
+  return s;
+}
+async function loadI18n(lang){
+  const supported=['uz','ru','en'];
+  const l=supported.includes(lang)?lang:'uz';
+  try{
+    const r=await fetch('/i18n/'+l+'.json');
+    if(r.ok)_i18nData=await r.json();
+  }catch(e){console.warn('i18n load failed',e);}
+}
+function applyI18n(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k=el.getAttribute('data-i18n');
+    if(_i18nData[k])el.textContent=_i18nData[k];
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{
+    const k=el.getAttribute('data-i18n-placeholder');
+    if(_i18nData[k])el.placeholder=_i18nData[k];
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el=>{
+    const k=el.getAttribute('data-i18n-title');
+    if(_i18nData[k])el.title=_i18nData[k];
+  });
+  // Populate month select dynamically
+  const sel=document.getElementById('invoice-month');
+  if(sel){
+    const cur=sel.value;
+    sel.innerHTML='';
+    for(let m=1;m<=12;m++){
+      const o=document.createElement('option');
+      o.value=m;
+      o.textContent=t('admin.months.'+m);
+      sel.appendChild(o);
+    }
+    if(cur)sel.value=cur;
+  }
+}
 
 
 // ── PHOTO UPLOAD via Cloudflare R2 ──
@@ -798,17 +837,15 @@ async function handlePhotoFile(input){
 
   // Проверка типа
   if(!file.type.startsWith('image/')){
-    showToast("Faqat rasm fayllari qabul qilinadi",true);
+    showToast(t('admin.modal.photo_type_error'),true);
     input.value='';return;
   }
 
-  // Проверка размера (5MB)
   if(file.size>MAX_FILE_SIZE){
-    showToast(`Rasm hajmi 5MB dan oshmasligi kerak (hozir: ${(file.size/1024/1024).toFixed(1)}MB)`,true);
+    showToast(t('admin.modal.photo_size_error',{size:(file.size/1024/1024).toFixed(1)}),true);
     input.value='';return;
   }
 
-  // Показываем индикатор загрузки
   const loadEl=document.getElementById('editPhotoLoading');
   const uploadBtn=document.getElementById('editPhotoUploadBtn');
   loadEl.classList.add('show');
@@ -817,9 +854,9 @@ async function handlePhotoFile(input){
   try{
     const url=await uploadToTelegraph(file);
     setPhotoUrl(url);
-    showToast('Rasm yuklandi ✓');
+    showToast(t('admin.modal.photo_uploaded'));
   }catch(e){
-    showToast('Yuklash xatosi: '+e.message,true);
+    showToast(t('admin.modal.photo_upload_error',{msg:e.message}),true);
   }finally{
     loadEl.classList.remove('show');
     uploadBtn.disabled=false;
@@ -836,12 +873,12 @@ async function uploadToTelegraph(file){
     body:formData
   });
   if(!res.ok){
-    let msg='Yuklash xatosi';
+    let msg=t('admin.modal.upload_error_generic');
     try{const d=await res.json();msg=d.detail||msg;}catch(e){}
     throw new Error(msg);
   }
   const data=await res.json();
-  if(!data.url)throw new Error('Server URL qaytarmadi');
+  if(!data.url)throw new Error(t('admin.modal.server_no_url'));
   return data.url;
 }
 
@@ -875,7 +912,7 @@ function authHeaders(){return{'Content-Type':'application/json','Authorization':
 
 async function apiFetch(url,options={}){
   const res=await fetch(url,options);
-  if(res.status===401){doLogout();throw new Error('Sessiya tugadi. Qayta kiring.');}
+  if(res.status===401){doLogout();throw new Error(t('admin.error.session_expired'));}
   return res;
 }
 
@@ -898,38 +935,47 @@ async function doLogin(){
   const slugInput=document.getElementById('slugInput').value.trim().toLowerCase();
   const passInput=document.getElementById('passwordInput').value;
   const btn=document.getElementById('loginBtn');
-  if(!slugInput){showLoginError('Slug kiriting');return;}
-  if(!passInput){showLoginError('Parolni kiriting');return;}
-  btn.disabled=true;btn.textContent='Kirish...';
+  if(!slugInput){showLoginError(t('admin.login.error_slug_required'));return;}
+  if(!passInput){showLoginError(t('admin.login.error_pass_required'));return;}
+  btn.disabled=true;btn.textContent=t('admin.login.submitting');
   try{
     const res=await fetch(`${API}/api/agency/restaurant-login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug:slugInput,password:passInput})});
-    if(res.status===401){showLoginError("Noto'g'ri slug yoki parol");return;}
-    if(!res.ok){showLoginError("Server xatosi");return;}
+    if(res.status===401){showLoginError(t('admin.login.error_invalid'));return;}
+    if(!res.ok){showLoginError(t('error.server'));return;}
     const data=await res.json();
     AUTH_TOKEN=data.access_token;
     const rRes=await fetch(`${API}/api/restaurants/${slugInput}`);
-    if(!rRes.ok)throw new Error('Restoran topilmadi');
+    if(!rRes.ok)throw new Error(t('admin.error.not_found_title'));
     const rData=await rRes.json();
     RESTAURANT_ID=rData.id;RESTAURANT_SLUG=slugInput;
     sessionStorage.setItem(SESSION_KEY,JSON.stringify({slug:slugInput,id:rData.id}));
     document.getElementById('passwordInput').value='';
-    loadApp();
-  }catch(e){showLoginError(e.message||'Xato yuz berdi');}
-  finally{btn.disabled=false;btn.textContent='Kirish';}
+    await loadApp(rData);
+  }catch(e){showLoginError(e.message||t('common.error'));}
+  finally{btn.disabled=false;btn.textContent=t('admin.login.submit');}
 }
 
 function showLoginError(msg){const el=document.getElementById('loginError');el.textContent=msg;el.style.display='block';}
 
-function loadApp(){
+async function loadApp(rDataFromLogin){
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('loginError').style.display='none';
   document.getElementById('mainApp').style.display='block';
   document.getElementById('headerSlug').textContent=RESTAURANT_SLUG;
-  // Загружаем имя ресторана для заголовка
-  fetch(`${API}/api/restaurants/${RESTAURANT_SLUG}`)
-    .then(r=>r.ok?r.json():null)
-    .then(d=>{if(d?.name){document.getElementById('headerTitle').textContent=d.name;}if(d?.currency){RESTAURANT_CURRENCY=d.currency;}})
-    .catch(()=>{});
+  // Получаем данные ресторана (могут быть уже переданы из doLogin)
+  let d=rDataFromLogin||null;
+  if(!d){
+    try{
+      const r=await fetch(`${API}/api/restaurants/${RESTAURANT_SLUG}`);
+      if(r.ok)d=await r.json();
+    }catch(e){}
+  }
+  if(d?.name){document.getElementById('headerTitle').textContent=d.name;}
+  if(d?.currency){RESTAURANT_CURRENCY=d.currency;}
+  // i18n: загружаем язык ресторана ДО первого render
+  await loadI18n(d?.language||'uz');
+  applyI18n();
+  // Первый render только после i18n готов
   loadOrders();
 }
 
@@ -975,8 +1021,23 @@ function refreshCurrent(){
 }
 
 // ── ORDERS ──
-const STATUS_LABELS={new:'Yangi',accepted:'Qabul qilindi',preparing:'Tayyorlanmoqda',ready_for_delivery:'Yetkazishga tayyor',delivering:'Yetkazilmoqda',completed:'Bajarildi',cancelled:'Bekor qilindi'};
-const TYPE_LABELS={delivery:'Yetkazib berish',takeaway:'Olib ketish',dine_in:'Zal'};
+// Runtime functions — вызываются при рендере, когда t() уже доступен
+function getStatusLabel(status){
+  const map={
+    new:'order.status_new',
+    accepted:'admin.orders.status_accepted',
+    preparing:'admin.orders.status_preparing',
+    ready_for_delivery:'admin.orders.status_ready_for_delivery',
+    delivering:'admin.orders.status_delivering',
+    completed:'admin.orders.done_tab',
+    cancelled:'order.status_cancelled'
+  };
+  return t(map[status]||'order.status_new');
+}
+function getTypeLabel(type){
+  const map={delivery:'admin.qr.tab_delivery',takeaway:'admin.qr.tab_takeaway',dine_in:'admin.orders.type_dine_in'};
+  return t(map[type]||'admin.orders.type_dine_in');
+}
 // Цепочка статусов зависит от типа заказа
 function getNextStatus(status, orderType){
   const chain = orderType === 'delivery'
@@ -985,8 +1046,8 @@ function getNextStatus(status, orderType){
   return chain[status] || null;
 }
 function getNextLabel(status){
-  const labels = {accepted:'Tayyorlashni boshlash', preparing:'Bajarildi', delivering:'Yetkazildi'};
-  return labels[status] || null;
+  const map={accepted:'admin.orders.action_start_preparing',preparing:'admin.orders.action_done',delivering:'admin.orders.action_delivered'};
+  return map[status]?t(map[status]):null;
 }
 
 // ── PRICE FORMATTER ─────────────────────────────────────────────────────────
@@ -1016,13 +1077,12 @@ function fmtMoney(p){return fmt(p);}
 /* XSS-защита: экранирует HTML-спецсимволы перед вставкой в innerHTML */
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function timeAgo(dateStr){
-  // Сервер хранит UTC, добавляем Z если нет timezone
   const s=dateStr.endsWith('Z')||dateStr.includes('+')?dateStr:dateStr+'Z';
   const diff=Math.floor((Date.now()-new Date(s))/60000);
-  if(diff<1)return'Hozirgina';
-  if(diff<60)return diff+' daqiqa oldin';
-  if(diff<1440)return Math.floor(diff/60)+' soat oldin';
-  return Math.floor(diff/1440)+' kun oldin';
+  if(diff<1)return t('admin.time.just_now');
+  if(diff<60)return t('admin.time.minutes_ago',{n:diff});
+  if(diff<1440)return t('admin.time.hours_ago',{n:Math.floor(diff/60)});
+  return t('admin.time.days_ago',{n:Math.floor(diff/1440)});
 }
 
 function showOrdersSkeleton(){
@@ -1049,7 +1109,7 @@ async function loadOrders(){
     prevNewCount=newCount;allOrders=freshOrders;
     if(currentPage==='orders')renderOrders();
   }catch(e){
-    document.getElementById('orders-content').innerHTML=`<div class="empty">${e.message||"Yuklab bo'lmadi"}</div>`;
+    document.getElementById('orders-content').innerHTML=`<div class="empty">${esc(e.message||t('admin.orders.load_error'))}</div>`;
   }
 }
 
@@ -1070,18 +1130,18 @@ function updateStatsBar(){
   document.getElementById('sBarActive').textContent=activeCount;
   document.getElementById('sBarToday').textContent=todayOrders.length;
   document.getElementById('sBarRevenue').textContent=todayRevenue>=1000000?(todayRevenue/1000000).toFixed(1)+'M':todayRevenue>=1000?Math.round(todayRevenue/1000)+'K':todayRevenue||0;
-}
   // Счётчик на вкладке Faol
   const totalActive=newCount+activeCount;
   const ac=document.getElementById('activeOrderCount');
   if(ac){ac.textContent=totalActive>0?totalActive:'';ac.className='tab-count'+(totalActive>0?' visible':'');}
+}
 
 function renderOrders(){
   updateStatsBar();
   const ACTIVE=['new','accepted','preparing','ready_for_delivery','delivering'];
   const filtered=currentFilter==='active'?allOrders.filter(o=>ACTIVE.includes(o.status)):allOrders.filter(o=>['completed','cancelled'].includes(o.status));
   const content=document.getElementById('orders-content');
-  if(filtered.length===0){content.innerHTML=`<div class="empty">Bu bo'limda buyurtmalar yo'q</div>`;return;}
+  if(filtered.length===0){content.innerHTML=`<div class="empty">${esc(t('admin.orders.empty'))}</div>`;return;}
   content.innerHTML='';
   filtered.forEach((order,i)=>{const card=makeOrderCard(order);card.style.animationDelay=`${i*40}ms`;content.appendChild(card);});
 }
@@ -1096,26 +1156,26 @@ function makeOrderCard(order){
   // Для new: кнопка "Bekor qilish" через существующий PATCH /status.
   // Для completed/cancelled: никаких деструктивных действий.
   const cancelBtn=order.status==='new'
-    ?`<button class="btn-delete" onclick="confirmCancelOrder(${order.id})">Buyurtmani bekor qilish</button>`
+    ?`<button class="btn-delete" onclick="confirmCancelOrder(${order.id})">${esc(t('admin.orders.cancel_btn'))}</button>`
     :'';
   const actionBtns=nextStatus?`
     <div class="action-btns">
-      <button class="btn btn-accept" onclick="changeStatus(${order.id},'${nextStatus}')">${getNextLabel(order.status)}</button>
+      <button class="btn btn-accept" onclick="changeStatus(${order.id},'${nextStatus}')">${esc(getNextLabel(order.status))}</button>
     </div>
     ${cancelBtn}`:cancelBtn;
   div.innerHTML=`
     <div class="order-header">
-      <div><div class="order-id">#${String(order.id).padStart(4,'0')}</div><div class="order-time">${timeAgo(order.created_at)}</div></div>
-      <span class="status-badge status-${order.status}">${STATUS_LABELS[order.status]||order.status}</span>
+      <div><div class="order-id">#${String(order.id).padStart(4,'0')}</div><div class="order-time">${esc(timeAgo(order.created_at))}</div></div>
+      <span class="status-badge status-${order.status}">${esc(getStatusLabel(order.status))}</span>
     </div>
-    <div class="order-type">${TYPE_LABELS[order.order_type]||order.order_type}</div>
+    <div class="order-type">${esc(getTypeLabel(order.order_type))}</div>
     <div class="client-info">
       <div class="client-name">${esc(order.client_name)||'—'}</div>
       <div class="client-phone">${esc(order.client_phone)||'—'}</div>
       ${addressHtml}${commentHtml}
     </div>
     <div class="items-list">${itemsHtml}</div>
-    <div class="order-total"><span class="order-total-label">Jami</span><span class="order-total-val">${fmt(order.total_amount)}</span></div>
+    <div class="order-total"><span class="order-total-label">${esc(t('admin.orders.total_label'))}</span><span class="order-total-val">${fmt(order.total_amount)}</span></div>
     ${actionBtns}`;
   return div;
 }
@@ -1125,15 +1185,15 @@ async function changeStatus(orderId,newStatus){
     const res=await apiFetch(`${API}/api/orders/${orderId}/status`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify({status:newStatus})});
     if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Xato');}
     await loadOrders();
-  }catch(e){showToast('Xato: '+e.message,true);}
+  }catch(e){showToast(t('admin.common.error_prefix',{msg:e.message}),true);}
 }
 
 // Отмена заказа через существующий PATCH /status → 'cancelled'.
 // Физическое удаление запрещено: заказы — это журнал ресторана.
 function confirmCancelOrder(orderId){
   showConfirm(
-    `Buyurtma #${String(orderId).padStart(4,'0')}`,
-    "Bu buyurtmani bekor qilishni xohlaysizmi? Buyurtma arxivda saqlanib qoladi.",
+    t('order.number',{id:String(orderId).padStart(4,'0')}),
+    t('admin.orders.cancel_confirm_sub'),
     ()=>changeStatus(orderId,'cancelled')
   );
 }
@@ -1150,20 +1210,20 @@ async function loadMenu(){
     if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Xato');}
     menuData=await res.json();renderMenu();
   }catch(e){
-    document.getElementById('menu-content').innerHTML=`<div class="empty">${e.message||'Menyu yuklanmadi'}</div>`;
+    document.getElementById('menu-content').innerHTML=`<div class="empty">${esc(e.message||t('admin.menu.load_error'))}</div>`;
   }
 }
 
 function renderMenu(){
   const content=document.getElementById('menu-content');content.innerHTML='';
   const catBtn=document.getElementById('addCategoryBtn');
-  if(!menuData||menuData.length===0){catBtn.style.display='block';content.innerHTML=`<div class="empty">Menyu bo'sh.<br>Avval kategoriya qo'shing.</div>`;return;}
+  if(!menuData||menuData.length===0){catBtn.style.display='block';content.innerHTML=`<div class="empty">${esc(t('admin.menu.empty')).replace('\n','<br>')}</div>`;return;}
   catBtn.style.display='block';
   menuData.forEach(cat=>{
     const block=document.createElement('div');block.className='category-block';
     block.innerHTML=`<div class="category-name">${esc(cat.name)}</div>`;
     if(cat.products&&cat.products.length>0){cat.products.forEach(p=>block.appendChild(makeProductRow(p)));}
-    else{const e=document.createElement('div');e.className='empty';e.style.padding='12px 0';e.textContent="Bu kategoriyada taom yo'q";block.appendChild(e);}
+    else{const e=document.createElement('div');e.className='empty';e.style.padding='12px 0';e.textContent=t('admin.menu.category_empty');block.appendChild(e);}
     content.appendChild(block);
   });
 }
@@ -1174,7 +1234,7 @@ function makeProductRow(p){
   const photoHtml=p.photo_url
     ?`<div class="product-row-photo"><img src="${esc(p.photo_url)}" alt="${esc(p.name)}" loading="lazy"></div>`
     :`<div class="product-row-ph"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a4 4 0 0 1 0 8M6 4v16M6 4c0 2.5 2.5 2.5 2.5 5S6 11.5 6 14"/></svg></div>`;
-  const popularHtml=p.is_popular?`<span class="popular-badge">★ Mashhur</span>`:'';
+  const popularHtml=p.is_popular?`<span class="popular-badge">${esc(t('admin.menu.popular_badge'))}</span>`:'';
   div.innerHTML=`
     ${photoHtml}
     <div class="product-row-info">
@@ -1196,7 +1256,7 @@ async function toggleProduct(productId,currentAvailable){
     const res=await apiFetch(`${API}/api/menu/product/${productId}`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify({is_available:!currentAvailable})});
     if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Xato');}
     await loadMenu();
-  }catch(e){showToast('Xato: '+e.message,true);}
+  }catch(e){showToast(t('admin.common.error_prefix',{msg:e.message}),true);}
 }
 
 function openEditProduct(productId){
@@ -1224,31 +1284,31 @@ async function saveEditProduct(){
   const description=document.getElementById('editProductDesc').value.trim();
   const photo_url=document.getElementById('editProductPhoto').value.trim();
   const is_popular=document.getElementById('editProductPopular').classList.contains('on');
-  if(!name){showToast('Taom nomini kiriting',true);return;}
-  if(!price||price<=0){showToast('Narxni kiriting',true);return;}
+  if(!name){showToast(t('admin.modal.error_name_required'),true);return;}
+  if(!price||price<=0){showToast(t('admin.modal.error_price_required'),true);return;}
   try{
     const res=await apiFetch(`${API}/api/menu/product/${editingProductId}`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify({name,price,description:description||null,photo_url:photo_url||null,is_popular})});
     if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Xato');}
     closeModal('editProductModal');
-    showToast('Saqlandi ✓');
+    showToast(t('admin.modal.saved'));
     await loadMenu();
-  }catch(e){showToast('Xato: '+e.message,true);}
+  }catch(e){showToast(t('admin.common.error_prefix',{msg:e.message}),true);}
 }
 
 function openAddCategoryModal(){document.getElementById('newCategoryName').value='';document.getElementById('addCategoryModal').classList.add('active');}
 
 async function saveNewCategory(){
   const name=document.getElementById('newCategoryName').value.trim();
-  if(!name){showToast('Kategoriya nomini kiriting',true);return;}
+  if(!name){showToast(t('admin.modal.error_category_name_required'),true);return;}
   try{
     const res=await apiFetch(`${API}/api/menu/category/`,{method:'POST',headers:authHeaders(),body:JSON.stringify({name,sort_order:menuData?menuData.length:0})});
-    if(!res.ok){let d=`HTTP ${res.status}`;try{const t=await res.text();try{const p=JSON.parse(t);d=p.detail?JSON.stringify(p.detail):t;}catch{d=t;}}catch{}throw new Error(d);}
-    closeModal('addCategoryModal');showToast("Kategoriya qo'shildi ✓");await loadMenu();
-  }catch(e){showToast('Xato: '+e.message,true);}
+    if(!res.ok){let d=`HTTP ${res.status}`;try{const tx=await res.text();try{const p=JSON.parse(tx);d=p.detail?JSON.stringify(p.detail):tx;}catch{d=tx;}}catch{}throw new Error(d);}
+    closeModal('addCategoryModal');showToast(t('admin.modal.category_added'));await loadMenu();
+  }catch(e){showToast(t('admin.common.error_prefix',{msg:e.message}),true);}
 }
 
 function openAddModal(){
-  if(!menuData||menuData.length===0){showToast("Avval kategoriya qo'shing",true);return;}
+  if(!menuData||menuData.length===0){showToast(t('admin.menu.no_categories'),true);return;}
   const select=document.getElementById('newProductCategory');
   select.innerHTML=menuData.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
   document.getElementById('newProductName').value='';
@@ -1262,13 +1322,13 @@ async function saveNewProduct(){
   const name=document.getElementById('newProductName').value.trim();
   const price=parseInt(document.getElementById('newProductPrice').value);
   const description=document.getElementById('newProductDesc').value.trim();
-  if(!name){showToast('Taom nomini kiriting',true);return;}
-  if(!price||price<=0){showToast('Narxni kiriting',true);return;}
+  if(!name){showToast(t('admin.modal.error_name_required'),true);return;}
+  if(!price||price<=0){showToast(t('admin.modal.error_price_required'),true);return;}
   try{
     const res=await apiFetch(`${API}/api/menu/product/`,{method:'POST',headers:authHeaders(),body:JSON.stringify({category_id:categoryId,name,price,description:description||null,is_available:true})});
     if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Xato');}
-    closeModal('addProductModal');showToast("Taom qo'shildi ✓");await loadMenu();
-  }catch(e){showToast('Xato: '+e.message,true);}
+    closeModal('addProductModal');showToast(t('admin.modal.product_added'));await loadMenu();
+  }catch(e){showToast(t('admin.common.error_prefix',{msg:e.message}),true);}
 }
 
 function closeModal(id){document.getElementById(id).classList.remove('active');}
@@ -1277,10 +1337,9 @@ document.querySelectorAll('.modal-overlay').forEach(overlay=>{
 });
 
 // ── ANALYTICS ──
-const PERIOD_LABELS={today:'Bugun','7d':'7 kun','30d':'30 kun','90d':'90 kun',this_month:'Bu oy'};
 function setPeriod(period){
   analyticsPeriod=period;
-  document.querySelectorAll('.period-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.period-tab').forEach(el=>el.classList.remove('active'));
   const tabEl=document.getElementById('ptab-'+period);if(tabEl)tabEl.classList.add('active');
   renderAnalytics();
 }
@@ -1290,7 +1349,6 @@ async function _loadAnalyticsFromServer(period){
   const loading=document.getElementById('analytics-loading');
   const kpiGrid=document.getElementById('analytics-kpi');
 
-  // Skeleton: KPI-карточки показывают shimmer пока грузятся данные
   const skelVal='<div class="skel" style="height:22px;width:80px;border-radius:6px;display:inline-block"></div>';
   ['kpi-revenue','kpi-orders','kpi-avg','kpi-returning'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.innerHTML=skelVal;
@@ -1313,12 +1371,11 @@ async function _loadAnalyticsFromServer(period){
     _renderSummary(summary);_renderStatusGrid(summary);_renderTopDishes(topDishes);
     _renderOrderTypes(orderTypes,summary.orders_total);_renderPeakHours(peakHours);_renderDailyChart(byDay,period);
   }catch(e){
-    // Показываем ошибку в UI вместо тихого console.error
     ['kpi-revenue','kpi-orders','kpi-avg','kpi-returning'].forEach(id=>{
       const el=document.getElementById(id);if(el)el.textContent='—';
     });
     const topEl=document.getElementById('top-dishes-content');
-    if(topEl)topEl.innerHTML=`<div class="empty" style="padding:16px;color:#EF9A9A">Ma'lumotlarni yuklashda xatolik.<br><span style="font-size:11px;color:var(--iv4)">${e.message||'Server bilan bog\'lanib bo\'lmadi'}</span></div>`;
+    if(topEl)topEl.innerHTML=`<div class="empty" style="padding:16px;color:#EF9A9A">${esc(t('admin.analytics.load_error'))}<br><span style="font-size:11px;color:var(--iv4)">${esc(e.message||t('admin.common.server_unreachable'))}</span></div>`;
     console.error('Analytics load error:',e);
   }
   finally{loading.style.display='none';kpiGrid.style.opacity='1';}
@@ -1326,39 +1383,44 @@ async function _loadAnalyticsFromServer(period){
 
 function _renderSummary(s){
   document.getElementById('kpi-revenue').textContent=fmt(s.revenue);
-  document.getElementById('kpi-revenue-sub').textContent=s.orders_completed+' ta bajarilgan';
+  document.getElementById('kpi-revenue-sub').textContent=t('admin.analytics.orders_completed_sub',{n:s.orders_completed});
   document.getElementById('kpi-orders').textContent=s.orders_total;
-  document.getElementById('kpi-orders-sub').textContent=(s.orders_total-s.orders_completed-s.orders_cancelled)+' ta faol';
+  const active=s.orders_total-s.orders_completed-s.orders_cancelled;
+  document.getElementById('kpi-orders-sub').textContent=t('admin.analytics.orders_active_sub',{n:active});
   document.getElementById('kpi-avg').textContent=s.avg_check?fmt(s.avg_check):'—';
   document.getElementById('kpi-returning').textContent=s.returning_clients;
-  document.getElementById('kpi-returning-sub').textContent=s.new_clients+' ta yangi';
+  document.getElementById('kpi-returning-sub').textContent=t('admin.analytics.new_clients_sub',{n:s.new_clients});
 }
 function _renderStatusGrid(s){
   const active=s.orders_total-s.orders_completed-s.orders_cancelled;
   document.getElementById('status-grid').innerHTML=`
-    <div class="status-stat"><div class="status-stat-val" style="color:#66BB6A">${s.orders_completed}</div><div class="status-stat-label">Bajarildi</div></div>
-    <div class="status-stat"><div class="status-stat-val" style="color:var(--g2)">${active}</div><div class="status-stat-label">Jarayonda</div></div>
-    <div class="status-stat"><div class="status-stat-val" style="color:#EF9A9A">${s.orders_cancelled}</div><div class="status-stat-label">Bekor qilindi</div></div>`;
+    <div class="status-stat"><div class="status-stat-val" style="color:#66BB6A">${s.orders_completed}</div><div class="status-stat-label">${esc(t('admin.orders.done_tab'))}</div></div>
+    <div class="status-stat"><div class="status-stat-val" style="color:var(--g2)">${active}</div><div class="status-stat-label">${esc(t('admin.analytics.in_progress'))}</div></div>
+    <div class="status-stat"><div class="status-stat-val" style="color:#EF9A9A">${s.orders_cancelled}</div><div class="status-stat-label">${esc(t('order.status_cancelled'))}</div></div>`;
 }
 function _renderTopDishes(dishes){
   const container=document.getElementById('top-dishes-content');
-  if(!dishes.length){container.innerHTML=`<div class="empty" style="padding:16px">Ma'lumot yo'q</div>`;return;}
+  if(!dishes.length){container.innerHTML=`<div class="empty" style="padding:16px">${esc(t('admin.analytics.no_data'))}</div>`;return;}
   const rankClasses=['gold','silver','bronze','','','','','','',''];
   container.innerHTML=dishes.map(d=>`
     <div class="dish-row">
       <div class="dish-rank ${rankClasses[d.rank-1]||''}">${d.rank}</div>
-      <div class="dish-info"><div class="dish-name">${d.name}</div><div class="dish-qty">${d.qty} ta sotildi</div></div>
+      <div class="dish-info"><div class="dish-name">${esc(d.name)}</div><div class="dish-qty">${esc(t('admin.analytics.sold_qty',{n:d.qty}))}</div></div>
       <div class="dish-revenue">${fmtShort(d.revenue)}</div>
     </div>`).join('');
 }
 function _renderOrderTypes(types,totalOrders){
   const total=totalOrders||1;
-  const config={dine_in:{label:'Zal (QR)',color:'#C8703A'},delivery:{label:'Yetkazib berish',color:'#64B5F6'},takeaway:{label:'Olib ketish',color:'#66BB6A'}};
+  const config={
+    dine_in:{label:t('admin.analytics.type_dine_in'),color:'#C8703A'},
+    delivery:{label:t('admin.qr.tab_delivery'),color:'#64B5F6'},
+    takeaway:{label:t('admin.qr.tab_takeaway'),color:'#66BB6A'}
+  };
   const counts={dine_in:0,delivery:0,takeaway:0};
-  types.forEach(t=>{if(counts[t.order_type]!==undefined)counts[t.order_type]=t.orders;});
+  types.forEach(tp=>{if(counts[tp.order_type]!==undefined)counts[tp.order_type]=tp.orders;});
   document.getElementById('type-rows').innerHTML=Object.entries(config).map(([key,c])=>{
     const pct=Math.round((counts[key]/total)*100);
-    return`<div class="type-row"><div class="type-dot" style="background:${c.color}"></div><div class="type-name">${c.label}</div><div class="type-pct">${pct}%</div><div class="type-count">${counts[key]} ta</div></div>
+    return`<div class="type-row"><div class="type-dot" style="background:${c.color}"></div><div class="type-name">${esc(c.label)}</div><div class="type-pct">${pct}%</div><div class="type-count">${counts[key]} ta</div></div>
     <div style="background:rgba(247,245,240,0.05);border-radius:4px;height:5px;margin-bottom:4px;"><div style="width:${pct}%;height:100%;background:${c.color};border-radius:4px;transition:width .4s;opacity:.8;"></div></div>`;
   }).join('');
 }
@@ -1371,15 +1433,17 @@ function _renderPeakHours(hours){
     return`<div class="hour-col"><div class="hour-bar ${isPeak?'peak':''}" style="height:${pct}px"></div><div class="hour-tick">${h.hour}</div></div>`;
   }).join('');
   const peakLabel=document.getElementById('peak-label');
-  peakLabel.textContent=peakItem.orders>0?`Eng band: ${peakItem.hour}:00–${peakItem.hour+1}:00 (${peakItem.orders} buyurtma)`:"Bu davr uchun ma'lumot yo'q";
+  peakLabel.textContent=peakItem.orders>0
+    ?t('admin.analytics.peak_hour_label',{hour:peakItem.hour,next:peakItem.hour+1,n:peakItem.orders})
+    :t('admin.analytics.peak_no_data');
 }
 function _renderDailyChart(byDay,period){
   const section=document.getElementById('daily-section');
   if(period==='today'){section.style.display='none';return;}
   section.style.display='block';
-  const titleMap={'7d':'7 kunlik sotuvlar','30d':'30 kunlik sotuvlar','90d':'90 kunlik sotuvlar',this_month:'Shu oylik sotuvlar'};
-  document.getElementById('daily-title').textContent=titleMap[period]||'Kunlik sotuvlar';
-  if(!byDay.length){document.getElementById('daily-chart').innerHTML=`<div class="empty" style="padding:16px">Ma'lumot yo'q</div>`;return;}
+  const titleMap={'7d':'admin.analytics.daily_7d','30d':'admin.analytics.daily_30d','90d':'admin.analytics.daily_90d',this_month:'admin.analytics.daily_this_month'};
+  document.getElementById('daily-title').textContent=t(titleMap[period]||'admin.analytics.daily_title');
+  if(!byDay.length){document.getElementById('daily-chart').innerHTML=`<div class="empty" style="padding:16px">${esc(t('admin.analytics.no_data'))}</div>`;return;}
   const maxRevenue=Math.max(...byDay.map(d=>d.revenue),1);
   document.getElementById('daily-chart').innerHTML=byDay.map(d=>{
     const pct=Math.round((d.revenue/maxRevenue)*100);
@@ -1398,7 +1462,7 @@ async function loadSettings(){
     document.getElementById('settingsWorkingHours').value=r.working_hours||'';
     document.getElementById('settingsDeliveryFee').value=r.delivery_fee||0;
     document.getElementById('settingsMinOrder').value=r.min_order_amount||0;
-  }catch(e){showToast('Sozlamalarni yuklab bo\'lmadi',true);}
+  }catch(e){showToast(t('admin.settings.load_error'),true);}
 }
 
 async function saveSettings(){
@@ -1406,14 +1470,14 @@ async function saveSettings(){
   const deliveryFee=parseInt(document.getElementById('settingsDeliveryFee').value)||0;
   const minOrder=parseInt(document.getElementById('settingsMinOrder').value)||0;
 
-  if(deliveryFee<0||minOrder<0){showToast('Manfiy qiymat kiritib bo\'lmaydi',true);return;}
+  if(deliveryFee<0||minOrder<0){showToast(t('admin.settings.negative_value_error'),true);return;}
 
   const btn=document.getElementById('settingsSaveBtn');
-  btn.disabled=true;btn.textContent='Saqlanmoqda…';
+  btn.disabled=true;
+  const saveSpan=btn.querySelector('[data-i18n="common.save"]');
+  if(saveSpan)saveSpan.textContent=t('admin.settings.saving');
 
   try{
-    // Агентский PATCH /api/agency/restaurants/{id} принимает working_hours,
-    // delivery_fee, min_order_amount через RestaurantUpdate схему
     const res=await apiFetch(`${API}/api/agency/restaurants/${RESTAURANT_ID}`,{
       method:'PATCH',
       headers:authHeaders(),
@@ -1427,11 +1491,11 @@ async function saveSettings(){
       const err=await res.json().catch(()=>({}));
       throw new Error(err.detail||`HTTP ${res.status}`);
     }
-    showToast('Sozlamalar saqlandi ✓');
-  }catch(e){showToast('Xato: '+e.message,true);}
+    showToast(t('admin.settings.saved'));
+  }catch(e){showToast(t('admin.common.error_prefix',{msg:e.message}),true);}
   finally{
     btn.disabled=false;
-    btn.innerHTML='<svg class="icon" viewBox="0 0 24 24" style="width:15px;height:15px;stroke-width:2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Saqlash';
+    if(saveSpan)saveSpan.textContent=t('common.save');
   }
 }
 
@@ -1467,15 +1531,15 @@ function downloadQR(containerId,label){
 }
 function generateTableQR(){
   const input=document.getElementById('newTableNumber');const num=input.value.trim();if(!num){input.focus();return;}
-  if(qrTables.find(t=>t.number===num)){showToast(`Stol ${num} allaqachon mavjud`,true);input.value='';return;}
+  if(qrTables.find(tbl=>tbl.number===num)){showToast(t('admin.qr.table_duplicate',{num}),true);input.value='';return;}
   const url=buildQrUrl('table',num);
   const canvasId=`qr-table-canvas-${num.replace(/\s+/g,'-')}`;
   const card=document.createElement('div');card.className='qr-card';card.id=`qr-table-card-${num}`;
   card.innerHTML=`
-    <div class="qr-card-header"><div class="qr-table-label">Stol № ${num}</div><button class="qr-remove-btn" onclick="removeTableQR('${num}')">×</button></div>
+    <div class="qr-card-header"><div class="qr-table-label">${esc(t('admin.qr.table_label',{num}))}</div><button class="qr-remove-btn" onclick="removeTableQR('${esc(num)}')">×</button></div>
     <div class="qr-canvas-wrap" id="${canvasId}"></div>
-    <div class="qr-url-text">${url}</div>
-    <button class="qr-download-btn" onclick="downloadQR('${canvasId}','stol-${num}')">↓ PNG yuklab olish</button>`;
+    <div class="qr-url-text">${esc(url)}</div>
+    <button class="qr-download-btn" onclick="downloadQR('${canvasId}','stol-${esc(num)}')">${esc(t('admin.qr.download_btn'))}</button>`;
   document.getElementById('qr-tables-list').prepend(card);
   makeQR(document.getElementById(canvasId),url);
   qrTables.push({number:num});input.value='';input.focus();
@@ -1507,40 +1571,43 @@ async function loadBilling(){
 }
 function _renderBillingSub(sub,usage){
   const badge=document.getElementById('billing-badge');badge.textContent=sub.plan_name;
-  const priceLabel=sub.price===0?'Bepul':`${sub.currency} ${sub.price}/oy`;
+  const priceLabel=sub.price===0?t('admin.billing.free'):`${sub.currency} ${sub.price}/oy`;
   document.getElementById('billing-price').textContent=priceLabel;
   document.getElementById('billing-started').textContent=sub.started_at?new Date(sub.started_at).toLocaleDateString('uz-UZ'):'—';
-  document.getElementById('billing-expires').textContent=sub.expires_at?new Date(sub.expires_at).toLocaleDateString('uz-UZ'):'Muddatsiz';
+  document.getElementById('billing-expires').textContent=sub.expires_at?new Date(sub.expires_at).toLocaleDateString('uz-UZ'):t('admin.billing.no_expiry');
   const oUsed=usage.orders_used,oLimit=usage.orders_limit,oPct=usage.orders_pct,oRem=usage.orders_remaining;
-  document.getElementById('orders-usage-label').textContent=oLimit===-1?`${oUsed} ta (cheksiz)`:`${oUsed} / ${oLimit} (qoldi: ${oRem})`;
+  document.getElementById('orders-usage-label').textContent=oLimit===-1
+    ?t('admin.billing.usage_unlimited',{used:oUsed})
+    :t('admin.billing.usage_limited',{used:oUsed,limit:oLimit,rem:oRem});
   const oBar=document.getElementById('orders-bar');oBar.style.width=(oPct===-1?0:oPct)+'%';oBar.style.background=oPct>85?'#EF9A9A':'var(--g2)';
   const pUsed=usage.products_used,pLimit=usage.products_limit,pPct=usage.products_pct,pRem=usage.products_remaining;
-  document.getElementById('products-usage-label').textContent=pLimit===-1?`${pUsed} ta (cheksiz)`:`${pUsed} / ${pLimit} (qoldi: ${pRem})`;
+  document.getElementById('products-usage-label').textContent=pLimit===-1
+    ?t('admin.billing.usage_unlimited',{used:pUsed})
+    :t('admin.billing.usage_limited',{used:pUsed,limit:pLimit,rem:pRem});
   const pBar=document.getElementById('products-bar');pBar.style.width=(pPct===-1?0:pPct)+'%';pBar.style.background=pPct>85?'#EF9A9A':'var(--g3)';
 }
 function _renderBillingPlans(plans,currentPlanId){
   document.getElementById('billing-plans-list').innerHTML=plans.map(p=>{
     const isCurrent=p.id===currentPlanId;
-    const ordersLbl=p.orders_per_month===-1?'Cheksiz':`${p.orders_per_month} ta/oy`;
-    const prodLbl=p.products_limit===-1?'Cheksiz':`${p.products_limit} ta`;
-    const priceLbl=p.price===0?'Bepul':`${p.currency} ${p.price}/oy`;
+    const ordersLbl=p.orders_per_month===-1?t('admin.billing.unlimited'):`${p.orders_per_month} ta/oy`;
+    const prodLbl=p.products_limit===-1?t('admin.billing.unlimited'):`${p.products_limit} ta`;
+    const priceLbl=p.price===0?t('admin.billing.free'):`${p.currency} ${p.price}/oy`;
     const color=PLAN_COLORS[p.name]||'var(--ivory)';
     return`<div class="billing-card" style="${isCurrent?'border-color:rgba(212,175,55,0.35);':''} margin-bottom:10px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <div style="font-size:15px;font-weight:600;color:${color}">${p.name}</div>
-        <div style="font-size:13px;color:var(--ivory)">${priceLbl}</div>
+        <div style="font-size:15px;font-weight:600;color:${color}">${esc(p.name)}</div>
+        <div style="font-size:13px;color:var(--ivory)">${esc(priceLbl)}</div>
       </div>
-      <div style="font-size:12px;color:var(--iv4);margin-bottom:12px">${p.description||''}</div>
+      <div style="font-size:12px;color:var(--iv4);margin-bottom:12px">${esc(p.description||'')}</div>
       <div style="display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap">
-        <div style="font-size:12px"><span style="color:var(--iv4)">Buyurtmalar: </span><span style="color:var(--ivory);font-weight:500">${ordersLbl}</span></div>
-        <div style="font-size:12px"><span style="color:var(--iv4)">Mahsulotlar: </span><span style="color:var(--ivory);font-weight:500">${prodLbl}</span></div>
+        <div style="font-size:12px"><span style="color:var(--iv4)">${esc(t('admin.billing.orders_feature'))}</span><span style="color:var(--ivory);font-weight:500">${esc(ordersLbl)}</span></div>
+        <div style="font-size:12px"><span style="color:var(--iv4)">${esc(t('admin.billing.products_feature'))}</span><span style="color:var(--ivory);font-weight:500">${esc(prodLbl)}</span></div>
       </div>
       ${isCurrent
-        ?`<div style="padding:10px;text-align:center;border-radius:100px;background:rgba(212,175,55,0.08);border:1px solid var(--gl);font-size:12px;font-weight:600;color:var(--g2)">✓ Joriy tarif</div>`
-        :`<button data-plan-id="${p.id}" class="billing-subscribe-btn" style="width:100%;padding:13px;border:none;border-radius:100px;background:var(--gs);color:var(--obs);font-weight:700;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;">Tanlash</button>`}
+        ?`<div style="padding:10px;text-align:center;border-radius:100px;background:rgba(212,175,55,0.08);border:1px solid var(--gl);font-size:12px;font-weight:600;color:var(--g2)">${esc(t('admin.billing.current_badge'))}</div>`
+        :`<button data-plan-id="${p.id}" class="billing-subscribe-btn" style="width:100%;padding:13px;border:none;border-radius:100px;background:var(--gs);color:var(--obs);font-weight:700;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;">${esc(t('admin.billing.select_plan_btn'))}</button>`}
     </div>`;
   }).join('');
-  // Безопасный обработчик — p.name никогда не попадает в DOM-атрибут
   document.getElementById('billing-plans-list').querySelectorAll('.billing-subscribe-btn').forEach(btn=>{
     const planId=Number(btn.dataset.planId);
     const plan=plans.find(p=>p.id===planId);
@@ -1548,12 +1615,12 @@ function _renderBillingPlans(plans,currentPlanId){
   });
 }
 async function subscribePlan(planId,planName){
-  showConfirm(`"${planName}" tarifi`,`Ushbu tarifga o'tishni xohlaysizmi?`,async()=>{
+  showConfirm(t('admin.billing.plan_confirm_title',{name:planName}),t('admin.billing.plan_confirm_sub'),async()=>{
     try{
       const res=await apiFetch(`${API}/api/billing/subscribe/${planId}`,{method:'POST',headers:authHeaders()});
       if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Xato');}
-      showToast('Tarif yangilandi ✓');loadBilling();
-    }catch(e){showToast('Xatolik yuz berdi',true);}
+      showToast(t('admin.billing.plan_updated'));loadBilling();
+    }catch(e){showToast(t('common.error'),true);}
   });
 }
 function downloadInvoice(){
@@ -1561,7 +1628,7 @@ function downloadInvoice(){
   apiFetch(`${API}/api/billing/invoice/${month}`,{headers:authHeaders()})
     .then(r=>{if(!r.ok)throw new Error();return r.blob();})
     .then(blob=>{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`taomly-${new Date().getFullYear()}${String(month).padStart(2,'0')}.pdf`;a.click();URL.revokeObjectURL(a.href);})
-    .catch(()=>showToast('PDF yaratishda xatolik',true));
+    .catch(()=>showToast(t('admin.billing.pdf_error'),true));
 }
 
 // ── SOUND ──
@@ -1626,7 +1693,7 @@ function toggleSound(){
   updateSoundBtn();
   // При включении звука — сразу разблокируем AudioContext
   if(soundEnabled){_unlockAudio();playNewOrderSound();}
-  showToast(soundEnabled?'Ovoz yoqildi ✓':"Ovoz o'chirildi");
+  showToast(soundEnabled?t('admin.sound.enabled'):t('admin.sound.disabled'));
 }
 
 function updateSoundBtn(){
@@ -1653,8 +1720,8 @@ function _showNewOrderNotification(count){
   const title=document.getElementById('notTitle');
   const sub=document.getElementById('notSub');
   if(toast){
-    if(title)title.textContent=count===1?'Yangi buyurtma keldi!':count+' ta yangi buyurtma!';
-    if(sub)sub.textContent="Buyurtmalar bo'limiga o'ting";
+    if(title)title.textContent=count===1?t('admin.notification.new_order_single'):t('admin.notification.new_order_multi',{n:count});
+    if(sub)sub.textContent=t('admin.notification.go_to_orders');
     toast.classList.add('show');
     clearTimeout(toast._ht);
     toast._ht=setTimeout(()=>toast.classList.remove('show'),4500);
@@ -1672,7 +1739,7 @@ function _showNewOrderNotification(count){
     if(_titleFlipInterval)clearInterval(_titleFlipInterval);
     let _flip=false;
     _titleFlipInterval=setInterval(()=>{
-      document.title=_flip?_origTitle:`🔔 ${count} ta yangi!`;
+      document.title=_flip?_origTitle:t('admin.notification.title_flip',{n:count});
       _flip=!_flip;
     },900);
   }
@@ -1711,3 +1778,13 @@ document.addEventListener('visibilitychange',()=>{
     loadOrders();
     // Сбрасываем мигание title
     if(_titleFlipInterval){clearInterval(_titleFlipInterval);_titleFlipInterval=null
+;}
+    document.title=_origTitle;
+  }
+  _startPolling();
+});
+
+_startPolling();
+</script>
+</body>
+</html>
