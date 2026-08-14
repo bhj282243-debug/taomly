@@ -634,7 +634,7 @@ async function loadAgencies() {
       <td style="color:var(--mist);font-size:12px">${fmtDate(a.created_at)}</td>
       <td>${badge(a.is_active)}</td>
       <td><div style="display:flex;gap:6px">
-        <button class="btn btn-ghost btn-sm" onclick="viewAgency(${a.id},'${esc(a.name)}')">Детали</button>
+        <button class="btn btn-ghost btn-sm" onclick="viewAgency(${a.id})">Детали</button>
         <button class="btn btn-sm ${a.is_active?'btn-danger':'btn-success'}" onclick="toggleAgency(${a.id},${!a.is_active})">${a.is_active?'Блок':'Разблок'}</button>
       </div></td></tr>`).join('') : emptyRow(6,'Агентств не найдено');
     document.getElementById('agenciesInfo').textContent = `${agencySkip+1}–${Math.min(agencySkip+agencyLimit,agencyTotal)} из ${agencyTotal}`;
@@ -650,13 +650,14 @@ async function toggleAgency(id,isActive) {
   catch(e){toast('Ошибка: '+e.message,'error');}
 }
 
-async function viewAgency(id,name) {
+async function viewAgency(id) {
   currentAgencyId=id;
-  document.getElementById('agencyDetailTitle').textContent=name;
+  document.getElementById('agencyDetailTitle').textContent='…';
   document.getElementById('agencyDetailBody').innerHTML=`<div style="text-align:center;padding:24px"><span class="spinner"></span></div>`;
   openModal('agencyDetailModal');
   try {
     const res=await api(`/api/superadmin/agencies/${id}`); const a=await res.json();
+    document.getElementById('agencyDetailTitle').textContent=a.name;
     document.getElementById('agencyDetailBody').innerHTML=`
       <div style="display:flex;flex-direction:column;gap:10px">
         <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line-soft)"><span style="color:var(--mist)">Email</span><span>${esc(a.email)}</span></div>
