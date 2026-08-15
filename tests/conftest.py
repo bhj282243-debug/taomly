@@ -2,28 +2,18 @@
 tests/conftest.py — Taomly Platform
 Pytest fixtures: in-memory SQLite DB, test client, pre-seeded data.
 
-Архитектура тестов:
-  - SQLite in-memory: быстро, без внешних зависимостей, CI-ready
-  - Каждый тест получает чистую транзакцию, откатываемую после теста
-  - Фикстуры создают минимальный граф данных: Agency → Restaurant → Category → Product
-  - get_telegram_user и get_current_restaurant_admin мокируются через dependency_overrides
+Исправление v2 (Foundation Task 1):
+  - Восстановлена фикстура category() — тело случайно попало в restaurant_rub после return r
 """
 
 import os
 import sys
 
-# Устанавливаем тестовые env vars ДО импорта config.
-#
-# ВАЖНО: FERNET_KEY должен быть валидным base64url-ключом 32 байта ДО импорта auth/config,
-# потому что config._validate_fernet_key() вызывается на уровне определения класса _Settings.
-# Ключ ниже детерминированный (sha256 от строки "taomly-test-fernet-key-deterministic"),
-# всегда один и тот же — тесты воспроизводимы без генерации в рантайме.
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-minimum-32-chars-here-ok")
 os.environ.setdefault("FERNET_KEY", "bQG9o6ru5yC7KSDNJaHlTYr4YEyAp7SDUAYZQQmygX4=")
 os.environ.setdefault("WEBHOOK_URL", "https://test.taomly.uz")
 os.environ.setdefault("BOT_TOKEN", "")
-# config._load_superadmin_password_hash() требует SUPERADMIN_PASSWORD или SUPERADMIN_PASSWORD_HASH
 os.environ.setdefault("SUPERADMIN_PASSWORD", "test-superadmin-password")
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -46,8 +36,6 @@ from auth import (
 )
 from database import Base, get_db
 
-# Используем тот же детерминированный ключ что был задан до импортов.
-# Ключ уже валиден — config прошёл инициализацию без ошибок.
 _FERNET_KEY = os.environ["FERNET_KEY"]
 _fernet_test = Fernet(_FERNET_KEY.encode())
 
@@ -66,7 +54,7 @@ engine = create_engine(
     connect_args={"check_same_thread": False},
 )
 
-# SQLite не поддерживает CHECK CONSTRAINTS по умолчанию — включаем
+
 @event.listens_for(engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
@@ -80,7 +68,6 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 @pytest.fixture(scope="session", autouse=True)
 def create_tables():
     """Создаёт все таблицы один раз для всей тестовой сессии."""
-    # Импортируем models чтобы зарегистрировать все модели в Base.metadata
     import models  # noqa: F401
     Base.metadata.create_all(bind=engine)
     yield
@@ -93,21 +80,15 @@ def db():
     Изолированная БД-сессия на один тест.
     После теста — rollback, данные не остаются.
 
-    SQLAlchemy 2.0: subtransactions удалены. Если тестируемый код вызывает
-    session.commit() (например, revoke_token()), он коммитит на уровне соединения
-    и внешний transaction.rollback() не откатит эти данные.
-
-    Решение: begin_nested() создаёт SAVEPOINT. session.commit() внутри теста
-    коммитит до SAVEPOINT, а не до реального коммита соединения.
-    Внешний transaction.rollback() откатывает всё включая SAVEPOINT.
-    Изоляция между тестами сохраняется.
+    SQLAlchemy 2.0: subtransactions удалены. begin_nested() создаёт SAVEPOINT.
+    session.commit() внутри теста коммитит до SAVEPOINT, внешний rollback
+    откатывает всё. Изоляция между тестами сохраняется.
     """
     connection = engine.connect()
     transaction = connection.begin()
     nested = connection.begin_nested()  # SAVEPOINT
     session = TestingSessionLocal(bind=connection)
 
-    # Пересоздаём SAVEPOINT если тестируемый код случайно его закрыл
     @event.listens_for(session, "after_transaction_end")
     def restart_savepoint(session, transaction):
         if transaction.nested and not transaction._parent.nested:
@@ -122,7 +103,7 @@ def db():
 
 
 # ──────────────────────────────────────────
-# MODELS — импортируем после настройки env
+# MODELS
 # ──────────────────────────────────────────
 from models import (  # noqa: E402
     Agency,
@@ -222,6 +203,11 @@ def restaurant_rub(db, agency) -> Restaurant:
     db.add(r)
     db.flush()
     return r
+
+
+@pytest.fixture
+def category(db, restaurant) -> Category:
+    """Категория меню для основного тестового ресторана."""
     c = Category(restaurant_id=restaurant.id, name="Горячие блюда", sort_order=1)
     db.add(c)
     db.flush()
@@ -364,7 +350,6 @@ def auth_headers_restaurant(restaurant_token) -> dict:
 # POSTGRES MARKER — автоматический skip на SQLite
 # ──────────────────────────────────────────
 def _is_sqlite() -> bool:
-    """True если тестовый движок — SQLite (не PostgreSQL)."""
     return "sqlite" in SQLALCHEMY_TEST_URL
 
 
@@ -373,11 +358,11 @@ def pytest_collection_modifyitems(items):
     Автоматически пропускает тесты с маркером @pytest.mark.postgres
     при запуске на SQLite.
 
-    Чтобы запустить эти тесты, настройте CI с PostgreSQL и выполните:
+    Для запуска postgres-тестов:
         DATABASE_URL=postgresql://... pytest -m postgres
     """
     if not _is_sqlite():
-        return  # PostgreSQL доступен — запускаем всё
+        return
 
     skip_marker = pytest.mark.skip(
         reason=(
