@@ -365,6 +365,12 @@ def decode_token(token: str, db: Session) -> dict:
             detail="Токен устарел — войдите снова",
         )
 
+    if payload.get("token_type") != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Неверный тип токена",
+        )
+
     # Один SELECT по уникальному индексу ~1ms на Neon
     revoked = db.query(RevokedToken).filter(RevokedToken.jti == jti).first()
     if revoked:
