@@ -30,6 +30,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 from urllib.parse import parse_qsl, unquote
 
+import sentry_sdk
 from cryptography.fernet import Fernet, InvalidToken as FernetInvalidToken
 from fastapi import Depends, Header, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -86,7 +87,8 @@ def decrypt_token(encrypted: str) -> str:
             detail="Не удалось расшифровать токен бота. Обратитесь к администратору.",
         )
     except Exception as exc:
-        logger.exception("Неожиданная ошибка при расшифровке токена: %s", exc)
+        logger.exception("Неожиданная ошибка при расшифровке токена")
+        sentry_sdk.capture_exception(exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Внутренняя ошибка шифрования.",
@@ -420,9 +422,10 @@ def revoke_token(
         db.execute(stmt)
         db.commit()
         logger.info("JWT отозван: jti=%s type=%s", jti, token_type)
-    except Exception:
+    except Exception as exc:
         db.rollback()
         logger.exception("revoke_token: ошибка записи в БД jti=%s", jti)
+        sentry_sdk.capture_exception(exc)
 
 
 def purge_expired_revoked_tokens(db: Session) -> int:
@@ -453,8 +456,28 @@ def purge_expired_revoked_tokens(db: Session) -> int:
 
 # ──────────────────────────────────────────
 # BEARER
+#
+# auto_error=False: по умолчанию HTTPBearer() при ОТСУТСТВУЮЩЕМ заголовке
+# Authorization бросает 403 "Not authenticated" (особенность Starlette/
+# FastAPI), а не 401 — это противоречит ожидаемой семантике
+# (нет токена → 401, есть токен но не та роль → 403) и было замечено
+# аудитом Foundation Task 5 как реальная непоследовательность:
+# superadmin- и Telegram-initData-пути уже правильно отвечали 401 на
+# отсутствующие учётные данные, а agency/restaurant_admin — нет.
+# Здесь проверяем сами и явно бросаем 401.
 # ──────────────────────────────────────────
-bearer_scheme = HTTPBearer()
+bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def _require_bearer_credentials(
+    credentials: Optional[HTTPAuthorizationCredentials],
+) -> HTTPAuthorizationCredentials:
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Не авторизован: отсутствует Authorization заголовок",
+        )
+    return credentials
 
 
 # ──────────────────────────────────────────
@@ -462,7 +485,7 @@ bearer_scheme = HTTPBearer()
 # ──────────────────────────────────────────
 def get_current_agency(
     request: Request,
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> Agency:
     """
@@ -471,6 +494,7 @@ def get_current_agency(
     Сохраняет декодированный payload в request.state.jwt_payload —
     logout читает его оттуда без повторного decode и SELECT к revoked_tokens.
     """
+    credentials = _require_bearer_credentials(credentials)
     payload = decode_token(credentials.credentials, db=db)
     request.state.jwt_payload = payload  # для logout
 
@@ -506,7 +530,7 @@ def get_current_agency(
 # ──────────────────────────────────────────
 def get_current_restaurant_admin(
     request: Request,
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> Restaurant:
     """
@@ -515,6 +539,7 @@ def get_current_restaurant_admin(
     Сохраняет декодированный payload в request.state.jwt_payload —
     logout читает его оттуда без повторного decode и SELECT к revoked_tokens.
     """
+    credentials = _require_bearer_credentials(credentials)
     payload = decode_token(credentials.credentials, db=db)
     request.state.jwt_payload = payload  # для logout
 
