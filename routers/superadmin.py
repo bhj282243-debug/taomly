@@ -25,6 +25,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+import sentry_sdk
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, Field
@@ -399,8 +400,9 @@ def create_agency(
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="Email уже занят")
-    except Exception:
+    except Exception as exc:
         logger.exception("Ошибка при создании агентства superadmin: email=%s", data.email)
+        sentry_sdk.capture_exception(exc)
         db.rollback()
         raise HTTPException(status_code=500, detail="Ошибка при создании агентства")
     logger.info("Superadmin создал агентство id=%s", agency.id)
@@ -433,8 +435,9 @@ def update_agency(
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="Email уже занят другим агентством")
-    except Exception:
+    except Exception as exc:
         logger.exception("Ошибка при обновлении агентства superadmin: agency_id=%s", agency_id)
+        sentry_sdk.capture_exception(exc)
         db.rollback()
         raise HTTPException(status_code=500, detail="Ошибка при обновлении агентства")
     logger.info("Superadmin обновил агентство id=%s", agency_id)
