@@ -451,7 +451,9 @@ class RestaurantUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=500)
     phone: Optional[str] = None
     address: Optional[str] = Field(None, max_length=300)
-    is_active: Optional[bool] = None
+    # is_active намеренно отсутствует:
+    # деактивация ресторана — через DELETE /api/agency/restaurants/{id}
+    # Не принимать is_active через PATCH — защита от случайной деактивации.
     admin_password: Optional[str] = Field(None, min_length=8, max_length=128)
 
     logo_url: Optional[str] = None
