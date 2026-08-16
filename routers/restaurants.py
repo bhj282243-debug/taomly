@@ -32,6 +32,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 from typing import Optional
 
@@ -333,7 +334,18 @@ def create_table(
         table_number=data.table_number,
     )
     db.add(table)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Защита от TOCTOU: параллельный запрос мог создать тот же
+        # table_number между проверкой выше и этим commit(). Уникальный
+        # constraint в БД — последний рубеж; конвертируем в чистый 409
+        # вместо утечки сырой ошибки PostgreSQL через 500.
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Стол '{data.table_number}' уже существует",
+        )
     db.refresh(table)
 
     logger.info(
