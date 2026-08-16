@@ -107,7 +107,7 @@ class _Settings:
     FERNET_KEY: str = _validate_fernet_key(_require("FERNET_KEY"))
 
     SUPERADMIN_PASSWORD_HASH: str = _load_superadmin_password_hash()
-    SUPERADMIN_EMAIL: str = os.getenv("SUPERADMIN_EMAIL", "superadmin@example.com")
+    SUPERADMIN_EMAIL: str = _require("SUPERADMIN_EMAIL")
 
     # -- White-label platform branding ----------------------------------------
     # Используются в PDF-инвойсах и системных сообщениях.
