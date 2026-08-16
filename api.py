@@ -30,6 +30,7 @@ api.py — Taomly Platform
 import hmac
 import logging
 import os
+import uuid
 from contextlib import asynccontextmanager
 from datetime import date
 
@@ -60,6 +61,46 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ──────────────────────────────────────────
+# SECRET REDACTION (Foundation Task 5)
+# Ключи, значения которых никогда не должны попасть в Sentry event
+# (extra/context/tags), даже если где-то в коде их случайно передадут.
+# Это defense-in-depth поверх send_default_pii=False — основная защита
+# в том, что мы просто нигде не кладём эти значения в Sentry-контекст.
+# ──────────────────────────────────────────
+_SENTRY_REDACT_KEYS = {
+    "password", "password_hash", "authorization", "bearer",
+    "access_token", "refresh_token", "secret_key", "fernet_key",
+    "superadmin_password_hash", "webhook_secret", "telegram_bot_token",
+    "telegram_bot_token_encrypted", "x-telegram-init-data", "init_data",
+    "x-telegram-bot-api-secret-token",
+}
+
+
+def _scrub_sentry_event(event: dict, hint: dict) -> dict:
+    """
+    before_send: последний рубеж защиты от утечки секретов в Sentry.
+
+    Рекурсивно вычищает известные секретные ключи из request/extra/contexts.
+    Не полагается на это как на единственную защиту — основная защита в том,
+    что секреты просто нигде не передаются в capture_exception()/set_context().
+    """
+    def _scrub(obj):
+        if isinstance(obj, dict):
+            return {
+                k: ("[REDACTED]" if k.lower() in _SENTRY_REDACT_KEYS else _scrub(v))
+                for k, v in obj.items()
+            }
+        if isinstance(obj, list):
+            return [_scrub(v) for v in obj]
+        return obj
+
+    for key in ("request", "extra", "contexts"):
+        if key in event:
+            event[key] = _scrub(event[key])
+    return event
+
+
+# ──────────────────────────────────────────
 # SENTRY (опционально — включается при наличии SENTRY_DSN)
 # ──────────────────────────────────────────
 if settings.SENTRY_DSN:
@@ -67,9 +108,19 @@ if settings.SENTRY_DSN:
         dsn=settings.SENTRY_DSN,
         traces_sample_rate=0.1,
         profiles_sample_rate=0.1,
-        environment="production",
+        environment=settings.ENVIRONMENT,
+        # send_default_pii=False (default): не отправляем headers/cookies/IP
+        # автоматически — минимизация PII, как решено для Taomly.
+        send_default_pii=False,
+        # Значения локальных переменных в stack frame НЕ отправляем: функции
+        # вроде decrypt_token()/verify_telegram_init_data() держат bot_token
+        # и производные секретных ключей в локальных переменных — если бы
+        # там возникло исключение, Sentry по умолчанию прикрепил бы их
+        # значения к событию. Отключаем этот вектор утечки целиком.
+        include_local_variables=False,
+        before_send=_scrub_sentry_event,
     )
-    logger.info("Sentry инициализирован")
+    logger.info("Sentry инициализирован (environment=%s)", settings.ENVIRONMENT)
 else:
     logger.warning("SENTRY_DSN не задан — мониторинг ошибок отключён")
 
@@ -118,6 +169,22 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 # ──────────────────────────────────────────
+# REQUEST ID MIDDLEWARE (Foundation Task 5, п.12)
+# Простой UUID per request — не distributed tracing, только:
+#   входящий X-Request-ID (если клиент/прокси уже его проставил) уважается,
+#   иначе генерируется новый; кладётся в request.state, в response header
+#   и используется как Sentry tag / часть лога в глобальном exception handler.
+# ──────────────────────────────────────────
+class RequestIDMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+        request.state.request_id = request_id
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
+
+
+# ──────────────────────────────────────────
 # LIFESPAN
 # ──────────────────────────────────────────
 @asynccontextmanager
@@ -135,8 +202,9 @@ async def lifespan(app: FastAPI):
                 logger.info("Webhook установлен: %s/webhook", settings.WEBHOOK_URL)
             else:
                 logger.warning("WEBHOOK_URL не задан — webhook не установлен")
-        except Exception:
+        except Exception as exc:
             logger.exception("Не удалось установить webhook — приложение продолжает работу")
+            sentry_sdk.capture_exception(exc)
     else:
         logger.warning("BOT_TOKEN не задан — платформенный бот отключён")
 
@@ -207,6 +275,56 @@ app.add_middleware(
 # SECURITY HEADERS
 # ──────────────────────────────────────────
 app.add_middleware(SecurityHeadersMiddleware)
+
+# ──────────────────────────────────────────
+# REQUEST ID
+# BaseHTTPMiddleware стек выполняется в порядке, обратном добавлению —
+# регистрируем сразу после security headers, чтобы request_id был
+# доступен максимально рано (до роутеров и до глобального handler'а).
+# ──────────────────────────────────────────
+app.add_middleware(RequestIDMiddleware)
+
+
+# ──────────────────────────────────────────
+# GLOBAL EXCEPTION HANDLER (Foundation Task 5, п.13)
+#
+# До этой задачи необработанное исключение долетало до дефолтного
+# Starlette ServerErrorMiddleware: клиенту уходил безопасный ответ
+# (текст "Internal Server Error", без traceback — т.к. FastAPI(debug=...)
+# нигде не включён), НО:
+#   - в формате plain text, а не в JSON-контракте остального API;
+#   - без request_id;
+#   - Sentry получал событие автоматически (ASGI-интеграция), но без
+#     единообразного тега request_id, который был бы в логах.
+#
+# Этот handler не меняет поведение для HTTPException/RequestValidationError
+# (они остаются в стандартной FastAPI-обработке — 401/403/404/422/409/429
+# и т.д. НЕ проходят через него и НЕ уходят в Sentry, см. п.23) —
+# он ловит только по-настоящему неожиданные исключения.
+# ──────────────────────────────────────────
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    request_id = getattr(request.state, "request_id", None) or str(uuid.uuid4())
+
+    # exc_info=exc (не просто exception()) — не полагаемся на то, что
+    # sys.exc_info() всё ещё активен к моменту вызова хендлера;
+    # передаём объект исключения явно, чтобы traceback гарантированно
+    # попал в лог независимо от того, как Starlette вызвала хендлер.
+    logger.error(
+        "Необработанное исключение: method=%s path=%s request_id=%s",
+        request.method, request.url.path, request_id,
+        exc_info=exc,
+    )
+
+    # Sentry's ASGI-интеграция уже изолирует scope на запрос — просто
+    # проставляем тег в текущий (per-request) scope перед капчуром.
+    sentry_sdk.set_tag("request_id", request_id)
+    sentry_sdk.capture_exception(exc)
+
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "Internal server error", "request_id": request_id},
+    )
 
 # ──────────────────────────────────────────
 # PROXY HEADERS (SEC-4)
@@ -439,8 +557,15 @@ def restaurant_webhook(
         try:
             handlers.process_restaurant_webhook_update(restaurant, update)
             return {"ok": True}
-        except Exception:
+        except Exception as exc:
+            # Отвечаем 200/{"ok": False} — это намеренно (не HTTPException):
+            # Telegram ретраит webhook при не-2xx ответе, а битый update
+            # ретраить бессмысленно. Ошибка при этом не должна быть "немой" —
+            # локально логируем и репортим в Sentry, иначе поломки обработки
+            # апдейтов конкретного ресторана никогда не станут видны.
             logger.exception("Webhook[%s]: ошибка обработки update", slug)
+            sentry_sdk.set_tag("restaurant_slug", slug)
+            sentry_sdk.capture_exception(exc)
             return {"ok": False}
 
 
@@ -474,6 +599,7 @@ def webhook(
         update_obj = telebot.types.Update.de_json(update)
         handlers.platform_bot.process_new_updates([update_obj])
         return {"ok": True}
-    except Exception:
+    except Exception as exc:
         logger.exception("Ошибка обработки webhook update")
+        sentry_sdk.capture_exception(exc)
         return {"ok": False}
