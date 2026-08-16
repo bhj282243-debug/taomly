@@ -16,6 +16,7 @@ routers/agency.py — Taomly Platform
 
 import logging
 
+import sentry_sdk
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -90,8 +91,9 @@ def register_agency(request: Request, data: AgencyRegister, db: Session = Depend
             status_code=status.HTTP_409_CONFLICT,
             detail="Email уже зарегистрирован",
         )
-    except Exception:
+    except Exception as exc:
         logger.exception("Ошибка при регистрации агентства: email=%s", data.email)
+        sentry_sdk.capture_exception(exc)
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -275,11 +277,12 @@ def create_restaurant(
             status_code=status.HTTP_409_CONFLICT,
             detail="Slug или домен уже заняты",
         )
-    except Exception:
+    except Exception as exc:
         logger.exception(
             "Ошибка при создании ресторана: agency_id=%s slug=%s",
             agency.id, slug,
         )
+        sentry_sdk.capture_exception(exc)
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -411,10 +414,11 @@ def update_restaurant(
             status_code=status.HTTP_409_CONFLICT,
             detail="Slug или домен уже заняты",
         )
-    except Exception:
+    except Exception as exc:
         logger.exception(
             "Ошибка при обновлении ресторана: restaurant_id=%s", restaurant_id
         )
+        sentry_sdk.capture_exception(exc)
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -477,10 +481,11 @@ def delete_restaurant(
 
     try:
         db.commit()
-    except Exception:
+    except Exception as exc:
         logger.exception(
             "Ошибка при деактивации ресторана: restaurant_id=%s", restaurant_id
         )
+        sentry_sdk.capture_exception(exc)
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
