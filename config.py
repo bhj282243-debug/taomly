@@ -19,7 +19,6 @@ config.py — Taomly Platform
       # SUPERADMIN_PASSWORD= (убрать или оставить пустым)
 """
 
-import hashlib
 import logging
 import os
 
@@ -101,6 +100,48 @@ def _load_superadmin_password_hash() -> str:
     )
 
 
+def _load_webhook_secret(secret_key: str) -> str:
+    """
+    Загружает WEBHOOK_SECRET.
+
+    Production (ENVIRONMENT=production):
+      WEBHOOK_SECRET обязателен — без него приложение не стартует.
+      Это независимый секрет, не производный от SECRET_KEY.
+
+    Development / test:
+      WEBHOOK_SECRET необязателен — если не задан, используется
+      безопасное детерминированное значение на основе SECRET_KEY
+      (только для локальной разработки и CI).
+
+    Формат (ограничение Telegram API): 1–256 символов, [A-Za-z0-9_-].
+    sha256 hexdigest удовлетворяет этому требованию.
+    """
+    import hmac as _hmac
+
+    explicit = os.getenv("WEBHOOK_SECRET", "").strip()
+    if explicit:
+        return explicit
+
+    environment = os.getenv("ENVIRONMENT", "development")
+    if environment == "production":
+        raise RuntimeError(
+            "WEBHOOK_SECRET is required in production but not set. "
+            "Generate with: python -c \"import secrets; print(secrets.token_hex(32))\" "
+            "and add to Render Dashboard → Environment Variables. "
+            "See README.md → Environment Variables."
+        )
+
+    # Development / test: derive a stable fallback so webhook tests work without
+    # explicit WEBHOOK_SECRET. Uses HMAC(SECRET_KEY, "webhook-secret") so that
+    # even if SECRET_KEY leaks, WEBHOOK_SECRET is not trivially recoverable by
+    # sha256(SECRET_KEY) alone.
+    return _hmac.new(
+        secret_key.encode(),
+        b"webhook-secret",
+        "sha256",
+    ).hexdigest()
+
+
 class _Settings:
     DATABASE_URL: str = _require("DATABASE_URL")
     SECRET_KEY: str = _require("SECRET_KEY")
@@ -132,10 +173,7 @@ class _Settings:
 
     MAX_INIT_DATA_AGE_SECONDS: int = int(os.getenv("MAX_INIT_DATA_AGE_SECONDS", "3600"))
 
-    WEBHOOK_SECRET: str = os.getenv(
-        "WEBHOOK_SECRET",
-        hashlib.sha256(SECRET_KEY.encode()).hexdigest()[:64],
-    )
+    WEBHOOK_SECRET: str = _load_webhook_secret(SECRET_KEY)
 
     ALLOWED_ORIGINS: list[str] = [
         o.strip()
