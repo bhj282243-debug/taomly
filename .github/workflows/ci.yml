@@ -46,7 +46,6 @@ jobs:
   test:
     name: Tests (SQLite)
     runs-on: ubuntu-latest
-    needs: lint
     env:
       DATABASE_URL: "sqlite:///:memory:"
       SECRET_KEY: "ci-secret-key-minimum-32-characters-ok"
@@ -88,7 +87,6 @@ jobs:
   test-postgres:
     name: Tests (PostgreSQL)
     runs-on: ubuntu-latest
-    needs: lint
     services:
       postgres:
         image: postgres:15
