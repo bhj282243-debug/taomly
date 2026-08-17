@@ -30,17 +30,20 @@ DATABASE_URL = settings.DATABASE_URL
 # ──────────────────────────────────────────
 # ДВИЖОК
 # ──────────────────────────────────────────
-engine = create_engine(
-    DATABASE_URL,
-    # Проверяет соединение перед выдачей из пула (защита от stale connections)
-    pool_pre_ping=True,
+# pool_size / max_overflow / pool_recycle поддерживаются только QueuePool
+# (PostgreSQL). SQLite использует SingletonThreadPool и не принимает эти
+# аргументы — поэтому для тестов (sqlite:///) передаём минимальный набор.
+_is_sqlite = DATABASE_URL.startswith("sqlite")
+
+_engine_kwargs: dict = {"echo": False, "pool_pre_ping": not _is_sqlite}
+if not _is_sqlite:
     # Render Free + Neon Free: держим пул небольшим
-    pool_size=3,
-    max_overflow=5,
+    _engine_kwargs["pool_size"] = 3
+    _engine_kwargs["max_overflow"] = 5
     # Пересоздаём соединение каждые 30 минут
-    pool_recycle=1800,
-    echo=False,
-)
+    _engine_kwargs["pool_recycle"] = 1800
+
+engine = create_engine(DATABASE_URL, **_engine_kwargs)
 
 # ──────────────────────────────────────────
 # ФАБРИКА СЕССИЙ
