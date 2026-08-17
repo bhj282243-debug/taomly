@@ -14,7 +14,10 @@ os.environ.setdefault("SECRET_KEY", "test-secret-key-minimum-32-chars-here-ok")
 os.environ.setdefault("FERNET_KEY", "bQG9o6ru5yC7KSDNJaHlTYr4YEyAp7SDUAYZQQmygX4=")
 os.environ.setdefault("WEBHOOK_URL", "https://test.taomly.uz")
 os.environ.setdefault("BOT_TOKEN", "")
+os.environ.setdefault("SUPERADMIN_EMAIL", "test-admin@example.com")
 os.environ.setdefault("SUPERADMIN_PASSWORD", "test-superadmin-password")
+# ENVIRONMENT не задаём — дефолт "development" позволяет WEBHOOK_SECRET
+# работать без явного значения (детерминированный fallback из _load_webhook_secret).
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
