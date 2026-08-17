@@ -25,6 +25,13 @@ api.py — Taomly Platform
 
 Изменения v7 (Security Patch SEC-4):
   - ProxyHeadersMiddleware: rate limiting теперь работает корректно за Render proxy
+
+Изменения v8 (Foundation Task 7 — Security Headers):
+  - SecurityHeadersMiddleware: X-Frame-Options: DENY заменён на CSP frame-ancestors 'none'
+    (CSP Level 2+ имеет приоритет; убирает риск конфликта при iframe-виджетах ресторанов)
+  - SecurityHeadersMiddleware: Cache-Control: no-store добавлен на auth endpoints
+    (login, restaurant-login, superadmin-login, register)
+  - CSP: добавлена директива frame-ancestors 'none'
 """
 
 import hmac
@@ -134,16 +141,46 @@ from limiter import limiter
 # SECURITY HEADERS MIDDLEWARE
 # ──────────────────────────────────────────
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    # Пути, чьи ответы содержат токены — кешировать нельзя.
+    _NO_CACHE_PATHS = frozenset([
+        "/api/agency/login",
+        "/api/agency/restaurant-login",
+        "/api/superadmin/login",
+        "/api/agency/register",
+    ])
+
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
-        response.headers["X-Frame-Options"] = "DENY"
+
+        # X-Content-Type-Options: защита от MIME-sniffing атак
         response.headers["X-Content-Type-Options"] = "nosniff"
+
+        # Referrer-Policy: не утекаем полный URL при переходах на внешние сайты
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+        # HSTS: только HTTPS, 2 года. Не ставим preload — это необратимо.
         response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+
+        # Permissions-Policy: запрещаем ненужные браузерные API
         response.headers["Permissions-Policy"] = (
             "geolocation=(self), camera=(), microphone=(), payment=()"
         )
-        # Не перезаписываем CSP если роутер уже установил свой (например debug endpoint)
+
+        # Cache-Control: no-store на auth endpoints.
+        # JWT-ответы не должны кешироваться proxy/браузером.
+        # Не перезаписываем если роутер уже задал Cache-Control (например /sw.js).
+        if request.url.path in self._NO_CACHE_PATHS and "cache-control" not in response.headers:
+            response.headers["Cache-Control"] = "no-store"
+
+        # CSP: не перезаписываем если роутер уже установил свой.
+        #
+        # X-Frame-Options: DENY — НАМЕРЕННО УДАЛЁН.
+        # Причина: CSP frame-ancestors является современной заменой и имеет приоритет
+        # над X-Frame-Options в браузерах с поддержкой CSP Level 2+. Дублирование
+        # создаёт риск конфликта при будущем добавлении iframe-виджетов для ресторанов.
+        # frame-ancestors 'none' эквивалентен DENY и принимается всеми целевыми браузерами.
+        # Telegram Mini App работает через встроенный WebView — не iframe — X-Frame-Options
+        # там не применяется в любом случае.
         if "Content-Security-Policy" not in response.headers:
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; "
@@ -163,7 +200,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 "  https://api.telegram.org "
                 "  https://*.r2.dev; "
                 "worker-src 'self'; "
-                "manifest-src 'self';"
+                "manifest-src 'self'; "
+                "frame-ancestors 'none';"
             )
         return response
 
