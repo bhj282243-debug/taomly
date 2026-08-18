@@ -118,20 +118,22 @@ class TestSecurityHeaders:
         """
         SH-10: Cache-Control: no-store на /api/agency/login.
 
-        Создаём изолированный TestClient с override get_db (SQLite :memory:),
-        чтобы endpoint отработал до 401 и middleware добавил заголовки.
-        Не используем conftest client fixture — он требует agency/restaurant
-        fixtures с известной SQLite AUTOINCREMENT проблемой.
+        Создаём изолированный TestClient с override get_db.
+        StaticPool гарантирует что create_all и _Session используют
+        одно и то же соединение (SQLite :memory: создаёт новую БД
+        на каждое новое соединение без StaticPool).
         """
         import models  # noqa: F401
         from sqlalchemy import create_engine
         from sqlalchemy.orm import sessionmaker
+        from sqlalchemy.pool import StaticPool
 
         from database import Base, get_db
 
         _engine = create_engine(
             "sqlite:///:memory:",
             connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
         )
         Base.metadata.create_all(bind=_engine)
         _Session = sessionmaker(bind=_engine)
