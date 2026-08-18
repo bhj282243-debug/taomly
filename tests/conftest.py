@@ -1,9 +1,18 @@
 """
 tests/conftest.py — Taomly Platform
-Pytest fixtures: in-memory SQLite DB, test client, pre-seeded data.
+Pytest fixtures: test DB (SQLite local / PostgreSQL CI), test client, pre-seeded data.
 
 Исправление v2 (Foundation Task 1):
   - Восстановлена фикстура category() — тело случайно попало в restaurant_rub после return r
+
+Исправление v3 (Foundation Task 8):
+  - DATABASE_URL из окружения теперь реально используется для выбора тестовой БД.
+  - Если DATABASE_URL указывает на PostgreSQL — engine создаётся для PostgreSQL
+    (без SQLite-специфичных connect_args и PRAGMA foreign_keys).
+  - Если DATABASE_URL отсутствует или SQLite — прежнее поведение (in-memory SQLite).
+  - create_tables fixture пропускает Base.metadata.create_all для PostgreSQL
+    (таблицы уже созданы Alembic-миграциями в CI).
+  - _is_sqlite() и pytest_collection_modifyitems корректно работают для обоих диалектов.
 """
 
 import os
@@ -48,21 +57,30 @@ def _encrypt(token: str) -> str:
 
 
 # ──────────────────────────────────────────
-# DATABASE ENGINE (SQLite in-memory)
+# DATABASE ENGINE
+# Читаем DATABASE_URL из окружения.
+# PostgreSQL CI: DATABASE_URL=postgresql://taomly:testpass@localhost:5432/taomly_test
+# Локально без переменной: fallback на SQLite in-memory.
 # ──────────────────────────────────────────
-SQLALCHEMY_TEST_URL = "sqlite:///:memory:"
+SQLALCHEMY_TEST_URL = os.environ["DATABASE_URL"]
 
-engine = create_engine(
-    SQLALCHEMY_TEST_URL,
-    connect_args={"check_same_thread": False},
-)
+_is_postgres = SQLALCHEMY_TEST_URL.startswith("postgresql")
 
+if _is_postgres:
+    # PostgreSQL: без SQLite-специфичных аргументов
+    engine = create_engine(SQLALCHEMY_TEST_URL)
+else:
+    # SQLite: нужен check_same_thread=False и PRAGMA foreign_keys
+    engine = create_engine(
+        SQLALCHEMY_TEST_URL,
+        connect_args={"check_same_thread": False},
+    )
 
-@event.listens_for(engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -70,11 +88,18 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 @pytest.fixture(scope="session", autouse=True)
 def create_tables():
-    """Создаёт все таблицы один раз для всей тестовой сессии."""
+    """
+    SQLite: создаёт таблицы через Base.metadata.create_all — нет Alembic.
+    PostgreSQL: таблицы уже созданы `alembic upgrade head` в CI — пропускаем create_all,
+    чтобы не конфликтовать с миграциями.
+    """
     import models  # noqa: F401
-    Base.metadata.create_all(bind=engine)
+
+    if not _is_postgres:
+        Base.metadata.create_all(bind=engine)
     yield
-    Base.metadata.drop_all(bind=engine)
+    if not _is_postgres:
+        Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture
@@ -86,10 +111,12 @@ def db():
     SQLAlchemy 2.0: subtransactions удалены. begin_nested() создаёт SAVEPOINT.
     session.commit() внутри теста коммитит до SAVEPOINT, внешний rollback
     откатывает всё. Изоляция между тестами сохраняется.
+
+    Работает одинаково для SQLite и PostgreSQL.
     """
     connection = engine.connect()
     transaction = connection.begin()
-    nested = connection.begin_nested()  # SAVEPOINT
+    connection.begin_nested()  # SAVEPOINT
     session = TestingSessionLocal(bind=connection)
 
     @event.listens_for(session, "after_transaction_end")
@@ -353,7 +380,7 @@ def auth_headers_restaurant(restaurant_token) -> dict:
 # POSTGRES MARKER — автоматический skip на SQLite
 # ──────────────────────────────────────────
 def _is_sqlite() -> bool:
-    return "sqlite" in SQLALCHEMY_TEST_URL
+    return not _is_postgres
 
 
 def pytest_collection_modifyitems(items):
