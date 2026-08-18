@@ -25,6 +25,7 @@ from limiter import limiter
 from auth import (
     create_agency_token,
     create_restaurant_token,
+    decrypt_token,
     encrypt_token,
     get_current_agency,
     get_current_restaurant_admin,
@@ -52,6 +53,46 @@ import telegram_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/agency", tags=["agency"])
+
+
+# ──────────────────────────────────────────
+# FOUNDATION TASK 8 — Telegram Auth Hardening
+#
+# Cross-restaurant isolation (auth.get_telegram_user / verify_telegram_init_data)
+# relies on each restaurant having a DISTINCT bot token: the Telegram HMAC
+# is computed with the bot token of the restaurant named in X-Restaurant-Id,
+# so initData from restaurant A only verifies against restaurant B's context
+# if A and B share the exact same bot token. Nothing previously stopped an
+# agency admin from pasting the same bot token into two restaurants (e.g.
+# copy-paste error, or reusing one bot while testing). This check closes
+# that gap at the point tokens are set, without changing the auth algorithm
+# or adding any new storage/migration.
+# ──────────────────────────────────────────
+def _bot_token_in_use(
+    db: Session,
+    plain_token: str,
+    exclude_restaurant_id: int | None = None,
+) -> bool:
+    """
+    True если plain_token уже используется другим рестораном.
+
+    Fernet-шифрование не детерминировано — сравнить ciphertext напрямую
+    нельзя, поэтому расшифровываем существующие токены и сравниваем
+    в открытом виде. Приемлемо при текущем масштабе (десятки-сотни
+    ресторанов): полный пересчёт архитектуры/индекса не требуется.
+    """
+    query = db.query(Restaurant).filter(Restaurant.telegram_bot_token_encrypted.isnot(None))
+    if exclude_restaurant_id is not None:
+        query = query.filter(Restaurant.id != exclude_restaurant_id)
+    for other in query.all():
+        try:
+            if decrypt_token(other.telegram_bot_token_encrypted) == plain_token:
+                return True
+        except HTTPException:
+            # Повреждённый/нерасшифровываемый токен другого ресторана —
+            # не блокируем текущую операцию из-за чужой проблемы.
+            continue
+    return False
 
 # Фиктивный хеш для timing-safe проверки пароля (SEC-6).
 # bcrypt отрабатывает даже когда email/slug не найден — выравнивает время ответа.
@@ -247,6 +288,15 @@ def create_restaurant(
 
     encrypted_token = None
     if data.telegram_bot_token:
+        if _bot_token_in_use(db, data.telegram_bot_token):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Этот Telegram Bot Token уже используется другим рестораном. "
+                    "У каждого ресторана должен быть собственный бот (создайте "
+                    "нового через @BotFather)."
+                ),
+            )
         encrypted_token = encrypt_token(data.telegram_bot_token)
 
     restaurant = Restaurant(
@@ -399,6 +449,15 @@ def update_restaurant(
 
     if "telegram_bot_token" in update_fields:
         new_plain_token = update_fields.pop("telegram_bot_token")
+        if _bot_token_in_use(db, new_plain_token, exclude_restaurant_id=restaurant_id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Этот Telegram Bot Token уже используется другим рестораном. "
+                    "У каждого ресторана должен быть собственный бот (создайте "
+                    "нового через @BotFather)."
+                ),
+            )
         restaurant.telegram_bot_token_encrypted = encrypt_token(new_plain_token)
         token_changed = True
 
