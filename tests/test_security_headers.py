@@ -114,23 +114,49 @@ class TestSecurityHeaders:
         _, h = _headers("/health")
         assert not re.search(r"/[\d.]+", h.get("server", ""))
 
-    def test_sh10_cache_control_agency_login(self, client):
+    def test_sh10_cache_control_agency_login(self):
         """
         SH-10: Cache-Control: no-store на /api/agency/login.
 
-        Использует conftest client fixture (с реальной SQLite БД),
-        чтобы endpoint отработал до конца и middleware добавил заголовки.
+        Создаём изолированный TestClient с override get_db (SQLite :memory:),
+        чтобы endpoint отработал до 401 и middleware добавил заголовки.
+        Не используем conftest client fixture — он требует agency/restaurant
+        fixtures с известной SQLite AUTOINCREMENT проблемой.
         """
-        resp = client.post(
-            "/api/agency/login",
-            json={"email": "nonexistent@test.uz", "password": "wrongpassword"},
+        import models  # noqa: F401
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+
+        from database import Base, get_db
+
+        _engine = create_engine(
+            "sqlite:///:memory:",
+            connect_args={"check_same_thread": False},
         )
-        # Ожидаем 401 (неверный логин) — endpoint дошёл до конца
-        assert resp.status_code == 401
-        cc = resp.headers.get("cache-control", "")
-        assert "no-store" in cc, (
-            f"Cache-Control на /api/agency/login не содержит no-store: {cc!r}"
-        )
+        Base.metadata.create_all(bind=_engine)
+        _Session = sessionmaker(bind=_engine)
+
+        def _override():
+            db = _Session()
+            try:
+                yield db
+            finally:
+                db.close()
+
+        app.dependency_overrides[get_db] = _override
+        try:
+            c = TestClient(app, raise_server_exceptions=False)
+            resp = c.post(
+                "/api/agency/login",
+                json={"email": "nonexistent@test.uz", "password": "wrongpassword"},
+            )
+            assert resp.status_code == 401
+            cc = resp.headers.get("cache-control", "")
+            assert "no-store" in cc, (
+                f"Cache-Control на /api/agency/login не содержит no-store: {cc!r}"
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
 
     def test_sh11_cache_control_superadmin_login(self):
         """SH-11: Cache-Control: no-store на /api/superadmin/login."""
