@@ -6,17 +6,23 @@ cross-restaurant isolation / bot token security / webhook auth / active-state /
 error handling / rate limiting), выполненный над auth.verify_telegram_init_data,
 auth.get_telegram_user и webhook-роутами в api.py.
 
-Стиль соответствует tests/test_error_handling.py и tests/test_rbac.py:
-  - `_raw_client(db)` — TestClient БЕЗ переопределения get_telegram_user,
-    т.е. запросы проходят через реальную HMAC-верификацию initData.
-  - `client` (из conftest.py) — используется только там, где сама
-    Telegram-верификация не тестируется (например rate limit).
+`raw_client` — TestClient БЕЗ переопределения get_telegram_user/get_current_agency/
+get_current_restaurant_admin (только get_db переопределён), т.е. запросы проходят
+через РЕАЛЬНУЮ HMAC-верификацию initData. Определена как pytest-фикстура и
+использует ТОТ ЖЕ паттерн, что и стандартная фикстура `client()` из conftest.py:
+generator-override + `with TestClient(app) as c: yield c`.
 
-ВАЖНО: как и test_error_handling.py, этот файл написан по коду (code audit)
-и НЕ был выполнен в песочнице — здесь нет сетевого доступа для установки
-fastapi/sqlalchemy/pytest и т.д. Реальный `pytest tests/test_telegram_auth.py -v`
-должен быть запущен со стороны пользователя (CI/Render/локально) — см.
-FOUNDATION_TASK_8_REPORT.md → секция L/M.
+ВАЖНО (v2, пост-инцидент): первая версия этого файла использовала bare
+`TestClient(app)` без `with`-контекста. Это ломало ASGI lifespan/пул соединений
+SQLite и после первого же теста этого файла вызывало каскад из ~199 ошибок
+`NOT NULL constraint failed: agencies.id` во ВСЕХ последующих тестах всего
+проекта (включая test_tenant_isolation.py), потому что фикстура `agency`
+переставала успешно вставлять строки в общей тестовой БД. Обнаружено по
+реальному прогону в GitHub Actions CI (не воспроизводилось в песочнице —
+здесь нет сети для установки зависимостей и запуска pytest). Исправлено
+переходом на тот же `with TestClient(...) as c` паттерн, что уже проверенно
+работает в `client()`. `routers/agency.py` (сам код Task 8) инцидент не
+затронул — сломан был только тестовый файл.
 """
 
 import hashlib
@@ -36,12 +42,26 @@ from models import Restaurant
 
 
 # ─────────────────────────────────────────
-# HELPERS
+# FIXTURES / HELPERS
 # ─────────────────────────────────────────
-def _raw_client(db) -> TestClient:
-    """TestClient без dependency overrides — реальная HMAC-верификация initData."""
-    app.dependency_overrides[get_db] = lambda: db
-    return TestClient(app, raise_server_exceptions=True)
+@pytest.fixture
+def raw_client(db):
+    """
+    TestClient с переопределённым ТОЛЬКО get_db — так initData реально
+    проходит через verify_telegram_init_data(), а не через override.
+
+    Паттерн идентичен фикстуре `client()` из conftest.py (generator-override
+    + `with TestClient(...) as c`) — это принципиально для корректной работы
+    ASGI lifespan и пула соединений SQLite в тестах (см. docstring файла).
+    """
+
+    def override_get_db():
+        yield db
+
+    app.dependency_overrides[get_db] = override_get_db
+    with TestClient(app, raise_server_exceptions=True) as c:
+        yield c
+    app.dependency_overrides.clear()
 
 
 def _sign(bot_token: str, fields: dict) -> str:
@@ -90,184 +110,143 @@ ORDERS_MY_URL = "/api/orders/my"
 # 1-2 — VALID initData / MISSING hash
 # ═════════════════════════════════════════
 @pytest.mark.security
-def test_valid_init_data_accepted(db, restaurant):
+def test_valid_init_data_accepted(raw_client, restaurant):
     """Корректно подписанная initData → 200, гость НЕ создаётся (реальный tg id)."""
     bot_token = _decrypted_token(restaurant)
     init_data = _build_init_data(bot_token)
-    c = _raw_client(db)
-    try:
-        resp = c.get(
-            ORDERS_MY_URL,
-            headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
-        )
-        assert resp.status_code == 200
-        assert resp.json() == []  # нет заказов у нового пользователя, но НЕ 401
-    finally:
-        app.dependency_overrides.clear()
+    resp = raw_client.get(
+        ORDERS_MY_URL,
+        headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
+    )
+    assert resp.status_code == 200
+    assert resp.json() == []  # нет заказов у нового пользователя, но НЕ 401
 
 
 @pytest.mark.security
-def test_missing_hash_rejected(db, restaurant):
+def test_missing_hash_rejected(raw_client, restaurant):
     """initData без поля hash → 401."""
-    bot_token = _decrypted_token(restaurant)
     fields = {"auth_date": str(int(time.time())), "user": json.dumps({"id": 1})}
     init_data = urlencode(fields)  # без hash
-    c = _raw_client(db)
-    try:
-        resp = c.get(
-            ORDERS_MY_URL,
-            headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
-        )
-        assert resp.status_code == 401
-    finally:
-        app.dependency_overrides.clear()
+    resp = raw_client.get(
+        ORDERS_MY_URL,
+        headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
+    )
+    assert resp.status_code == 401
 
 
 @pytest.mark.security
-def test_invalid_hash_rejected(db, restaurant):
+def test_invalid_hash_rejected(raw_client, restaurant):
     """Подделанный hash → 401."""
     bot_token = _decrypted_token(restaurant)
     init_data = _build_init_data(bot_token, override_hash="0" * 64)
-    c = _raw_client(db)
-    try:
-        resp = c.get(
-            ORDERS_MY_URL,
-            headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
-        )
-        assert resp.status_code == 401
-    finally:
-        app.dependency_overrides.clear()
+    resp = raw_client.get(
+        ORDERS_MY_URL,
+        headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
+    )
+    assert resp.status_code == 401
 
 
 # ═════════════════════════════════════════
 # 3-7 — auth_date
 # ═════════════════════════════════════════
 @pytest.mark.security
-def test_missing_auth_date_rejected(db, restaurant):
+def test_missing_auth_date_rejected(raw_client, restaurant):
     bot_token = _decrypted_token(restaurant)
     fields = {"user": json.dumps({"id": 1})}
     fields["hash"] = _sign(bot_token, fields)
     init_data = urlencode(fields)
-    c = _raw_client(db)
-    try:
-        resp = c.get(
-            ORDERS_MY_URL,
-            headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
-        )
-        assert resp.status_code == 401
-    finally:
-        app.dependency_overrides.clear()
+    resp = raw_client.get(
+        ORDERS_MY_URL,
+        headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
+    )
+    assert resp.status_code == 401
 
 
 @pytest.mark.security
-def test_malformed_auth_date_rejected(db, restaurant):
+def test_malformed_auth_date_rejected(raw_client, restaurant):
     bot_token = _decrypted_token(restaurant)
     fields = {"auth_date": "not-a-number", "user": json.dumps({"id": 1})}
     fields["hash"] = _sign(bot_token, fields)
     init_data = urlencode(fields)
-    c = _raw_client(db)
-    try:
-        resp = c.get(
-            ORDERS_MY_URL,
-            headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
-        )
-        assert resp.status_code == 401
-    finally:
-        app.dependency_overrides.clear()
+    resp = raw_client.get(
+        ORDERS_MY_URL,
+        headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
+    )
+    assert resp.status_code == 401
 
 
 @pytest.mark.security
-def test_expired_auth_date_rejected(db, restaurant):
+def test_expired_auth_date_rejected(raw_client, restaurant):
     """auth_date старше MAX_INIT_DATA_AGE_SECONDS → 401."""
     bot_token = _decrypted_token(restaurant)
     expired = int(time.time()) - settings.MAX_INIT_DATA_AGE_SECONDS - 60
     init_data = _build_init_data(bot_token, auth_date=expired)
-    c = _raw_client(db)
-    try:
-        resp = c.get(
-            ORDERS_MY_URL,
-            headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
-        )
-        assert resp.status_code == 401
-    finally:
-        app.dependency_overrides.clear()
+    resp = raw_client.get(
+        ORDERS_MY_URL,
+        headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
+    )
+    assert resp.status_code == 401
 
 
 @pytest.mark.security
-def test_future_auth_date_rejected(db, restaurant):
+def test_future_auth_date_rejected(raw_client, restaurant):
     """auth_date из будущего → 401 (защита от подмены времени клиентом)."""
     bot_token = _decrypted_token(restaurant)
     future = int(time.time()) + 3600
     init_data = _build_init_data(bot_token, auth_date=future)
-    c = _raw_client(db)
-    try:
-        resp = c.get(
-            ORDERS_MY_URL,
-            headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
-        )
-        assert resp.status_code == 401
-    finally:
-        app.dependency_overrides.clear()
+    resp = raw_client.get(
+        ORDERS_MY_URL,
+        headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
+    )
+    assert resp.status_code == 401
 
 
 # ═════════════════════════════════════════
 # 8-9 — MODIFIED user / auth_date после подписи
 # ═════════════════════════════════════════
 @pytest.mark.security
-def test_modified_user_data_rejected(db, restaurant):
+def test_modified_user_data_rejected(raw_client, restaurant):
     """user изменён ПОСЛЕ подписи (без пересчёта hash) → 401."""
     bot_token = _decrypted_token(restaurant)
     init_data = _build_init_data(bot_token)
     tampered = init_data.replace("111111111", "999999999")
-    c = _raw_client(db)
-    try:
-        resp = c.get(
-            ORDERS_MY_URL,
-            headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": tampered},
-        )
-        assert resp.status_code == 401
-    finally:
-        app.dependency_overrides.clear()
+    resp = raw_client.get(
+        ORDERS_MY_URL,
+        headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": tampered},
+    )
+    assert resp.status_code == 401
 
 
 @pytest.mark.security
-def test_modified_auth_date_rejected(db, restaurant):
+def test_modified_auth_date_rejected(raw_client, restaurant):
     """auth_date изменён ПОСЛЕ подписи (без пересчёта hash) → 401."""
     bot_token = _decrypted_token(restaurant)
     now = int(time.time())
     init_data = _build_init_data(bot_token, auth_date=now)
     tampered = init_data.replace(f"auth_date={now}", f"auth_date={now - 1}")
-    c = _raw_client(db)
-    try:
-        resp = c.get(
-            ORDERS_MY_URL,
-            headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": tampered},
-        )
-        assert resp.status_code == 401
-    finally:
-        app.dependency_overrides.clear()
+    resp = raw_client.get(
+        ORDERS_MY_URL,
+        headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": tampered},
+    )
+    assert resp.status_code == 401
 
 
 # ═════════════════════════════════════════
 # 10-11 — WRONG bot token / WRONG restaurant context
 # ═════════════════════════════════════════
 @pytest.mark.security
-def test_wrong_bot_token_rejected(db, restaurant):
+def test_wrong_bot_token_rejected(raw_client, restaurant):
     """initData подписана НЕ тем токеном, что хранится у ресторана → 401."""
     init_data = _build_init_data("0000000000:CompletelyWrongToken")
-    c = _raw_client(db)
-    try:
-        resp = c.get(
-            ORDERS_MY_URL,
-            headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
-        )
-        assert resp.status_code == 401
-    finally:
-        app.dependency_overrides.clear()
+    resp = raw_client.get(
+        ORDERS_MY_URL,
+        headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
+    )
+    assert resp.status_code == 401
 
 
 @pytest.mark.security
-def test_wrong_restaurant_context_rejected(db, restaurant, restaurant2):
+def test_wrong_restaurant_context_rejected(raw_client, restaurant, restaurant2):
     """
     Критический сценарий Этапа 5: initData ресторана A (подписана токеном A)
     + X-Restaurant-Id ресторана B → должно быть отвергнуто, т.к. HMAC
@@ -275,105 +254,81 @@ def test_wrong_restaurant_context_rejected(db, restaurant, restaurant2):
     """
     bot_token_a = _decrypted_token(restaurant)
     init_data_a = _build_init_data(bot_token_a)
-    c = _raw_client(db)
-    try:
-        resp = c.get(
-            ORDERS_MY_URL,
-            headers={"X-Restaurant-Id": str(restaurant2.id), "X-Telegram-Init-Data": init_data_a},
-        )
-        assert resp.status_code == 401
-    finally:
-        app.dependency_overrides.clear()
+    resp = raw_client.get(
+        ORDERS_MY_URL,
+        headers={"X-Restaurant-Id": str(restaurant2.id), "X-Telegram-Init-Data": init_data_a},
+    )
+    assert resp.status_code == 401
 
 
 # ═════════════════════════════════════════
 # 12-14 — ACTIVE STATE (restaurant / agency)
 # ═════════════════════════════════════════
 @pytest.mark.security
-def test_inactive_restaurant_rejected(db, restaurant):
+def test_inactive_restaurant_rejected(raw_client, db, restaurant):
     bot_token = _decrypted_token(restaurant)
     init_data = _build_init_data(bot_token)
     restaurant.is_active = False
     db.flush()
-    c = _raw_client(db)
-    try:
-        resp = c.get(
-            ORDERS_MY_URL,
-            headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
-        )
-        assert resp.status_code == 404  # ресторан "не найден" — is_active фильтруется в самом запросе
-    finally:
-        app.dependency_overrides.clear()
+    resp = raw_client.get(
+        ORDERS_MY_URL,
+        headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
+    )
+    assert resp.status_code == 404  # ресторан "не найден" — is_active фильтруется в самом запросе
 
 
 @pytest.mark.security
-def test_inactive_agency_rejected(db, restaurant, agency):
+def test_inactive_agency_rejected(raw_client, db, restaurant, agency):
     bot_token = _decrypted_token(restaurant)
     init_data = _build_init_data(bot_token)
     agency.is_active = False
     db.flush()
-    c = _raw_client(db)
-    try:
-        resp = c.get(
-            ORDERS_MY_URL,
-            headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
-        )
-        assert resp.status_code == 403
-    finally:
-        app.dependency_overrides.clear()
+    resp = raw_client.get(
+        ORDERS_MY_URL,
+        headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
+    )
+    assert resp.status_code == 403
 
 
 @pytest.mark.security
-def test_missing_restaurant_rejected(db):
-    c = _raw_client(db)
-    try:
-        resp = c.get(
-            ORDERS_MY_URL,
-            headers={"X-Restaurant-Id": "999999999", "X-Telegram-Init-Data": "auth_date=1&hash=deadbeef"},
-        )
-        assert resp.status_code == 404
-    finally:
-        app.dependency_overrides.clear()
+def test_missing_restaurant_rejected(raw_client):
+    resp = raw_client.get(
+        ORDERS_MY_URL,
+        headers={"X-Restaurant-Id": "999999999", "X-Telegram-Init-Data": "auth_date=1&hash=deadbeef"},
+    )
+    assert resp.status_code == 404
 
 
 # ═════════════════════════════════════════
 # 15-16 — MALFORMED initData / MISSING user
 # ═════════════════════════════════════════
 @pytest.mark.security
-def test_malformed_init_data_rejected(db, restaurant):
+def test_malformed_init_data_rejected(raw_client, restaurant):
     """Полностью не query-string-формат → не должно падать с 500, только 401."""
-    c = _raw_client(db)
-    try:
-        resp = c.get(
-            ORDERS_MY_URL,
-            headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": "this-is-not-valid-init-data-@@@"},
-        )
-        assert resp.status_code == 401
-    finally:
-        app.dependency_overrides.clear()
+    resp = raw_client.get(
+        ORDERS_MY_URL,
+        headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": "this-is-not-valid-init-data-@@@"},
+    )
+    assert resp.status_code == 401
 
 
 @pytest.mark.security
-def test_missing_telegram_user_rejected(db, restaurant):
+def test_missing_telegram_user_rejected(raw_client, restaurant):
     """Валидная подпись, но поле user отсутствует → 401."""
     bot_token = _decrypted_token(restaurant)
     init_data = _build_init_data(bot_token, include_user=False)
-    c = _raw_client(db)
-    try:
-        resp = c.get(
-            ORDERS_MY_URL,
-            headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
-        )
-        assert resp.status_code == 401
-    finally:
-        app.dependency_overrides.clear()
+    resp = raw_client.get(
+        ORDERS_MY_URL,
+        headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
+    )
+    assert resp.status_code == 401
 
 
 # ═════════════════════════════════════════
 # 17-19 — BOT TOKEN SECURITY
 # ═════════════════════════════════════════
 @pytest.mark.security
-def test_bot_token_encrypted_at_rest(db, restaurant):
+def test_bot_token_encrypted_at_rest(restaurant):
     """В БД лежит НЕ plaintext-токен, а Fernet-шифротекст, который расшифровывается обратно."""
     plain = "1234567890:AAFakeTokenForTests"
     assert restaurant.telegram_bot_token_encrypted != plain
@@ -381,123 +336,95 @@ def test_bot_token_encrypted_at_rest(db, restaurant):
 
 
 @pytest.mark.security
-def test_decrypt_failure_handled_safely(db, restaurant):
+def test_decrypt_failure_handled_safely(raw_client, db, restaurant):
     """Повреждённый ciphertext → 401 (не 500), FERNET_KEY не попадает в ответ."""
     restaurant.telegram_bot_token_encrypted = "not-a-valid-fernet-token"
     db.flush()
-    c = _raw_client(db)
-    try:
-        resp = c.get(
-            ORDERS_MY_URL,
-            headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": "auth_date=1&user=%7B%7D&hash=deadbeef"},
-        )
-        assert resp.status_code == 401
-        assert settings.FERNET_KEY not in resp.text
-    finally:
-        app.dependency_overrides.clear()
+    resp = raw_client.get(
+        ORDERS_MY_URL,
+        headers={
+            "X-Restaurant-Id": str(restaurant.id),
+            "X-Telegram-Init-Data": "auth_date=1&user=%7B%7D&hash=deadbeef",
+        },
+    )
+    assert resp.status_code == 401
+    assert settings.FERNET_KEY not in resp.text
 
 
 @pytest.mark.security
-def test_bot_token_not_exposed_in_agency_response(db, agency, restaurant, agency_token):
+def test_bot_token_not_exposed_in_agency_response(raw_client, agency, restaurant, agency_token):
     """GET /api/agency/restaurants никогда не должен вернуть токен (ни plaintext, ни шифротекст)."""
     plain = "1234567890:AAFakeTokenForTests"
-    c = _raw_client(db)
-    try:
-        resp = c.get(
-            "/api/agency/restaurants",
-            headers={"Authorization": f"Bearer {agency_token}"},
-        )
-        assert resp.status_code == 200
-        assert plain not in resp.text
-        assert restaurant.telegram_bot_token_encrypted not in resp.text
-        assert "telegram_bot_token_encrypted" not in resp.text
-    finally:
-        app.dependency_overrides.clear()
+    resp = raw_client.get(
+        "/api/agency/restaurants",
+        headers={"Authorization": f"Bearer {agency_token}"},
+    )
+    assert resp.status_code == 200
+    assert plain not in resp.text
+    assert restaurant.telegram_bot_token_encrypted not in resp.text
+    assert "telegram_bot_token_encrypted" not in resp.text
 
 
 # ═════════════════════════════════════════
 # CROSS-RESTAURANT — Duplicate bot token guard (Task 8 minimal fix)
 # ═════════════════════════════════════════
 @pytest.mark.security
-def test_duplicate_bot_token_rejected_on_create(db, agency, agency_token):
+def test_duplicate_bot_token_rejected_on_create(raw_client, agency, agency_token):
     """Нельзя создать второй ресторан с ТЕМ ЖЕ bot token, что уже используется (restaurant fixture)."""
-    c = _raw_client(db)
-    try:
-        resp = c.post(
-            "/api/agency/restaurants",
-            headers={"Authorization": f"Bearer {agency_token}"},
-            json={
-                "name": "Duplicate Bot Restaurant",
-                "slug": "dup-bot-restaurant",
-                "admin_password": "password123456",
-                "telegram_bot_token": "1234567890:AAFakeTokenForTests",  # == restaurant fixture's token
-            },
-        )
-        assert resp.status_code == 400
-        assert "уже используется" in resp.text
-    finally:
-        app.dependency_overrides.clear()
+    resp = raw_client.post(
+        "/api/agency/restaurants",
+        headers={"Authorization": f"Bearer {agency_token}"},
+        json={
+            "name": "Duplicate Bot Restaurant",
+            "slug": "dup-bot-restaurant",
+            "admin_password": "password123456",
+            "telegram_bot_token": "1234567890:AAFakeTokenForTests",  # == restaurant fixture's token
+        },
+    )
+    assert resp.status_code == 400
+    assert "уже используется" in resp.text
 
 
 @pytest.mark.security
-def test_duplicate_bot_token_rejected_on_update(db, agency, agency_token, restaurant, restaurant2):
-    """Нельзя переключить restaurant2 на bot token, который уже занят restaurant."""
-    c = _raw_client(db)
-    try:
-        # restaurant принадлежит agency (owner), но restaurant2 принадлежит agency2 —
-        # используем ID restaurant2 через её собственный owner было бы честнее,
-        # здесь достаточно показать, что проверка срабатывает независимо от владельца.
-        resp = c.patch(
-            f"/api/agency/restaurants/{restaurant.id}",
-            headers={"Authorization": f"Bearer {agency_token}"},
-            json={"telegram_bot_token": "9876543210:AAFakeTokenForTests2"},  # == restaurant2's token
-        )
-        assert resp.status_code == 400
-        assert "уже используется" in resp.text
-    finally:
-        app.dependency_overrides.clear()
+def test_duplicate_bot_token_rejected_on_update(raw_client, agency, agency_token, restaurant, restaurant2):
+    """Нельзя переключить restaurant на bot token, который уже занят restaurant2."""
+    resp = raw_client.patch(
+        f"/api/agency/restaurants/{restaurant.id}",
+        headers={"Authorization": f"Bearer {agency_token}"},
+        json={"telegram_bot_token": "9876543210:AAFakeTokenForTests2"},  # == restaurant2's token
+    )
+    assert resp.status_code == 400
+    assert "уже используется" in resp.text
 
 
 # ═════════════════════════════════════════
 # 20-22 — WEBHOOK AUTHENTICATION
 # ═════════════════════════════════════════
 @pytest.mark.security
-def test_webhook_invalid_secret_rejected(db, restaurant):
-    c = _raw_client(db)
-    try:
-        resp = c.post(
-            f"/webhook/{restaurant.slug}",
-            json={"update_id": 1},
-            headers={"X-Telegram-Bot-Api-Secret-Token": "wrong-secret"},
-        )
-        assert resp.status_code == 403
-    finally:
-        app.dependency_overrides.clear()
+def test_webhook_invalid_secret_rejected(raw_client, restaurant):
+    resp = raw_client.post(
+        f"/webhook/{restaurant.slug}",
+        json={"update_id": 1},
+        headers={"X-Telegram-Bot-Api-Secret-Token": "wrong-secret"},
+    )
+    assert resp.status_code == 403
 
 
 @pytest.mark.security
-def test_webhook_missing_secret_rejected(db, restaurant):
-    c = _raw_client(db)
-    try:
-        resp = c.post(f"/webhook/{restaurant.slug}", json={"update_id": 1})
-        assert resp.status_code == 403
-    finally:
-        app.dependency_overrides.clear()
+def test_webhook_missing_secret_rejected(raw_client, restaurant):
+    resp = raw_client.post(f"/webhook/{restaurant.slug}", json={"update_id": 1})
+    assert resp.status_code == 403
 
 
 @pytest.mark.security
-def test_webhook_valid_secret_accepted(db, restaurant):
-    c = _raw_client(db)
-    try:
-        resp = c.post(
-            f"/webhook/{restaurant.slug}",
-            json={"update_id": 1},  # update без message — process_new_updates просто ничего не делает
-            headers={"X-Telegram-Bot-Api-Secret-Token": settings.WEBHOOK_SECRET},
-        )
-        assert resp.status_code == 200
-        assert resp.json()["ok"] is True
-    finally:
-        app.dependency_overrides.clear()
+def test_webhook_valid_secret_accepted(raw_client, restaurant):
+    resp = raw_client.post(
+        f"/webhook/{restaurant.slug}",
+        json={"update_id": 1},  # update без message — process_new_updates просто ничего не делает
+        headers={"X-Telegram-Bot-Api-Secret-Token": settings.WEBHOOK_SECRET},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
 
 
 # ═════════════════════════════════════════
@@ -525,22 +452,18 @@ def test_hmac_comparisons_use_compare_digest():
 # 24 — Errors don't expose secrets
 # ═════════════════════════════════════════
 @pytest.mark.security
-def test_telegram_auth_error_does_not_expose_secrets(db, restaurant):
+def test_telegram_auth_error_does_not_expose_secrets(raw_client, restaurant):
     """401 от verify_telegram_init_data не должен содержать bot token, FERNET_KEY или WEBHOOK_SECRET."""
     bot_token = _decrypted_token(restaurant)
     init_data = _build_init_data(bot_token, override_hash="f" * 64)
-    c = _raw_client(db)
-    try:
-        resp = c.get(
-            ORDERS_MY_URL,
-            headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
-        )
-        assert resp.status_code == 401
-        assert bot_token not in resp.text
-        assert settings.FERNET_KEY not in resp.text
-        assert settings.WEBHOOK_SECRET not in resp.text
-    finally:
-        app.dependency_overrides.clear()
+    resp = raw_client.get(
+        ORDERS_MY_URL,
+        headers={"X-Restaurant-Id": str(restaurant.id), "X-Telegram-Init-Data": init_data},
+    )
+    assert resp.status_code == 401
+    assert bot_token not in resp.text
+    assert settings.FERNET_KEY not in resp.text
+    assert settings.WEBHOOK_SECRET not in resp.text
 
 
 # ═════════════════════════════════════════
