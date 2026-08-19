@@ -31,7 +31,7 @@ routers/restaurants.py — Taomly Platform
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 from typing import Optional
@@ -68,7 +68,7 @@ _SUPPORTED_LANGUAGES  = {"uz", "ru", "en"}
 
 
 class RestaurantSettingsUpdate(BaseModel):
-    working_hours:    Optional[str] = None
+    working_hours:    Optional[str] = Field(None, max_length=50)
     delivery_fee:     Optional[int] = None
     min_order_amount: Optional[int] = None
     timezone:         Optional[str] = None
@@ -160,8 +160,19 @@ def update_restaurant_settings(
             )
         restaurant.language = lang
 
-    db.commit()
-    db.refresh(restaurant)
+    try:
+        db.commit()
+        db.refresh(restaurant)
+    except Exception:
+        db.rollback()
+        logger.exception(
+            "Ошибка при сохранении настроек ресторана: slug=%s",
+            restaurant.slug,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при сохранении настроек ресторана",
+        )
 
     logger.info(
         "Restaurant settings updated: slug=%s working_hours=%s "
