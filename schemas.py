@@ -873,13 +873,24 @@ class SADashboardResponse(BaseModel):
 # RESTAURANT TABLES — management schemas
 # ──────────────────────────────────────────
 
+_TABLE_NUMBER_RE = re.compile(r"^[A-Za-z0-9\u0400-\u04FF_\- ]+$")
+
+
 class TableCreateRequest(BaseModel):
     table_number: str = Field(..., min_length=1, max_length=50, description="Номер или название стола (1, 2, VIP...)")
 
     @field_validator("table_number")
     @classmethod
-    def strip_table_number(cls, v: str) -> str:
-        return v.strip()
+    def validate_table_number(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Номер стола не может быть пустым")
+        if not _TABLE_NUMBER_RE.match(v):
+            raise ValueError(
+                "Номер стола может содержать только буквы, цифры, "
+                "дефис, подчёркивание и пробел"
+            )
+        return v
 
 
 class TableItem(BaseModel):
