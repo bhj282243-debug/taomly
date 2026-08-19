@@ -32,6 +32,14 @@ api.py — Taomly Platform
   - SecurityHeadersMiddleware: Cache-Control: no-store добавлен на auth endpoints
     (login, restaurant-login, superadmin-login, register)
   - CSP: добавлена директива frame-ancestors 'none'
+
+Изменения v9 (Foundation Task 9 — API Versioning):
+  - ApiVersioningMiddleware: path-rewriting /api/v1/* → /api/* на уровне ASGI scope.
+    Роутеры регистрируются один раз — нет operation_id конфликтов, нет дублирования.
+    Rate limiting (slowapi) видит переписанный путь — один bucket для /api/v1 и /api.
+    SecurityHeadersMiddleware._NO_CACHE_PATHS работает автоматически (path уже переписан).
+    /webhook, /health, /, /sw.js — не затронуты.
+    Существующие /api/* endpoints продолжают работать без изменений.
 """
 
 import hmac
@@ -223,6 +231,65 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 
 
 # ──────────────────────────────────────────
+# API VERSIONING MIDDLEWARE (Foundation Task 9)
+#
+# Стратегия: path-rewriting на уровне ASGI scope.
+#
+# /api/v1/{rest}  →  /api/{rest}  (до FastAPI routing)
+#
+# Почему не двойной include_router():
+#   - 6 из 10 роутеров имеют prefix="/api/XXX" внутри самого роутера.
+#     include_router(router, prefix="/api/v1") даёт /api/v1/api/XXX — неправильно.
+#   - Двойная регистрация создаёт дублирующиеся operation_id в OpenAPI схеме
+#     (даже при отключённой docs_url).
+#
+# Почему не HTTP 307 redirect:
+#   - Лишний roundtrip для каждого запроса клиента.
+#   - CORS preflight может не следовать за редиректом в некоторых браузерах.
+#
+# Почему ASGI middleware (не BaseHTTPMiddleware):
+#   - BaseHTTPMiddleware буферизует тело запроса дважды (известный overhead).
+#   - Чистый ASGI middleware переписывает scope['path'] до любой обработки:
+#     SecurityHeadersMiddleware, rate limiting, роутер — все видят /api/... путь.
+#
+# Побочные эффекты:
+#   - slowapi rate limit bucket: /api/v1/agency/login и /api/agency/login
+#     используют ОДИН bucket (/api/agency/login). Логически правильно —
+#     это один и тот же endpoint.
+#   - _NO_CACHE_PATHS в SecurityHeadersMiddleware: path уже переписан →
+#     no-store применяется к /api/agency/login корректно.
+#   - sw.js: startsWith('/api/') перехватывает /api/v1/* ПОСЛЕ rewriting →
+#     Network First стратегия применяется корректно.
+# ──────────────────────────────────────────
+_V1_PREFIX = "/api/v1"
+_V1_PREFIX_LEN = len(_V1_PREFIX)
+_API_PREFIX = "/api"
+
+
+class ApiVersioningMiddleware:
+    """
+    ASGI middleware: /api/v1/{path} → /api/{path}.
+
+    Переписывает scope['path'] и scope['raw_path'] до FastAPI dispatch.
+    Не буферизует тело запроса. Не меняет response.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            path: str = scope.get("path", "")
+            if path.startswith(_V1_PREFIX + "/") or path == _V1_PREFIX:
+                # /api/v1/agency/login  →  /api/agency/login
+                new_path = _API_PREFIX + path[_V1_PREFIX_LEN:]
+                scope = dict(scope)  # копируем — не мутируем оригинал
+                scope["path"] = new_path
+                scope["raw_path"] = new_path.encode("latin-1")
+        await self.app(scope, receive, send)
+
+
+# ──────────────────────────────────────────
 # LIFESPAN
 # ──────────────────────────────────────────
 @asynccontextmanager
@@ -385,6 +452,13 @@ if _trusted_proxy_hosts == "*":
         "Допустимо на Render/Railway. Для собственного сервера задайте конкретный IP."
     )
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=_trusted_proxy_hosts)
+
+# ──────────────────────────────────────────
+# API VERSIONING (Foundation Task 9)
+# Регистрируется ПОСЛЕДНИМ — в стеке Starlette middleware выполняется ПЕРВЫМ.
+# Переписывает /api/v1/* → /api/* до любого другого middleware и роутера.
+# ──────────────────────────────────────────
+app.add_middleware(ApiVersioningMiddleware)
 
 # ──────────────────────────────────────────
 # ROUTERS
