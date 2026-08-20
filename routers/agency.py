@@ -96,7 +96,14 @@ def _bot_token_in_use(
 
 # Фиктивный хеш для timing-safe проверки пароля (SEC-6).
 # bcrypt отрабатывает даже когда email/slug не найден — выравнивает время ответа.
-_DUMMY_HASH: str = "$2b$12$dummyhashXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+#
+# Foundation Gate P0-2: предыдущий хеш имел 51 символ после префикса вместо 53
+# (checksum 29 вместо 31). passlib выбрасывал ValueError: malformed bcrypt hash
+# → неизвестный email/slug возвращал HTTP 500 вместо 401.
+# Текущий хеш структурно валиден: $2b$12$ (7) + 22-char salt + 31-char checksum = 60 total.
+# bcrypt.verify() вернёт False (пароль не совпадает) — без исключения.
+# Хеш не является хешем реального пароля; используется только для timing equality.
+_DUMMY_HASH: str = "$2b$12$abcdefghijklmnopqrstuvAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 
 
 # ──────────────────────────────────────────
