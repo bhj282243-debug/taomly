@@ -1,6 +1,15 @@
 """
 schemas.py — Taomly Platform
 
+Изменения v4 (Foundation Task 11 — Production Hardening):
+  - RestaurantSettingsUpdate: delivery_fee и min_order_amount получили
+    верхнюю границу le=10_000_000 (10 млн сум). Без верхней границы
+    значение 9_999_999_999 вызывает PostgreSQL IntegerOverflow → HTTP 500
+    вместо корректного HTTP 422. Граница достаточна для любого ресторана.
+  - OrderCreate: location_lat ge=-90.0, le=90.0; location_lng ge=-180.0, le=180.0.
+    NaN и Infinity от Pydantic float validator преобразуются в 422 через
+    field_validator с явной проверкой math.isfinite().
+
 Изменения v3:
   - OrderResponse: добавлен updated_at (M-3)
   - OrderCreate: валидация address обязателен при order_type=delivery (M-10)
@@ -16,6 +25,7 @@ schemas.py — Taomly Platform
   - Analytics и Billing схемы перенесены из routers/ (Sprint 3.2)
 """
 
+import math
 import re
 from datetime import datetime, timezone
 from typing import List, Literal, Optional
@@ -229,6 +239,26 @@ class OrderItemCreate(BaseModel):
     quantity: int = Field(..., ge=1, le=99)
 
 
+def _validate_coordinate(value: Optional[float], min_val: float, max_val: float, name: str) -> Optional[float]:
+    """
+    Проверяет координату на допустимый диапазон, NaN и Infinity.
+
+    Pydantic float validator пропускает float("nan") и float("inf") без ошибки.
+    Эти значения записываются в PostgreSQL DOUBLE PRECISION без исключения,
+    но ломают любые арифметические операции над координатами в будущей аналитике.
+
+    Foundation Task 11.3: явная проверка math.isfinite() блокирует NaN/Infinity
+    до попадания в БД.
+    """
+    if value is None:
+        return None
+    if not math.isfinite(value):
+        raise ValueError(f"{name} не может быть NaN или бесконечностью")
+    if not (min_val <= value <= max_val):
+        raise ValueError(f"{name} должна быть в диапазоне [{min_val}, {max_val}]")
+    return value
+
+
 class OrderCreate(BaseModel):
     client_name: Optional[str] = Field(None, max_length=100)
     client_phone: Optional[str] = None
@@ -244,6 +274,18 @@ class OrderCreate(BaseModel):
     @classmethod
     def validate_phone(cls, v: Optional[str]) -> Optional[str]:
         return _validate_phone(v)
+
+    @field_validator("location_lat", mode="after")
+    @classmethod
+    def validate_lat(cls, v: Optional[float]) -> Optional[float]:
+        # Foundation Task 11.3: диапазон [-90, 90], блокируем NaN/Infinity
+        return _validate_coordinate(v, -90.0, 90.0, "location_lat")
+
+    @field_validator("location_lng", mode="after")
+    @classmethod
+    def validate_lng(cls, v: Optional[float]) -> Optional[float]:
+        # Foundation Task 11.3: диапазон [-180, 180], блокируем NaN/Infinity
+        return _validate_coordinate(v, -180.0, 180.0, "location_lng")
 
     @model_validator(mode="after")
     def validate_order_type_fields(self) -> "OrderCreate":
