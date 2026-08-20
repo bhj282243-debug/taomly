@@ -2,6 +2,13 @@
 api.py — Taomly Platform
 Точка входа FastAPI приложения.
 
+Изменения v10 (Foundation Task 11 — Production Hardening):
+  - lifespan: вызывает purge_expired_revoked_tokens() при старте.
+    Удаляет истёкшие JWT-revocation записи накопившиеся между рестартами.
+    Ошибка purge не прерывает запуск приложения — логируется и игнорируется.
+    Probabilistic purge при logout не нужен: ACCESS_TOKEN_EXPIRE_HOURS=8,
+    Render перезапускается при каждом deploy — startup достаточен.
+
 Изменения v3:
   - config.py: все env-переменные читаются из единого модуля
   - CORSMiddleware: настроен с ALLOWED_ORIGINS из config
@@ -295,6 +302,24 @@ class ApiVersioningMiddleware:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Lifespan: запуск приложения. Схема управляется Alembic.")
+
+    # Foundation Task 11.1: очистка истёкших revoked_tokens при старте.
+    # Токены живут ACCESS_TOKEN_EXPIRE_HOURS=8 часов; при каждом рестарте
+    # (deploy или Render cold-start) накопленные истёкшие записи удаляются.
+    # Это предотвращает рост таблицы и деградацию decode_token() SELECT.
+    # Ошибка не прерывает запуск — безопасно: истёкшие токены и без того
+    # недействительны по полю exp в самом JWT.
+    try:
+        from auth import purge_expired_revoked_tokens
+        _db = SessionLocal()
+        try:
+            deleted = purge_expired_revoked_tokens(_db)
+            if deleted:
+                logger.info("Startup: удалено %d истёкших revoked_tokens", deleted)
+        finally:
+            _db.close()
+    except Exception:
+        logger.exception("Startup: не удалось выполнить purge revoked_tokens — продолжаем")
 
     if handlers.platform_bot:
         try:
