@@ -154,6 +154,10 @@ from models import (  # noqa: E402
 @pytest.fixture
 def agency(db) -> Agency:
     a = Agency(
+        # SQLite не поддерживает BigInteger autoincrement через RETURNING.
+        # Явный id устраняет IntegrityError только в SQLite-тестах.
+        # PostgreSQL игнорирует id и генерирует его сам через SERIAL/BIGSERIAL.
+        **({"id": 1} if not _is_postgres else {}),
         name="Test Agency",
         owner_email="test@agency.uz",
         owner_password_hash=hash_password("password123"),
@@ -167,6 +171,7 @@ def agency(db) -> Agency:
 def agency2(db) -> Agency:
     """Второе агентство — для тестов tenant isolation."""
     a = Agency(
+        **({"id": 2} if not _is_postgres else {}),
         name="Other Agency",
         owner_email="other@agency.uz",
         owner_password_hash=hash_password("password123"),
