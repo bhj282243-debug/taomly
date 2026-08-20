@@ -27,11 +27,12 @@ from typing import List, Optional
 
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from sqlalchemy.orm import Session, joinedload
 
 from auth import get_current_restaurant_admin
 from config import settings
+from limiter import limiter
 from database import get_db
 from models import Category, Product, Restaurant, Subscription, SubscriptionPlan, UsageEvent
 from sqlalchemy import func
@@ -176,7 +177,9 @@ def _delete_r2_photo(photo_url: str) -> None:
 
 
 @router.post("/upload-photo")
+@limiter.limit("20/hour")
 async def upload_photo(
+    request: Request,
     file: UploadFile = File(...),
     restaurant: Restaurant = Depends(get_current_restaurant_admin),
 ):
@@ -188,6 +191,7 @@ async def upload_photo(
       - Только JPEG / PNG / WebP / GIF
       - Максимум 5 MB
       - Требует JWT-авторизации ресторанного администратора
+      - Rate limit: 20 запросов в час с одного IP (Foundation Task 11.2)
     """
     # Проверяем что R2 настроен
     if not settings.R2_ACCESS_KEY_ID or not settings.R2_ACCOUNT_ID:
