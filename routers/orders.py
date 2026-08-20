@@ -468,15 +468,29 @@ def update_order_status(
     """
     Меняет статус заказа.
     Tenant-изоляция + проверка допустимости перехода.
+
+    Foundation Gate P0-1: запрос разделён на два шага.
+
+    Причина: PostgreSQL запрещает FOR UPDATE на nullable side of outer join.
+    joinedload(Order.items) генерирует LEFT OUTER JOIN order_items — несовместимо
+    с with_for_update() на уровне всего запроса. На SQLite баг не проявлялся,
+    на PostgreSQL — crash HTTP 500 при любом PATCH /{order_id}/status.
+
+    Решение (два шага):
+      1. SELECT orders WHERE id + restaurant_id FOR UPDATE — только таблица orders,
+         без join. Захватываем row-level lock на запись заказа.
+      2. db.refresh(order) после lock — подгружает items отдельным SELECT
+         (lazy="select" на relationship, см. models.py:402).
+    Бизнес-логика не изменена.
     """
+    # Шаг 1: блокируем строку без JOIN. Tenant isolation: restaurant_id filter.
     order = (
         db.query(Order)
-        .options(joinedload(Order.items))
         .filter(
             Order.id == order_id,
             Order.restaurant_id == restaurant.id,
         )
-        .with_for_update()  # F-40: блокируем строку — защита от race condition
+        .with_for_update()
         .first()
     )
     if not order:
@@ -484,6 +498,9 @@ def update_order_status(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Заказ не найден",
         )
+
+    # Шаг 2: подгружаем items после блокировки (отдельный SELECT, без join).
+    db.refresh(order)
 
     allowed = VALID_STATUS_TRANSITIONS.get(order.status, [])
     if data.status not in allowed:
