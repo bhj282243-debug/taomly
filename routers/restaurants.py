@@ -69,8 +69,11 @@ _SUPPORTED_LANGUAGES  = {"uz", "ru", "en"}
 
 class RestaurantSettingsUpdate(BaseModel):
     working_hours:    Optional[str] = Field(None, max_length=50)
-    delivery_fee:     Optional[int] = None
-    min_order_amount: Optional[int] = None
+    # Foundation Task 11.3: ge=0 + le=10_000_000 (10 млн сум).
+    # Без верхней границы значение > 2_147_483_647 вызывает PostgreSQL
+    # IntegerOverflow → HTTP 500 вместо корректного 422.
+    delivery_fee:     Optional[int] = Field(None, ge=0, le=10_000_000)
+    min_order_amount: Optional[int] = Field(None, ge=0, le=10_000_000)
     timezone:         Optional[str] = None
     currency:         Optional[str] = None
     language:         Optional[str] = None
