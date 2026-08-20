@@ -388,6 +388,31 @@ def _is_sqlite() -> bool:
     return not _is_postgres
 
 
+# ─────────────────────────────────────────
+# Foundation Gate P1: rate limit isolation
+# ─────────────────────────────────────────
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """
+    Сбрасывает состояние slowapi limiter перед каждым тестом.
+
+    Проблема: slowapi хранит счётчики запросов in-memory, keyed by IP.
+    TestClient всегда использует IP "testclient". Без сброса счётчики
+    накапливаются между тестами — тест N может исчерпать лимит за тест N-1
+    и получить 429 вместо ожидаемого 200/400/etc.
+
+    Решение: limiter.reset() перед каждым тестом. Паттерн уже используется
+    в test_error_handling.py — здесь переносим его в autouse fixture.
+
+    Production rate limit НЕ изменяется: настройки RATE_LIMIT_* остаются
+    теми же. Изолируется только тестовое состояние.
+    """
+    from limiter import limiter
+    limiter.reset()
+    yield
+    # После теста сброс не нужен: следующий тест сбросит сам перед запуском.
+
+
 def pytest_collection_modifyitems(items):
     """
     Автоматически пропускает тесты с маркером @pytest.mark.postgres
