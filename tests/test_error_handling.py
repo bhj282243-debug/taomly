@@ -43,6 +43,7 @@ from api import app
 from auth import get_current_agency, get_current_restaurant_admin, get_telegram_user
 from config import settings
 from database import get_db
+from models import Location
 
 
 # ─────────────────────────────────────────
@@ -241,6 +242,23 @@ def test_404_cross_tenant_order_by_id(db, restaurant, restaurant2, tg_user2):
 # ─────────────────────────────────────────
 @pytest.mark.security
 def test_duplicate_table_number_returns_409_not_raw_db_error(db, restaurant):
+    # S1-2: router now resolves location_id via Location.restaurant_id.
+    # Must seed a Location so the endpoint doesn't return 500.
+    loc = Location(
+        restaurant_id=restaurant.id,
+        name=restaurant.name,
+        slug=restaurant.slug,
+        is_active=True,
+        timezone="Asia/Tashkent",
+        delivery_fee=0,
+        min_order_amount=0,
+        currency="UZS",
+        language="uz",
+        is_waiter_call_enabled=False,
+    )
+    db.add(loc)
+    db.flush()
+
     c = _authed_restaurant_client(db, restaurant)
     try:
         payload = {"table_number": "T-DUPLICATE-TEST"}
@@ -252,6 +270,7 @@ def test_duplicate_table_number_returns_409_not_raw_db_error(db, restaurant):
         body = second.json()
         assert "duplicate key value violates" not in body.get("detail", "")
         assert "uq_table_restaurant_number" not in body.get("detail", "")
+        assert "uq_table_location_number" not in body.get("detail", "")
     finally:
         app.dependency_overrides.clear()
 
