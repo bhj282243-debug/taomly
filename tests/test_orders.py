@@ -154,12 +154,13 @@ def test_create_order_with_foreign_product(client, db, agency2, restaurant2):
 # TEST 18: Status transition valid
 # ──────────────────────────────────────────
 @pytest.mark.integration
-def test_order_status_transition_valid(client, db, product, restaurant):
+def test_order_status_transition_valid(client, db, product, restaurant, location):
     from models import Order, OrderItem
 
     # Создаём заказ напрямую в БД
     order = Order(
         restaurant_id=restaurant.id,
+        location_id=location.id,   # S1-3: required
         client_telegram_id=111111111,
         order_type="takeaway",
         total_amount=15000,
@@ -188,11 +189,12 @@ def test_order_status_transition_valid(client, db, product, restaurant):
 # TEST 19: Status transition invalid → 400
 # ──────────────────────────────────────────
 @pytest.mark.integration
-def test_order_status_transition_invalid(client, db, restaurant):
+def test_order_status_transition_invalid(client, db, restaurant, location):
     from models import Order
 
     order = Order(
         restaurant_id=restaurant.id,
+        location_id=location.id,   # S1-3: required
         client_telegram_id=111111111,
         order_type="takeaway",
         total_amount=10000,
@@ -210,15 +212,16 @@ def test_order_status_transition_invalid(client, db, restaurant):
 # TEST 20: Tenant isolation — GET orders
 # ──────────────────────────────────────────
 @pytest.mark.security
-def test_get_orders_tenant_isolation(client, db, restaurant, restaurant2):
+def test_get_orders_tenant_isolation(client, db, restaurant, restaurant2, location2):
     """
     Ресторан A не видит заказы ресторана B.
     """
     from models import Order
 
-    # Заказ ресторана B
+    # Заказ ресторана B — location2 принадлежит restaurant2
     order_b = Order(
         restaurant_id=restaurant2.id,
+        location_id=location2.id,  # S1-3: required
         client_telegram_id=999999,
         order_type="takeaway",
         total_amount=20000,
