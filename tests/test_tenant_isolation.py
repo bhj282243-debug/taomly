@@ -113,10 +113,11 @@ def product_r2(db, restaurant2, category2) -> Product:
 
 
 @pytest.fixture
-def order_r1(db, restaurant, product) -> Order:
-    """Заказ первого ресторана."""
+def order_r1(db, restaurant, product, location) -> Order:
+    """Заказ первого ресторана. S1-3: location_id обязателен."""
     o = Order(
         restaurant_id=restaurant.id,
+        location_id=location.id,   # S1-3
         client_telegram_id=111111111,
         client_name="Алишер",
         order_type="takeaway",
@@ -131,10 +132,11 @@ def order_r1(db, restaurant, product) -> Order:
 
 
 @pytest.fixture
-def order_r2(db, restaurant2, product_r2) -> Order:
-    """Заказ второго ресторана."""
+def order_r2(db, restaurant2, product_r2, location2) -> Order:
+    """Заказ второго ресторана. S1-3: location_id обязателен."""
     o = Order(
         restaurant_id=restaurant2.id,
+        location_id=location2.id,  # S1-3
         client_telegram_id=222222222,
         client_name="Камол",
         order_type="takeaway",
@@ -513,16 +515,13 @@ def test_create_order_with_foreign_product(db, restaurant, product_r2, tg_user2)
 
 
 @pytest.mark.security
-def test_create_order_product_cross_tenant(db, restaurant2, product, tg_user2):
+def test_create_order_product_cross_tenant(db, restaurant2, product, tg_user2, location2):
     """
     tg_user2 (ресторан B) пытается заказать product (ресторан A).
     Ожидаем 404 — продукт ресторана A невидим для клиента ресторана B.
 
-    Это проверяет строку:
-        db.query(Product).filter(
-            Product.id == item.product_id,
-            Product.restaurant_id == restaurant.id,  ← tenant filter
-        )
+    S1-3: X-Location-Id указывает на location2 (ресторан B) — корректно.
+    Продукт принадлежит ресторану A → 404 на этапе поиска продукта.
     """
     def _db():
         yield db
@@ -537,6 +536,7 @@ def test_create_order_product_cross_tenant(db, restaurant2, product, tg_user2):
                 "items": [{"product_id": product.id, "quantity": 1}],
                 "client_name": "Атакующий",
             },
+            headers={"X-Location-Id": str(location2.id)},
         )
         assert resp.status_code == 404, (
             f"Ожидали 404 (чужой продукт), получили {resp.status_code}: {resp.text}"
