@@ -339,13 +339,17 @@ def create_order(
     # Ошибка записи события НЕ откатывает уже созданный заказ —
     # квота всё равно пересчитывается из COUNT(orders) при следующем запросе.
     try:
-        db.add(UsageEvent(restaurant_id=restaurant.id, event_type="order_created"))
+        db.add(UsageEvent(
+            restaurant_id=restaurant.id,
+            location_id=location.id,   # S1-4: location в scope (resolved выше)
+            event_type="order_created",
+        ))
         db.commit()
     except Exception:
         db.rollback()
         logger.warning(
-            "Не удалось записать UsageEvent order_created: order_id=%s restaurant_id=%s",
-            order_with_items.id, restaurant.id,
+            "Не удалось записать UsageEvent order_created: order_id=%s restaurant_id=%s location_id=%s",
+            order_with_items.id, restaurant.id, location.id,
         )
 
     background_tasks.add_task(
