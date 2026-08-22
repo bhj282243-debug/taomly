@@ -34,7 +34,7 @@ from auth import get_current_restaurant_admin
 from config import settings
 from limiter import limiter
 from database import get_db
-from models import Category, Product, Restaurant, Subscription, SubscriptionPlan, UsageEvent
+from models import Category, Location, Product, Restaurant, Subscription, SubscriptionPlan, UsageEvent
 from sqlalchemy import func
 from schemas import (
     CategoryResponse,
@@ -48,6 +48,29 @@ from schemas import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _get_primary_location_id(db: Session, restaurant_id: int) -> int | None:
+    """
+    S1-4: Возвращает id первичной Location ресторана для UsageEvent.
+    В Stage 1 у каждого ресторана ровно одна Location (migration 0010).
+    Используется там где location не в scope (menu admin endpoints).
+    Ошибка не пробрасывается — UsageEvent.location_id nullable.
+    """
+    try:
+        loc = (
+            db.query(Location.id)
+            .filter(Location.restaurant_id == restaurant_id)
+            .order_by(Location.id)
+            .first()
+        )
+        return loc[0] if loc else None
+    except Exception:
+        logger.debug(
+            "_get_primary_location_id: не удалось получить location для restaurant_id=%s",
+            restaurant_id,
+        )
+        return None
 
 
 # ──────────────────────────────────────────
@@ -526,7 +549,11 @@ def create_product(
     # Записываем событие создания продукта для биллинга/аудита.
     # Ошибка записи не откатывает созданный продукт.
     try:
-        db.add(UsageEvent(restaurant_id=restaurant.id, event_type="product_created"))
+        db.add(UsageEvent(
+            restaurant_id=restaurant.id,
+            location_id=_get_primary_location_id(db, restaurant.id),  # S1-4
+            event_type="product_created",
+        ))
         db.commit()
     except Exception:
         db.rollback()
@@ -675,7 +702,11 @@ def delete_product(
     # Записываем событие удаления продукта для биллинга/аудита.
     # Ошибка записи не пробрасывается — продукт уже удалён.
     try:
-        db.add(UsageEvent(restaurant_id=restaurant.id, event_type="product_deleted"))
+        db.add(UsageEvent(
+            restaurant_id=restaurant.id,
+            location_id=_get_primary_location_id(db, restaurant.id),  # S1-4
+            event_type="product_deleted",
+        ))
         db.commit()
     except Exception:
         db.rollback()
