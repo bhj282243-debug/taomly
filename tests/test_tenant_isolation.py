@@ -47,6 +47,7 @@ from database import get_db
 from models import (
     Agency,
     Category,
+    Location,
     Order,
     OrderItem,
     Product,
@@ -165,9 +166,33 @@ def reservation_r2(db, restaurant2) -> Reservation:
 
 
 @pytest.fixture
-def table_r2(db, restaurant2) -> RestaurantTable:
-    """Стол второго ресторана."""
-    t = RestaurantTable(restaurant_id=restaurant2.id, table_number="10")
+def _location_r2(db, restaurant2) -> Location:
+    """Location второго ресторана — для table_r2 (S1-2)."""
+    loc = Location(
+        restaurant_id=restaurant2.id,
+        name=restaurant2.name,
+        slug=restaurant2.slug,
+        is_active=True,
+        timezone="Asia/Tashkent",
+        delivery_fee=0,
+        min_order_amount=0,
+        currency="USD",
+        language="uz",
+        is_waiter_call_enabled=False,
+    )
+    db.add(loc)
+    db.flush()
+    return loc
+
+
+@pytest.fixture
+def table_r2(db, restaurant2, _location_r2) -> RestaurantTable:
+    """Стол второго ресторана (S1-2: location_id добавлен)."""
+    t = RestaurantTable(
+        restaurant_id=restaurant2.id,
+        location_id=_location_r2.id,
+        table_number="10",
+    )
     db.add(t)
     db.flush()
     return t
