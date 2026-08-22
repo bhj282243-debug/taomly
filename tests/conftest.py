@@ -333,12 +333,74 @@ def location2(db, restaurant2) -> Location:
 
 
 @pytest.fixture
+def location_a2(db, restaurant) -> Location:
+    """
+    Второй Location того же Brand (restaurant) — S1-3.
+    Используется для тестов cross-location rejection:
+      Заказ с X-Location-Id=A1 + table.location_id=A2 → 400.
+      Заказ с X-Location-Id=A2 → принимается независимо.
+    """
+    loc = Location(
+        restaurant_id=restaurant.id,
+        name="Филиал 2",
+        slug=f"{restaurant.slug}-branch2",
+        is_active=True,
+        timezone="Asia/Tashkent",
+        delivery_fee=0,
+        min_order_amount=0,
+        currency="UZS",
+        language="uz",
+        is_waiter_call_enabled=False,
+    )
+    db.add(loc)
+    db.flush()
+    return loc
+
+
+@pytest.fixture
+def location_b1(db, restaurant2) -> Location:
+    """
+    Location другого Brand (restaurant2) — S1-3.
+    Используется для тестов cross-brand rejection:
+      Заказ с X-Location-Id=B1 через клиент ресторана A → 404.
+    """
+    loc = Location(
+        restaurant_id=restaurant2.id,
+        name=restaurant2.name,
+        slug=f"{restaurant2.slug}-loc1",
+        is_active=True,
+        timezone="Asia/Tashkent",
+        delivery_fee=0,
+        min_order_amount=0,
+        currency="USD",
+        language="uz",
+        is_waiter_call_enabled=False,
+    )
+    db.add(loc)
+    db.flush()
+    return loc
+
+
+@pytest.fixture
 def table(db, restaurant, location) -> RestaurantTable:
     """RestaurantTable с restaurant_id (legacy) и location_id (S1-2)."""
     t = RestaurantTable(
         restaurant_id=restaurant.id,
         location_id=location.id,
         table_number="5",
+    )
+    db.add(t)
+    db.flush()
+    return t
+
+
+@pytest.fixture
+def table_a2(db, restaurant, location_a2) -> RestaurantTable:
+    """RestaurantTable в Location A2 (второй филиал того же Brand) — S1-3."""
+    t = RestaurantTable(
+        restaurant_id=restaurant.id,
+        location_id=location_a2.id,
+        table_number="A2-1",
     )
     db.add(t)
     db.flush()
@@ -384,6 +446,11 @@ def client(db, agency, restaurant, tg_user, location):
 
     S1-2: location fixture добавлен, чтобы POST /me/tables мог найти
     Location по restaurant_id (router требует NOT NULL location_id).
+
+    S1-3: X-Location-Id и X-Restaurant-Id добавлены как default headers.
+    create_order теперь требует X-Location-Id (обязательный header).
+    Тесты, которые не передают его явно, получают location.id из fixture.
+    Тесты могут переопределить header на уровне конкретного вызова.
     """
     from api import app
 
@@ -404,7 +471,15 @@ def client(db, agency, restaurant, tg_user, location):
     app.dependency_overrides[get_current_agency] = override_get_current_agency
     app.dependency_overrides[get_current_restaurant_admin] = override_get_current_restaurant_admin
 
-    with TestClient(app, raise_server_exceptions=True) as c:
+    # S1-3: X-Location-Id обязателен для create_order.
+    # Передаём как default header чтобы не ломать все существующие тесты.
+    # Тесты с другой Location должны передавать header явно в вызове.
+    default_headers = {
+        "X-Restaurant-Id": str(restaurant.id),
+        "X-Location-Id": str(location.id),
+    }
+
+    with TestClient(app, raise_server_exceptions=True, headers=default_headers) as c:
         yield c
 
     app.dependency_overrides.clear()
