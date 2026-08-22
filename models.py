@@ -373,6 +373,8 @@ class Order(Base):
         CheckConstraint("total_amount >= 0", name="ck_orders_total_amount_nonnegative"),
         Index("ix_orders_restaurant_status_created", "restaurant_id", "status", "created_at"),
         Index("ix_orders_client_telegram", "client_telegram_id"),
+        # S1-3: index for location_id hot path.
+        Index("ix_orders_location_id", "location_id"),
     )
 
     id                 = Column(BigInteger, primary_key=True)
@@ -381,6 +383,16 @@ class Order(Base):
         ForeignKey("restaurants.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
+    )
+    # S1-3: location_id — canonical operational tenant scope for orders.
+    # ON DELETE RESTRICT: physical deletion of a Location with historical
+    # orders is forbidden. Soft delete (is_active=False) is the only
+    # allowed deactivation path (ADR-005).
+    # Migration 0015 will drop restaurant_id after full transition.
+    location_id        = Column(
+        BigInteger,
+        ForeignKey("locations.id", ondelete="RESTRICT"),
+        nullable=False,
     )
     client_id          = Column(
         BigInteger,
@@ -411,6 +423,8 @@ class Order(Base):
     )
 
     restaurant = relationship("Restaurant", back_populates="orders", lazy="select")
+    # S1-3: location relationship — canonical operational scope.
+    location   = relationship("Location", lazy="select")
     client     = relationship("User", lazy="select")
     items      = relationship(
         "OrderItem",
