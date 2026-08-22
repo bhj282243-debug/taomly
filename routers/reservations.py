@@ -1,7 +1,14 @@
 """
 routers/reservations.py — Taomly Platform
 
-Изменения относительно v1:
+Изменения v3 (S1-4: reservations.location_id):
+  - POST /: принимает X-Location-Id header — явный источник Location.
+    Location резолвится из БД и валидируется: location.restaurant_id == restaurant.id.
+    Reservation создаётся с location_id = location.id.
+  - GET /restaurant/{restaurant_id}: фильтр по restaurant_id сохранён (brand-level admin).
+  - PATCH /{reservation_id}/status: без изменений (tenant-изоляция по restaurant_id).
+
+Предыдущие изменения (v2):
   - POST /: добавлен get_telegram_user — restaurant берётся из TelegramUser,
     restaurant_id убран из схемы ReservationCreate
   - GET /restaurant/{restaurant_id}: добавлена JWT-авторизация + tenant-проверка
@@ -13,13 +20,13 @@ routers/reservations.py — Taomly Platform
 import logging
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from auth import TelegramUser, get_current_restaurant_admin, get_telegram_user
 from database import get_db
 from limiter import limiter
-from models import Reservation, Restaurant
+from models import Location, Reservation, Restaurant
 from schemas import ReservationCreate, ReservationResponse, ReservationStatusUpdate
 
 logger = logging.getLogger(__name__)
@@ -39,17 +46,35 @@ def create_reservation(
     data: ReservationCreate,
     tg_user: TelegramUser = Depends(get_telegram_user),
     db: Session = Depends(get_db),
+    x_location_id: int = Header(..., alias="X-Location-Id"),
 ):
     """
     Создаёт бронь стола.
 
     restaurant берётся из TelegramUser (верифицирован через initData).
     restaurant_id убран из тела запроса — клиент не может указать чужой ресторан.
+
+    S1-4: X-Location-Id обязателен. Location резолвится из БД и валидируется:
+      location.restaurant_id == restaurant.id — защита от cross-brand injection.
+      location.is_active == True — деактивированная Location не принимает брони.
     """
     restaurant = tg_user.restaurant
 
+    # ── S1-4: Resolve and validate Location ───────────────────────────────
+    location = db.query(Location).filter(
+        Location.id == x_location_id,
+        Location.restaurant_id == restaurant.id,
+        Location.is_active == True,  # noqa: E712
+    ).first()
+    if not location:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Location не найдена или недоступна для этого ресторана",
+        )
+
     reservation = Reservation(
         restaurant_id=restaurant.id,
+        location_id=location.id,        # S1-4 canonical
         client_name=data.client_name,
         client_phone=data.client_phone,
         guests_count=data.guests_count,
@@ -75,8 +100,8 @@ def create_reservation(
         )
 
     logger.info(
-        "Бронь создана: reservation_id=%s restaurant_id=%s client=%s",
-        reservation.id, restaurant.id, data.client_name,
+        "Бронь создана: reservation_id=%s restaurant_id=%s location_id=%s client=%s",
+        reservation.id, restaurant.id, location.id, data.client_name,
     )
     return reservation
 
