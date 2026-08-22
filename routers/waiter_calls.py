@@ -1,10 +1,15 @@
 """
 routers/waiter_calls.py — Taomly Platform
 
-Изменения v2:
+Изменения v3 (S1-4: waiter_calls.location_id):
+  - create_waiter_call: location_id берётся из table.location_id
+    (стол уже имеет location_id с S1-2 — детерминированный источник).
+    Не требует отдельного X-Location-Id header — стол однозначно привязан к Location.
+    WaiterCall создаётся с location_id = table.location_id.
+
+Предыдущие изменения (v2):
   - WaiterCallCreate: restaurant_id убран из схемы, берётся из TelegramUser
-  - Race condition: проверка существующего вызова защищена SELECT FOR UPDATE —
-    конкурентные запросы с одного стола не создадут два активных вызова
+  - Race condition: проверка существующего вызова защищена SELECT FOR UPDATE
   - GET /restaurant/{restaurant_id}: добавлен limit=100 по умолчанию
   - PATCH /{call_id}/status: tenant-изоляция + VALID_STATUS_TRANSITIONS
   - Логирование через logger.exception с контекстом
@@ -86,8 +91,11 @@ def create_waiter_call(
             detail="Для этого стола уже есть активный вызов",
         )
 
+    # S1-4: location_id берётся из table.location_id (стол привязан к Location в S1-2).
+    # Не требует X-Location-Id header — стол однозначно определяет локацию.
     call = WaiterCall(
         restaurant_id=restaurant.id,
+        location_id=table.location_id,  # S1-4 canonical
         table_id=data.table_id,
         status="active",
     )
@@ -109,8 +117,8 @@ def create_waiter_call(
         )
 
     logger.info(
-        "Вызов официанта создан: call_id=%s table_id=%s restaurant_id=%s",
-        call.id, data.table_id, restaurant.id,
+        "Вызов официанта создан: call_id=%s table_id=%s restaurant_id=%s location_id=%s",
+        call.id, data.table_id, restaurant.id, table.location_id,
     )
     return call
 
