@@ -138,6 +138,7 @@ def db():
 from models import (  # noqa: E402
     Agency,
     Category,
+    Location,
     Order,
     OrderItem,
     Product,
@@ -292,8 +293,53 @@ def product_unavailable(db, restaurant, category) -> Product:
 
 
 @pytest.fixture
-def table(db, restaurant) -> RestaurantTable:
-    t = RestaurantTable(restaurant_id=restaurant.id, table_number="5")
+def location(db, restaurant) -> Location:
+    """Primary Location for the main test restaurant (S1-2)."""
+    loc = Location(
+        restaurant_id=restaurant.id,
+        name=restaurant.name,
+        slug=restaurant.slug,
+        is_active=True,
+        timezone="Asia/Tashkent",
+        delivery_fee=0,
+        min_order_amount=0,
+        currency="UZS",
+        language="uz",
+        is_waiter_call_enabled=False,
+    )
+    db.add(loc)
+    db.flush()
+    return loc
+
+
+@pytest.fixture
+def location2(db, restaurant2) -> Location:
+    """Primary Location for the second test restaurant (S1-2)."""
+    loc = Location(
+        restaurant_id=restaurant2.id,
+        name=restaurant2.name,
+        slug=restaurant2.slug,
+        is_active=True,
+        timezone="Asia/Tashkent",
+        delivery_fee=0,
+        min_order_amount=0,
+        currency="USD",
+        language="uz",
+        is_waiter_call_enabled=False,
+    )
+    db.add(loc)
+    db.flush()
+    return loc
+
+
+@pytest.fixture
+def table(db, restaurant, location) -> RestaurantTable:
+    """RestaurantTable с restaurant_id (legacy) и location_id (S1-2)."""
+    t = RestaurantTable(
+        restaurant_id=restaurant.id,
+        location_id=location.id,
+        table_number="5",
+    )
     db.add(t)
     db.flush()
     return t
@@ -331,10 +377,13 @@ def tg_user2(restaurant2) -> TelegramUser:
 # FASTAPI TEST CLIENT
 # ──────────────────────────────────────────
 @pytest.fixture
-def client(db, agency, restaurant, tg_user):
+def client(db, agency, restaurant, tg_user, location):
     """
     TestClient с переопределёнными зависимостями.
     Каждый тест получает изолированный клиент.
+
+    S1-2: location fixture добавлен, чтобы POST /me/tables мог найти
+    Location по restaurant_id (router требует NOT NULL location_id).
     """
     from api import app
 
