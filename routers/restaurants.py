@@ -38,7 +38,7 @@ from typing import Optional
 
 from auth import get_current_restaurant_admin
 from database import get_db
-from models import Category, Restaurant, RestaurantTable
+from models import Category, Location, Restaurant, RestaurantTable
 from schemas import (
     CategoryPublicResponse,
     ProductPublicResponse,
@@ -343,8 +343,24 @@ def create_table(
             detail=f"Стол '{data.table_number}' уже существует",
         )
 
+    # S1-2: resolve location_id for this restaurant.
+    # Each restaurant has exactly 1 Location (migration 0010 backfill guarantee).
+    # We take the first active location; fallback to any location if none active.
+    _loc = (
+        db.query(Location)
+        .filter(Location.restaurant_id == restaurant.id)
+        .order_by(Location.id)
+        .first()
+    )
+    if _loc is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Локация ресторана не найдена. Обратитесь к администратору.",
+        )
+
     table = RestaurantTable(
         restaurant_id=restaurant.id,
+        location_id=_loc.id,
         table_number=data.table_number,
     )
     db.add(table)
