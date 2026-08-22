@@ -323,13 +323,25 @@ class Product(Base):
 class RestaurantTable(Base):
     __tablename__ = "restaurant_tables"
     __table_args__ = (
-        UniqueConstraint("restaurant_id", "table_number", name="uq_table_restaurant_number"),
+        # S1-2: unique table_number within a Location.
+        # Allows same table_number across different Locations of the same Brand.
+        # uq_table_restaurant_number dropped in migration 0011.
+        UniqueConstraint("location_id", "table_number", name="uq_table_location_number"),
     )
 
     id            = Column(BigInteger, primary_key=True)
+    # Legacy: restaurant_id will be removed in migration 0015.
+    # Kept for backward compat with all existing queries.
     restaurant_id = Column(
         BigInteger,
         ForeignKey("restaurants.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    # S1-2: location_id — new tenant identity for tables.
+    location_id = Column(
+        BigInteger,
+        ForeignKey("locations.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -337,6 +349,8 @@ class RestaurantTable(Base):
     created_at   = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
 
     restaurant = relationship("Restaurant", back_populates="tables", lazy="select")
+    # S1-2: location relationship — for future use; does not break existing code.
+    location   = relationship("Location", lazy="select")
 
     def __repr__(self) -> str:
         return f"<RestaurantTable id={self.id} number={self.table_number!r}>"
