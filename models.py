@@ -491,6 +491,16 @@ class Reservation(Base):
         nullable=False,
         index=True,
     )
+    # S1-4: Location-level tenant scope.
+    # ON DELETE RESTRICT: бронь — исторический документ; Location с бронями
+    # физически удалить нельзя. Soft delete (is_active=False) — единственный
+    # допустимый способ деактивации.
+    location_id = Column(
+        BigInteger,
+        ForeignKey("locations.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
     client_name      = Column(String(255), nullable=False)
     client_phone     = Column(String(50), nullable=False)
     guests_count     = Column(Integer, nullable=False)
@@ -506,6 +516,7 @@ class Reservation(Base):
     )
 
     restaurant = relationship("Restaurant", back_populates="reservations", lazy="select")
+    location   = relationship("Location", lazy="select")
 
     def __repr__(self) -> str:
         return f"<Reservation id={self.id} client={self.client_name!r} status={self.status!r}>"
@@ -531,6 +542,15 @@ class WaiterCall(Base):
         nullable=False,
         index=True,
     )
+    # S1-4: Location-level tenant scope.
+    # ON DELETE CASCADE: вызов официанта — оперативная запись.
+    # При удалении Location вызовы удаляются вместе с ней.
+    location_id = Column(
+        BigInteger,
+        ForeignKey("locations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     table_id   = Column(
         BigInteger,
         ForeignKey("restaurant_tables.id", ondelete="CASCADE"),
@@ -547,6 +567,7 @@ class WaiterCall(Base):
     )
 
     restaurant = relationship("Restaurant", lazy="select")
+    location   = relationship("Location", lazy="select")
     table      = relationship("RestaurantTable", lazy="select")
 
     def __repr__(self) -> str:
@@ -625,6 +646,16 @@ class UsageEvent(Base):
         BigInteger,
         ForeignKey("restaurants.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
+    )
+    # S1-4: Location-level scope (nullable).
+    # ON DELETE SET NULL: исторические billing events не удаляются при закрытии Location.
+    # location_id становится NULL — event сохраняется для аудита.
+    # Billing quota считается по Brand (restaurant_id) — location_id аналитический.
+    location_id = Column(
+        BigInteger,
+        ForeignKey("locations.id", ondelete="SET NULL"),
+        nullable=True,
         index=True,
     )
     event_type = Column(String(50), nullable=False)
