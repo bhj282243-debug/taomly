@@ -35,9 +35,10 @@ def _seed_subscription(db, restaurant_id, plan_id):
     db.flush()
 
 
-def _seed_order(db, restaurant):
+def _seed_order(db, restaurant, location):
     o = Order(
         restaurant_id=restaurant.id,
+        location_id=location.id,   # S1-3
         client_name="Test", client_phone="+998901111111",
         order_type="dine_in", total_amount=25000, status="completed",
     )
@@ -177,18 +178,18 @@ class TestUsage:
         assert data["orders_used"] == 0
         assert data["products_used"] == 0
 
-    def test_usage_counts_orders(self, client, db, restaurant, auth_headers_restaurant):
+    def test_usage_counts_orders(self, client, db, restaurant, location, auth_headers_restaurant):
         _seed_plans(db)
-        _seed_order(db, restaurant)
-        _seed_order(db, restaurant)
+        _seed_order(db, restaurant, location)
+        _seed_order(db, restaurant, location)
         r = client.get("/api/billing/usage", headers=auth_headers_restaurant)
         assert r.json()["orders_used"] == 2
 
-    def test_usage_remaining(self, client, db, restaurant, auth_headers_restaurant):
+    def test_usage_remaining(self, client, db, restaurant, location, auth_headers_restaurant):
         """orders_remaining = limit - used."""
         _seed_plans(db)
         _seed_subscription(db, restaurant.id, plan_id=1)  # Free: limit=100
-        _seed_order(db, restaurant)
+        _seed_order(db, restaurant, location)
         r = client.get("/api/billing/usage", headers=auth_headers_restaurant)
         data = r.json()
         assert data["orders_remaining"] == 99
@@ -246,13 +247,14 @@ class TestInvoice:
 
 class TestTenantIsolation:
     def test_usage_isolated_from_other_restaurant(
-        self, client, db, restaurant, restaurant2, auth_headers_restaurant
+        self, client, db, restaurant, restaurant2, location2, auth_headers_restaurant
     ):
         """Ресторан 1 не видит заказы ресторана 2 в usage."""
         _seed_plans(db)
         for _ in range(5):
             db.add(Order(
                 restaurant_id=restaurant2.id,
+                location_id=location2.id,   # S1-3
                 client_name="Other", client_phone="+998900000000",
                 order_type="takeaway", total_amount=10000, status="completed",
             ))
