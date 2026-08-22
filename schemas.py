@@ -309,6 +309,9 @@ class OrderItemResponse(BaseModel):
 class OrderResponse(BaseModel):
     id: int
     restaurant_id: int
+    # S1-3: location_id — canonical operational tenant scope.
+    # Populated for all orders after migration 0012 backfill.
+    location_id: int
     status: str
     order_type: str
     total_amount: int
