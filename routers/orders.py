@@ -20,19 +20,31 @@ routers/orders.py — Taomly Platform
   - create_order: после успешного commit пишет UsageEvent(event_type='order_created')
     в таблицу usage_events. Ошибка записи события не откатывает заказ —
     логируется предупреждение, заказ возвращается клиенту.
+
+Изменения v9 (S1-3: orders.location_id):
+  - create_order: принимает X-Location-Id header — явный источник Location.
+    Location резолвится из БД и валидируется: location.restaurant_id == restaurant.id.
+    Без X-Location-Id → 400 (Location должна быть explicit, не угадывается).
+  - dine_in: проверяет RestaurantTable.location_id == location.id.
+    Стол из другой Location того же Brand → 400 (cross-location reject).
+    Стол из другого Brand → 404 (уже существующая tenant-isolation).
+  - Order создаётся с location_id = location.id (canonical operational scope).
+  - Legacy compat: order.restaurant_id = location.restaurant_id заполняется
+    одновременно для сохранения consistency до Migration 0015.
+  - Quota остаётся Brand-level (restaurant_id) — S1-8 task.
 """
 
 import logging
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session, joinedload
 
 from auth import TelegramUser, get_current_restaurant_admin, get_telegram_user
 from database import get_db
-from models import Order, OrderItem, Product, Restaurant, RestaurantTable, Subscription, SubscriptionPlan, UsageEvent, User
+from models import Location, Order, OrderItem, Product, Restaurant, RestaurantTable, Subscription, SubscriptionPlan, UsageEvent, User
 from schemas import OrderCreate, OrderResponse, OrderStatusUpdate
 import handlers
 from limiter import limiter
@@ -145,6 +157,7 @@ def create_order(
     background_tasks: BackgroundTasks,
     tg_user: TelegramUser = Depends(get_telegram_user),
     db: Session = Depends(get_db),
+    x_location_id: int = Header(..., alias="X-Location-Id"),
 ):
     """
     Создаёт новый заказ.
@@ -152,13 +165,42 @@ def create_order(
     Источники данных (все верифицированы до роутера):
       restaurant         → tg_user.restaurant    (загружен в get_telegram_user)
       restaurant_id      → tg_user.restaurant_id (из X-Restaurant-Id)
+      location_id        → X-Location-Id header  (explicit, не угадывается)
       client_telegram_id → tg_user.id            (из initData, HMAC-SHA256)
       total_amount       → вычислен из цен БД    (нельзя подменить)
       quantity           → проверен Pydantic ge=1
+
+    S1-3: X-Location-Id обязателен. Location резолвится из БД и валидируется:
+      location.restaurant_id == restaurant.id — защита от cross-brand injection.
+      location.is_active == True — деактивированная Location не принимает заказы.
     """
     restaurant = tg_user.restaurant
 
-    # Проверяем квоту заказов по тарифному плану до любой записи в БД
+    # ── S1-3: Resolve and validate Location ───────────────────────────────
+    #
+    # X-Location-Id — explicit источник Location. Не угадываем по restaurant_id,
+    # не берём «первую» Location. Клиент обязан указать конкретную Location.
+    #
+    # Двойная проверка:
+    #   1. location.restaurant_id == restaurant.id → защита от cross-brand injection
+    #      (клиент ресторана A не может создать заказ в Location бренда B)
+    #   2. location.is_active — деактивированная Location не принимает заказы
+    location = db.query(Location).filter(
+        Location.id == x_location_id,
+        Location.restaurant_id == restaurant.id,
+        Location.is_active == True,
+    ).first()
+
+    if not location:
+        # Намеренно не различаем "не найдена" и "чужая" — одинаковый 404
+        # (информационная безопасность: не раскрываем существование чужих Location)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Location не найдена или недоступна для этого ресторана",
+        )
+
+    # Проверяем квоту заказов по тарифному плану до любой записи в БД.
+    # Quota остаётся Brand-level (restaurant_id) — S1-8.
     _check_order_quota(db, restaurant.id)
 
     if data.order_type == "dine_in":
@@ -167,6 +209,15 @@ def create_order(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Для заказа в зале необходимо указать номер стола",
             )
+        # S1-3: dine_in validation — двойная проверка стола:
+        #   1. RestaurantTable.restaurant_id == restaurant.id  (Brand isolation)
+        #   2. RestaurantTable.location_id == location.id     (Location isolation)
+        #
+        # Сценарии отказа:
+        #   - Стол другого Brand → 404 (restaurant_id mismatch)
+        #   - Стол того же Brand, другой Location → 400 (location_id mismatch)
+        #     Это ключевой новый check S1-3: Brand A / Location A1 не может
+        #     принять заказ за столом Brand A / Location A2.
         table = db.query(RestaurantTable).filter(
             RestaurantTable.id == data.table_id,
             RestaurantTable.restaurant_id == restaurant.id,
@@ -175,6 +226,14 @@ def create_order(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Стол не найден в этом ресторане",
+            )
+        if table.location_id != location.id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Стол принадлежит другой локации. "
+                    "Убедитесь, что X-Location-Id соответствует локации стола."
+                ),
             )
 
     total = 0
@@ -232,8 +291,13 @@ def create_order(
         if user_row:
             client_db_id = user_row[0]
 
+    # S1-3: Order создаётся с location_id (canonical operational scope).
+    # Legacy compat: restaurant_id = location.restaurant_id заполняется
+    # одновременно для consistency до Migration 0015.
+    # Invariant: order.restaurant_id == order.location.restaurant_id — всегда.
     order = Order(
-        restaurant_id=restaurant.id,
+        restaurant_id=location.restaurant_id,   # legacy, == restaurant.id
+        location_id=location.id,                # S1-3 canonical
         client_id=client_db_id,
         client_telegram_id=tg_user.id,
         client_name=data.client_name or tg_user.display_name,
