@@ -21,11 +21,12 @@ from models import Order, OrderItem
 # HELPERS
 # ──────────────────────────────────────────
 
-def _make_order(db, restaurant, status="completed", total=25000, days_ago=0):
-    """Создаёт тестовый заказ с одним позицией."""
+def _make_order(db, restaurant, location, status="completed", total=25000, days_ago=0):
+    """Создаёт тестовый заказ с одним позицией. S1-3: location обязателен."""
     created = datetime.now(tz=timezone.utc) - timedelta(days=days_ago, hours=1)
     order = Order(
         restaurant_id=restaurant.id,
+        location_id=location.id,   # S1-3
         client_telegram_id=111222333,
         client_name="Test Client",
         client_phone="+998901234567",
@@ -67,11 +68,11 @@ class TestSummary:
         assert data["returning_clients"] == 0
         assert data["new_clients"] == 0
 
-    def test_summary_with_orders(self, client, db, restaurant, auth_headers_restaurant):
+    def test_summary_with_orders(self, client, db, restaurant, location, auth_headers_restaurant):
         """Заказы за период — счётчики корректны."""
-        _make_order(db, restaurant, status="completed", total=30000, days_ago=1)
-        _make_order(db, restaurant, status="completed", total=20000, days_ago=2)
-        _make_order(db, restaurant, status="cancelled",  total=10000, days_ago=1)
+        _make_order(db, restaurant, location, status="completed", total=30000, days_ago=1)
+        _make_order(db, restaurant, location, status="completed", total=20000, days_ago=2)
+        _make_order(db, restaurant, location, status="cancelled",  total=10000, days_ago=1)
 
         r = client.get("/api/analytics/summary?period=30d", headers=auth_headers_restaurant)
         assert r.status_code == 200
@@ -98,11 +99,12 @@ class TestSummary:
         r = client.get(f"/api/analytics/summary?period={period}", headers=auth_headers_restaurant)
         assert r.status_code == 200
 
-    def test_summary_returning_clients(self, client, db, restaurant, auth_headers_restaurant):
+    def test_summary_returning_clients(self, client, db, restaurant, location, auth_headers_restaurant):
         """Клиент с 2+ заказами считается повторным."""
         for _ in range(3):
             o = Order(
                 restaurant_id=restaurant.id,
+                location_id=location.id,   # S1-3
                 client_telegram_id=999888777,
                 client_name="Regular",
                 client_phone="+998900000001",
@@ -114,6 +116,7 @@ class TestSummary:
         # Второй клиент — только 1 заказ
         o2 = Order(
             restaurant_id=restaurant.id,
+            location_id=location.id,   # S1-3
             client_telegram_id=111000222,
             client_name="New",
             client_phone="+998900000002",
@@ -144,8 +147,8 @@ class TestRevenueByDay:
         assert r.status_code == 200
         assert isinstance(r.json(), list)
 
-    def test_revenue_by_day_has_entries(self, client, db, restaurant, auth_headers_restaurant):
-        _make_order(db, restaurant, status="completed", total=50000, days_ago=1)
+    def test_revenue_by_day_has_entries(self, client, db, restaurant, location, auth_headers_restaurant):
+        _make_order(db, restaurant, location, status="completed", total=50000, days_ago=1)
         r = client.get("/api/analytics/revenue-by-day?period=7d", headers=auth_headers_restaurant)
         assert r.status_code == 200
         data = r.json()
@@ -166,9 +169,9 @@ class TestTopDishes:
         assert r.status_code == 200
         assert r.json() == []
 
-    def test_top_dishes_ranking(self, client, db, restaurant, auth_headers_restaurant):
+    def test_top_dishes_ranking(self, client, db, restaurant, location, auth_headers_restaurant):
         """Блюдо с большим qty должно быть выше."""
-        order = _make_order(db, restaurant, status="completed", total=60000, days_ago=1)
+        order = _make_order(db, restaurant, location, status="completed", total=60000, days_ago=1)
         # Добавим второй item в тот же заказ
         item2 = OrderItem(order_id=order.id, name="Лагман", price=30000, quantity=2)
         db.add(item2)
@@ -180,10 +183,10 @@ class TestTopDishes:
         assert len(data) >= 1
         assert data[0]["rank"] == 1
 
-    def test_top_dishes_limit(self, client, db, restaurant, auth_headers_restaurant):
+    def test_top_dishes_limit(self, client, db, restaurant, location, auth_headers_restaurant):
         """Параметр limit работает."""
         for i in range(5):
-            o = _make_order(db, restaurant, status="completed", total=10000, days_ago=1)
+            o = _make_order(db, restaurant, location, status="completed", total=10000, days_ago=1)
             item = OrderItem(order_id=o.id, name=f"Dish{i}", price=10000, quantity=1)
             db.add(item)
         db.flush()
@@ -194,7 +197,7 @@ class TestTopDishes:
 
 
     def test_top_dishes_revenue_only_completed(
-        self, client, db, restaurant, auth_headers_restaurant
+        self, client, db, restaurant, location, auth_headers_restaurant
     ):
         """
         REGRESSION: top-dishes revenue считает только status=completed.
@@ -204,22 +207,22 @@ class TestTopDishes:
         не должны попадать в выручку.
         """
         # completed — должен войти в выручку
-        o_completed = _make_order(db, restaurant, status="completed", total=10000, days_ago=1)
+        o_completed = _make_order(db, restaurant, location, status="completed", total=10000, days_ago=1)
         item_c = OrderItem(order_id=o_completed.id, name="Плов", price=10000, quantity=1)
         db.add(item_c)
 
         # preparing — НЕ должен войти в выручку
-        o_preparing = _make_order(db, restaurant, status="preparing", total=20000, days_ago=1)
+        o_preparing = _make_order(db, restaurant, location, status="preparing", total=20000, days_ago=1)
         item_p = OrderItem(order_id=o_preparing.id, name="Плов", price=20000, quantity=1)
         db.add(item_p)
 
         # delivering — НЕ должен войти в выручку
-        o_delivering = _make_order(db, restaurant, status="delivering", total=30000, days_ago=1)
+        o_delivering = _make_order(db, restaurant, location, status="delivering", total=30000, days_ago=1)
         item_d = OrderItem(order_id=o_delivering.id, name="Плов", price=30000, quantity=1)
         db.add(item_d)
 
         # cancelled — НЕ должен войти в выручку
-        o_cancelled = _make_order(db, restaurant, status="cancelled", total=40000, days_ago=1)
+        o_cancelled = _make_order(db, restaurant, location, status="cancelled", total=40000, days_ago=1)
         item_x = OrderItem(order_id=o_cancelled.id, name="Плов", price=40000, quantity=1)
         db.add(item_x)
 
@@ -279,8 +282,8 @@ class TestOrderTypes:
         assert r.status_code == 200
         assert isinstance(r.json(), list)
 
-    def test_order_types_structure(self, client, db, restaurant, auth_headers_restaurant):
-        _make_order(db, restaurant, status="completed", total=20000, days_ago=1)
+    def test_order_types_structure(self, client, db, restaurant, location, auth_headers_restaurant):
+        _make_order(db, restaurant, location, status="completed", total=20000, days_ago=1)
         r = client.get("/api/analytics/order-types?period=30d", headers=auth_headers_restaurant)
         assert r.status_code == 200
         data = r.json()
@@ -296,11 +299,12 @@ class TestOrderTypes:
 # ──────────────────────────────────────────
 
 class TestTenantIsolation:
-    def test_restaurant_sees_only_own_orders(self, client, db, restaurant, restaurant2, auth_headers_restaurant):
+    def test_restaurant_sees_only_own_orders(self, client, db, restaurant, restaurant2, location2, auth_headers_restaurant):
         """Ресторан 1 не видит заказы ресторана 2."""
-        # Заказ для restaurant2
+        # Заказ для restaurant2 — location2 принадлежит restaurant2
         order_r2 = Order(
             restaurant_id=restaurant2.id,
+            location_id=location2.id,  # S1-3
             client_name="Other",
             client_phone="+998901111111",
             order_type="delivery",
