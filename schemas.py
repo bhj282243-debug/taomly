@@ -378,6 +378,7 @@ class ReservationResponse(BaseModel):
     reservation_time: datetime
     comment: Optional[str] = None
     created_at: datetime
+    location_id: int  # S1-4
 
     model_config = {"from_attributes": True}
 
@@ -397,6 +398,7 @@ class WaiterCallResponse(BaseModel):
     id: int
     status: str
     table_id: int
+    location_id: int  # S1-4
     created_at: datetime
 
     model_config = {"from_attributes": True}
