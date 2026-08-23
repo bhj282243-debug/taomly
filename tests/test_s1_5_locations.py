@@ -35,7 +35,7 @@ def _seed_order(db, restaurant, location, **kwargs) -> Order:
         location_id=location.id,
         order_type=kwargs.get("order_type", "dine_in"),
         status=kwargs.get("status", "new"),
-        total=kwargs.get("total", 15000),
+        total_amount=kwargs.get("total_amount", 15000),
         items_snapshot=[],
     )
     db.add(o)
@@ -52,7 +52,7 @@ def _seed_reservation(db, restaurant, location, **kwargs) -> Reservation:
         client_phone="+998901234567",
         reservation_time=datetime.now(timezone.utc) + timedelta(days=1),
         guests_count=kwargs.get("guests_count", 2),
-        status="pending",
+        status="new",
     )
     db.add(r)
     db.flush()
@@ -64,7 +64,7 @@ def _seed_waiter_call(db, restaurant, location, table, **kwargs) -> WaiterCall:
         restaurant_id=restaurant.id,
         location_id=location.id,
         table_id=table.id,
-        status="pending",
+        status="active",
     )
     db.add(w)
     db.flush()
