@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session
 from auth import TelegramUser, get_current_restaurant_admin, get_telegram_user
 from database import get_db
 from limiter import limiter
-from models import Restaurant, RestaurantTable, WaiterCall
+from models import Location, Restaurant, RestaurantTable, WaiterCall
 from schemas import WaiterCallCreate, WaiterCallResponse, WaiterCallStatusUpdate
 
 logger = logging.getLogger(__name__)
@@ -131,6 +131,9 @@ def get_waiter_calls(
     restaurant_id: int,
     status_filter: Optional[str] = Query(None, alias="status"),
     limit: int = Query(100, ge=1, le=500),
+    # S1-5: необязательный фильтр по Location.
+    # Без параметра → Brand-level (все вызовы ресторана, backward compat).
+    location_id: Optional[int] = Query(None, alias="location_id"),
     restaurant: Restaurant = Depends(get_current_restaurant_admin),
     db: Session = Depends(get_db),
 ):
@@ -138,6 +141,7 @@ def get_waiter_calls(
     Возвращает вызовы официанта для ресторана.
     Tenant-изоляция: restaurant_id из URL проверяется против токена JWT.
     Лимит по умолчанию 100 — защита от перегрузки при большом количестве записей.
+    S1-5: опциональный ?location_id=<id> — фильтр по Location (tenant-изолировано).
     """
     if restaurant.id != restaurant_id:
         raise HTTPException(
@@ -145,9 +149,25 @@ def get_waiter_calls(
             detail="Нет доступа к данным этого ресторана",
         )
 
+    # S1-5: валидируем location_id если передан (tenant isolation, I-2)
+    if location_id is not None:
+        loc = db.query(Location).filter(
+            Location.id == location_id,
+            Location.restaurant_id == restaurant.id,
+        ).first()
+        if not loc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Локация не найдена",
+            )
+
     query = db.query(WaiterCall).filter(
         WaiterCall.restaurant_id == restaurant_id,
     )
+
+    # S1-5: применяем фильтр только если явно передан
+    if location_id is not None:
+        query = query.filter(WaiterCall.location_id == location_id)
 
     if status_filter:
         valid_statuses = list(VALID_STATUS_TRANSITIONS.keys())
