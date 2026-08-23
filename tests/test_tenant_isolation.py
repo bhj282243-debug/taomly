@@ -151,11 +151,12 @@ def order_r2(db, restaurant2, product_r2, location2) -> Order:
 
 
 @pytest.fixture
-def reservation_r2(db, restaurant2) -> Reservation:
-    """Бронь второго ресторана."""
+def reservation_r2(db, restaurant2, _location_r2) -> Reservation:
+    """Бронь второго ресторана (S1-4: location_id обязателен)."""
     from datetime import datetime, timezone, timedelta
     r = Reservation(
         restaurant_id=restaurant2.id,
+        location_id=_location_r2.id,   # S1-4: NOT NULL
         client_name="Камол",
         client_phone="+998991234567",
         guests_count=2,
@@ -202,8 +203,13 @@ def table_r2(db, restaurant2, _location_r2) -> RestaurantTable:
 
 @pytest.fixture
 def waiter_call_r2(db, restaurant2, table_r2) -> WaiterCall:
-    """Вызов официанта второго ресторана."""
-    w = WaiterCall(restaurant_id=restaurant2.id, table_id=table_r2.id, status="active")
+    """Вызов официанта второго ресторана (S1-4: location_id из table_r2.location_id)."""
+    w = WaiterCall(
+        restaurant_id=restaurant2.id,
+        location_id=table_r2.location_id,  # S1-4: NOT NULL, из стола
+        table_id=table_r2.id,
+        status="active",
+    )
     db.add(w)
     db.flush()
     return w
