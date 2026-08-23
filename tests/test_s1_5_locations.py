@@ -36,7 +36,6 @@ def _seed_order(db, restaurant, location, **kwargs) -> Order:
         order_type=kwargs.get("order_type", "dine_in"),
         status=kwargs.get("status", "new"),
         total_amount=kwargs.get("total_amount", 15000),
-        items_snapshot=[],
     )
     db.add(o)
     db.flush()
