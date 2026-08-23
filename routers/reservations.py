@@ -18,9 +18,9 @@ routers/reservations.py — Taomly Platform
 """
 
 import logging
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from auth import TelegramUser, get_current_restaurant_admin, get_telegram_user
@@ -112,12 +112,16 @@ def create_reservation(
 @router.get("/restaurant/{restaurant_id}", response_model=List[ReservationResponse])
 def get_reservations(
     restaurant_id: int,
+    # S1-5: необязательный фильтр по Location.
+    # Без параметра → Brand-level (все брони ресторана, backward compat).
+    location_id: Optional[int] = Query(None, alias="location_id"),
     restaurant: Restaurant = Depends(get_current_restaurant_admin),
     db: Session = Depends(get_db),
 ):
     """
     Возвращает брони ресторана.
     Tenant-изоляция: restaurant_id из URL проверяется против токена JWT.
+    S1-5: опциональный ?location_id=<id> — фильтр по Location (tenant-изолировано).
     """
     if restaurant.id != restaurant_id:
         raise HTTPException(
@@ -125,12 +129,28 @@ def get_reservations(
             detail="Нет доступа к данным этого ресторана",
         )
 
-    return (
+    # S1-5: валидируем location_id если передан (tenant isolation, I-2)
+    if location_id is not None:
+        loc = db.query(Location).filter(
+            Location.id == location_id,
+            Location.restaurant_id == restaurant.id,
+        ).first()
+        if not loc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Локация не найдена",
+            )
+
+    query = (
         db.query(Reservation)
         .filter(Reservation.restaurant_id == restaurant_id)
-        .order_by(Reservation.reservation_time)
-        .all()
     )
+
+    # S1-5: применяем фильтр только если явно передан
+    if location_id is not None:
+        query = query.filter(Reservation.location_id == location_id)
+
+    return query.order_by(Reservation.reservation_time).all()
 
 
 # ──────────────────────────────────────────
