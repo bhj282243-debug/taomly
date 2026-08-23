@@ -461,12 +461,20 @@ def get_restaurant_orders(
     restaurant_id: int,
     status_filter: Optional[str] = Query(None, alias="status"),
     limit: int = Query(100, ge=1, le=500),
+    # S1-5: необязательный фильтр по Location.
+    # Без параметра → Brand-level (все заказы ресторана, backward compat).
+    # С параметром → только заказы указанной Location (tenant-изолировано).
+    location_id: Optional[int] = Query(None, alias="location_id"),
     restaurant: Restaurant = Depends(get_current_restaurant_admin),
     db: Session = Depends(get_db),
 ):
     """
     Возвращает заказы ресторана.
     Tenant-изоляция: restaurant_id из URL проверяется против токена JWT.
+    S1-5: опциональный ?location_id=<id> — фильтр по Location.
+      Без location_id → все заказы ресторана (Brand-level, backward compat).
+      С location_id   → только заказы указанной Location.
+      location_id чужого ресторана → 404.
     """
     if restaurant.id != restaurant_id:
         raise HTTPException(
@@ -474,11 +482,27 @@ def get_restaurant_orders(
             detail="Нет доступа к заказам этого ресторана",
         )
 
+    # S1-5: валидируем location_id если передан (tenant isolation, I-2)
+    if location_id is not None:
+        loc = db.query(Location).filter(
+            Location.id == location_id,
+            Location.restaurant_id == restaurant.id,
+        ).first()
+        if not loc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Локация не найдена",
+            )
+
     query = (
         db.query(Order)
         .options(joinedload(Order.items))
         .filter(Order.restaurant_id == restaurant_id)
     )
+
+    # S1-5: применяем фильтр только если явно передан
+    if location_id is not None:
+        query = query.filter(Order.location_id == location_id)
 
     if status_filter:
         valid_statuses = list(VALID_STATUS_TRANSITIONS.keys())
