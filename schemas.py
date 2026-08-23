@@ -1,6 +1,12 @@
 """
 schemas.py — Taomly Platform
 
+Изменения v5 (S1-5: Location CRUD):
+  - LocationCreate: поля для создания новой Location (slug, name, timezone, …).
+  - LocationUpdate: все поля Optional — PATCH-семантика.
+  - LocationResponse: полный отклик (id, restaurant_id, is_active, created_at, updated_at).
+  - LocationListResponse: обёртка списка (locations + total).
+
 Изменения v4 (Foundation Task 11 — Production Hardening):
   - RestaurantSettingsUpdate: delivery_fee и min_order_amount получили
     верхнюю границу le=10_000_000 (10 млн сум). Без верхней границы
@@ -796,6 +802,133 @@ class TableResponse(BaseModel):
     table_number:    str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ──────────────────────────────────────────
+# S1-5 — LOCATION CRUD schemas
+# ──────────────────────────────────────────
+
+# Допустимые значения совпадают с CHECK-constraint в migration 0010 / models.py.
+_LOCATION_CURRENCIES = {"UZS", "KZT", "RUB", "USD", "TRY", "AED"}
+_LOCATION_LANGUAGES  = {"uz", "ru", "en"}
+
+
+class LocationCreate(BaseModel):
+    """Схема создания новой Location.
+
+    restaurant_id берётся из JWT-токена в роутере — клиент не передаёт его.
+    slug обязателен, глобально уникален (ck на уровне БД), только [a-z0-9-].
+    """
+    name:                    str   = Field(..., min_length=1, max_length=255)
+    slug:                    str   = Field(..., min_length=1, max_length=100)
+    address:                 Optional[str]   = Field(None, max_length=500)
+    phone:                   Optional[str]   = Field(None, max_length=50)
+    timezone:                str   = Field("Asia/Tashkent", max_length=64)
+    working_hours:           Optional[str]   = Field(None, max_length=100)
+    delivery_fee:            int   = Field(0, ge=0, le=10_000_000)
+    min_order_amount:        int   = Field(0, ge=0, le=10_000_000)
+    currency:                str   = Field("UZS", max_length=10)
+    language:                str   = Field("uz", max_length=5)
+    is_waiter_call_enabled:  bool  = False
+
+    @field_validator("slug")
+    @classmethod
+    def validate_slug(cls, v: str) -> str:
+        if not _SLUG_RE.match(v):
+            raise ValueError("slug может содержать только строчные буквы, цифры и дефис")
+        return v
+
+    @field_validator("currency")
+    @classmethod
+    def validate_currency(cls, v: str) -> str:
+        if v not in _LOCATION_CURRENCIES:
+            raise ValueError(f"currency должна быть одним из: {sorted(_LOCATION_CURRENCIES)}")
+        return v
+
+    @field_validator("language")
+    @classmethod
+    def validate_language(cls, v: str) -> str:
+        if v not in _LOCATION_LANGUAGES:
+            raise ValueError(f"language должна быть одним из: {sorted(_LOCATION_LANGUAGES)}")
+        return v
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not _PHONE_RE.match(v):
+            raise ValueError("Некорректный формат телефона")
+        return v
+
+
+class LocationUpdate(BaseModel):
+    """Схема обновления Location (PATCH-семантика: все поля Optional)."""
+    name:                    Optional[str]   = Field(None, min_length=1, max_length=255)
+    slug:                    Optional[str]   = Field(None, min_length=1, max_length=100)
+    address:                 Optional[str]   = Field(None, max_length=500)
+    phone:                   Optional[str]   = Field(None, max_length=50)
+    timezone:                Optional[str]   = Field(None, max_length=64)
+    working_hours:           Optional[str]   = Field(None, max_length=100)
+    delivery_fee:            Optional[int]   = Field(None, ge=0, le=10_000_000)
+    min_order_amount:        Optional[int]   = Field(None, ge=0, le=10_000_000)
+    currency:                Optional[str]   = Field(None, max_length=10)
+    language:                Optional[str]   = Field(None, max_length=5)
+    is_waiter_call_enabled:  Optional[bool]  = None
+
+    @field_validator("slug")
+    @classmethod
+    def validate_slug(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not _SLUG_RE.match(v):
+            raise ValueError("slug может содержать только строчные буквы, цифры и дефис")
+        return v
+
+    @field_validator("currency")
+    @classmethod
+    def validate_currency(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in _LOCATION_CURRENCIES:
+            raise ValueError(f"currency должна быть одним из: {sorted(_LOCATION_CURRENCIES)}")
+        return v
+
+    @field_validator("language")
+    @classmethod
+    def validate_language(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in _LOCATION_LANGUAGES:
+            raise ValueError(f"language должна быть одним из: {sorted(_LOCATION_LANGUAGES)}")
+        return v
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not _PHONE_RE.match(v):
+            raise ValueError("Некорректный формат телефона")
+        return v
+
+
+class LocationResponse(BaseModel):
+    """Полный отклик Location (используется в list и detail)."""
+    id:                      int
+    restaurant_id:           int
+    name:                    str
+    slug:                    str
+    is_active:               bool
+    address:                 Optional[str]
+    phone:                   Optional[str]
+    timezone:                str
+    working_hours:           Optional[str]
+    delivery_fee:            int
+    min_order_amount:        int
+    currency:                str
+    language:                str
+    is_waiter_call_enabled:  bool
+    created_at:              datetime
+    updated_at:              datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class LocationListResponse(BaseModel):
+    """Список Location ресторана + счётчик."""
+    locations: List[LocationResponse]
+    total:     int
 
 
 # ──────────────────────────────────────────
