@@ -35,7 +35,7 @@ from auth import (
 )
 from config import settings
 from database import get_db
-from models import Agency, Restaurant
+from models import Agency, Location, Restaurant
 from schemas import (
     AgencyLogin,
     AgencyRegister,
@@ -324,6 +324,30 @@ def create_restaurant(
         telegram_dispatcher_id=data.telegram_dispatcher_id,
     )
     db.add(restaurant)
+
+    # S1-6: первая Location создаётся атомарно вместе с Restaurant.
+    # slug Location = slug Restaurant (backward compat: /webhook/{slug} ищет по Restaurant.slug,
+    # но Location.slug должен совпадать для будущего роутинга по QR/URL).
+    # Telegram-конфигурация дублируется в Location (ADR-001: 1 Location = 1 Bot).
+    # is_waiter_call_enabled берётся из Restaurant-уровня — REST схема передаёт его в Restaurant.
+    db.flush()  # получаем restaurant.id без commit
+    default_location = Location(
+        restaurant_id=restaurant.id,
+        name=restaurant.name,
+        slug=slug,
+        is_active=True,
+        address=restaurant.address,
+        phone=restaurant.phone,
+        timezone="Asia/Tashkent",
+        delivery_fee=0,
+        min_order_amount=0,
+        currency="UZS",
+        language="uz",
+        is_waiter_call_enabled=getattr(restaurant, "is_waiter_call_enabled", False),
+        telegram_bot_token_encrypted=encrypted_token,
+        telegram_dispatcher_id=restaurant.telegram_dispatcher_id,
+    )
+    db.add(default_location)
 
     try:
         db.commit()
