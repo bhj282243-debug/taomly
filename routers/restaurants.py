@@ -1,6 +1,16 @@
 """
 routers/restaurants.py — Taomly Platform
 
+Изменения v9 (S1-5: Location CRUD):
+  - GET  /api/restaurants/me/locations               — список Location ресторана
+  - POST /api/restaurants/me/locations               — создать Location
+  - GET  /api/restaurants/me/locations/{location_id} — деталь Location
+  - PATCH /api/restaurants/me/locations/{location_id} — обновить Location
+  - DELETE /api/restaurants/me/locations/{location_id} — soft-delete (is_active=False)
+  - Все endpoints: tenant-изоляция по restaurant_id из JWT.
+  - DELETE guard: нельзя деактивировать единственную активную Location (400).
+  - Slug uniqueness: IntegrityError → 409.
+
 Изменения относительно v1:
   - Унифицированы сообщения об ошибках на русский язык
   - Добавлен статус HTTP_404_NOT_FOUND через именованные константы
@@ -41,6 +51,10 @@ from database import get_db
 from models import Category, Location, Restaurant, RestaurantTable
 from schemas import (
     CategoryPublicResponse,
+    LocationCreate,
+    LocationListResponse,
+    LocationResponse,
+    LocationUpdate,
     ProductPublicResponse,
     RestaurantPublicResponse,
     RestaurantSettingsResponse,
@@ -414,6 +428,204 @@ def delete_table(
         restaurant.id,
         table_id,
         table.table_number,
+    )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# S1-5: LOCATION CRUD
+# GET  /me/locations               — список
+# POST /me/locations               — создать
+# GET  /me/locations/{location_id} — деталь
+# PATCH /me/locations/{location_id} — обновить
+# DELETE /me/locations/{location_id} — soft-delete
+#
+# Tenant-изоляция: каждый endpoint фильтрует по restaurant.id из JWT.
+# Slug уникален глобально (ck uq_locations_slug) — IntegrityError → 409.
+# DELETE: нельзя деактивировать единственную активную Location (I-4).
+# ══════════════════════════════════════════════════════════════════════════════
+
+@router.get("/me/locations", response_model=LocationListResponse)
+def list_locations(
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+) -> LocationListResponse:
+    """
+    Возвращает все Location текущего ресторана (активные и неактивные).
+    Tenant-изоляция: только свои Location, отсортированы по id.
+    Требует авторизацию: restaurant_admin.
+    """
+    locations = (
+        db.query(Location)
+        .filter(Location.restaurant_id == restaurant.id)
+        .order_by(Location.id)
+        .all()
+    )
+    return LocationListResponse(
+        locations=[LocationResponse.model_validate(loc) for loc in locations],
+        total=len(locations),
+    )
+
+
+@router.post("/me/locations", response_model=LocationResponse, status_code=201)
+def create_location(
+    data: LocationCreate,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+) -> LocationResponse:
+    """
+    Создаёт новую Location для текущего ресторана.
+    restaurant_id берётся из JWT — клиент не может указать чужой ресторан.
+    Slug глобально уникален; конфликт → 409.
+    Требует авторизацию: restaurant_admin.
+    """
+    loc = Location(
+        restaurant_id=restaurant.id,
+        name=data.name,
+        slug=data.slug,
+        address=data.address,
+        phone=data.phone,
+        timezone=data.timezone,
+        working_hours=data.working_hours,
+        delivery_fee=data.delivery_fee,
+        min_order_amount=data.min_order_amount,
+        currency=data.currency,
+        language=data.language,
+        is_waiter_call_enabled=data.is_waiter_call_enabled,
+        is_active=True,
+    )
+    db.add(loc)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Slug '{data.slug}' уже занят другой локацией",
+        )
+    db.refresh(loc)
+    logger.info(
+        "Location created: id=%s restaurant_id=%s slug=%s",
+        loc.id, restaurant.id, loc.slug,
+    )
+    return LocationResponse.model_validate(loc)
+
+
+@router.get("/me/locations/{location_id}", response_model=LocationResponse)
+def get_location(
+    location_id: int,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+) -> LocationResponse:
+    """
+    Возвращает Location по ID.
+    Tenant-изоляция: location.restaurant_id должен совпадать с JWT.
+    Требует авторизацию: restaurant_admin.
+    """
+    loc = db.query(Location).filter(
+        Location.id == location_id,
+        Location.restaurant_id == restaurant.id,
+    ).first()
+    if not loc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Локация не найдена",
+        )
+    return LocationResponse.model_validate(loc)
+
+
+@router.patch("/me/locations/{location_id}", response_model=LocationResponse)
+def update_location(
+    location_id: int,
+    data: LocationUpdate,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+) -> LocationResponse:
+    """
+    Обновляет Location (PATCH-семантика: только переданные поля).
+    Tenant-изоляция: location.restaurant_id должен совпадать с JWT.
+    Slug uniqueness проверяется на уровне БД; конфликт → 409.
+    Требует авторизацию: restaurant_admin.
+    """
+    loc = db.query(Location).filter(
+        Location.id == location_id,
+        Location.restaurant_id == restaurant.id,
+    ).first()
+    if not loc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Локация не найдена",
+        )
+
+    # PATCH: обновляем только поля, переданные клиентом (exclude_unset=True)
+    update_data = data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(loc, field, value)
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Slug '{data.slug}' уже занят другой локацией",
+        )
+    db.refresh(loc)
+    logger.info(
+        "Location updated: id=%s restaurant_id=%s fields=%s",
+        loc.id, restaurant.id, list(update_data.keys()),
+    )
+    return LocationResponse.model_validate(loc)
+
+
+@router.delete("/me/locations/{location_id}", status_code=204)
+def delete_location(
+    location_id: int,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    """
+    Soft-delete Location (is_active=False).
+    Hard-delete запрещён — FK RESTRICT на reservations.location_id защищает историю.
+    Guard I-4: нельзя деактивировать единственную активную Location ресторана.
+    Tenant-изоляция: location.restaurant_id должен совпадать с JWT.
+    Требует авторизацию: restaurant_admin.
+    """
+    loc = db.query(Location).filter(
+        Location.id == location_id,
+        Location.restaurant_id == restaurant.id,
+    ).first()
+    if not loc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Локация не найдена",
+        )
+    if not loc.is_active:
+        # Уже неактивна — идемпотентно, ничего не делаем
+        return
+
+    # I-4: проверяем, что это не единственная активная Location
+    active_count = (
+        db.query(Location)
+        .filter(
+            Location.restaurant_id == restaurant.id,
+            Location.is_active == True,
+        )
+        .count()
+    )
+    if active_count <= 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Нельзя деактивировать единственную активную локацию ресторана. "
+                "Сначала создайте или активируйте другую локацию."
+            ),
+        )
+
+    loc.is_active = False
+    db.commit()
+    logger.info(
+        "Location soft-deleted: id=%s restaurant_id=%s slug=%s",
+        loc.id, restaurant.id, loc.slug,
     )
 
 
