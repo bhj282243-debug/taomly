@@ -444,14 +444,20 @@ def test_restaurant_currency_default(restaurant):
 # TEST 34: Restaurant with RUB currency — price format in order error
 # ──────────────────────────────────────────
 @pytest.mark.integration
-def test_order_min_amount_error_uses_restaurant_currency(client, db, restaurant):
+def test_order_min_amount_error_uses_restaurant_currency(client, db, restaurant, location):
     """
     Сообщение об ошибке минимальной суммы заказа использует валюту ресторана,
     а не hardcoded so'm.
+
+    S1-7: min_order_amount и currency читаются из Location (source of truth).
+    Тест обновляет Location напрямую, а также Restaurant для backward compat.
     """
     from models import Category, Product
 
-    # Устанавливаем min_order_amount и RUB
+    # S1-7: устанавливаем min_order_amount и currency на Location (source of truth)
+    location.min_order_amount = 500
+    location.currency = "RUB"
+    # Backward compat: синхронизируем Restaurant
     restaurant.min_order_amount = 500
     restaurant.currency = "RUB"
     db.flush()
