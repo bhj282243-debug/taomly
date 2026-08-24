@@ -264,18 +264,22 @@ def create_order(
             "quantity":   item.quantity,
         })
 
+    # S1-7: min_order_amount и currency берутся из Location (source of truth).
+    # location уже resolved выше и tenant-изолирован.
+    _min_order = location.min_order_amount or 0
+    _cur = location.currency or "UZS"
+
     # Проверка минимальной суммы заказа для доставки
     if (
         data.order_type == "delivery"
-        and restaurant.min_order_amount
-        and total < restaurant.min_order_amount
+        and _min_order
+        and total < _min_order
     ):
-        _cur = getattr(restaurant, "currency", None) or "UZS"
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
                 f"Минимальная сумма заказа для доставки: "
-                f"{_fmt_price(restaurant.min_order_amount, _cur)}. "
+                f"{_fmt_price(_min_order, _cur)}. "
                 f"Ваш заказ: {_fmt_price(total, _cur)}."
             ),
         )
@@ -357,6 +361,7 @@ def create_order(
         order_with_items,
         order_with_items.items,
         restaurant,
+        location,   # S1-7: currency берётся из Location
     )
     background_tasks.add_task(
         handlers.notify_client_accepted,
