@@ -285,12 +285,16 @@ if platform_bot:
 # ──────────────────────────────────────────
 # УВЕДОМЛЕНИЕ ДИСПЕТЧЕРУ — новый заказ
 # ──────────────────────────────────────────
-def notify_new_order(order, items, restaurant) -> None:
+def notify_new_order(order, items, restaurant, location=None) -> None:
     """
     Отправляет уведомление диспетчеру ресторана о новом заказе.
 
     Multi-Tenant: dispatcher_id и бот берутся из объекта restaurant.
     Вызывается через BackgroundTasks — не блокирует HTTP-ответ.
+
+    S1-7: location — опциональный параметр; если передан, currency берётся
+    из Location (source of truth). Если не передан — fallback на restaurant.currency
+    для backward compat со старыми вызовами (например, тесты без location).
     """
     dispatcher_id = restaurant.telegram_dispatcher_id
     if not dispatcher_id:
@@ -310,7 +314,9 @@ def notify_new_order(order, items, restaurant) -> None:
     }
     type_label = order_type_labels.get(order.order_type, order.order_type)
 
-    _cur = getattr(restaurant, "currency", None) or "UZS"
+    # S1-7: currency из Location если передана, иначе fallback на Restaurant
+    _settings = location if location is not None else restaurant
+    _cur = getattr(_settings, "currency", None) or "UZS"
     items_text = "".join(
         f"  • {item.name} × {item.quantity} — {_fmt_price(item.price * item.quantity, _cur)}\n"
         for item in items
