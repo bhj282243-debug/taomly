@@ -1,6 +1,16 @@
 """
 routers/restaurants.py — Taomly Platform
 
+Изменения v10 (S1-7: Settings → Location):
+  - GET /me/settings: source of truth = первая активная Location ресторана.
+  - PATCH /me/settings: пишет в Location; поля restaurant.* обновляются
+    синхронно только там, где старый код ещё их читает (working_hours,
+    min_order_amount, currency) — backward compat до Migration 0015.
+  - GET /{slug}: operational settings (delivery_fee, min_order_amount,
+    working_hours, currency, language) берутся из первой активной Location.
+  - Telegram credentials (telegram_bot_token_encrypted, telegram_dispatcher_id)
+    в S1-7 НЕ переносятся — отдельный шаг после аудита webhook.
+
 Изменения v9 (S1-5: Location CRUD):
   - GET  /api/restaurants/me/locations               — список Location ресторана
   - POST /api/restaurants/me/locations               — создать Location
@@ -94,23 +104,59 @@ class RestaurantSettingsUpdate(BaseModel):
 
 
 # ──────────────────────────────────────────
+# HELPER — получить первую активную Location ресторана
+# ──────────────────────────────────────────
+def _get_primary_location(db: Session, restaurant_id: int) -> Location:
+    """
+    Возвращает первую активную Location ресторана (ORDER BY id ASC).
+
+    S1-7: Location — source of truth для operational settings.
+    Гарантировано: каждый ресторан имеет ≥1 Location (S1-1 backfill + S1-6 auto-create).
+
+    Raises HTTP 500 если Location не найдена — это баг данных, не ошибка клиента.
+    """
+    loc = (
+        db.query(Location)
+        .filter(
+            Location.restaurant_id == restaurant_id,
+            Location.is_active == True,
+        )
+        .order_by(Location.id)
+        .first()
+    )
+    if loc is None:
+        logger.error(
+            "Не найдена активная Location для restaurant_id=%s — нарушен инвариант S1-1",
+            restaurant_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Активная локация ресторана не найдена. Обратитесь к администратору.",
+        )
+    return loc
+
+
+# ──────────────────────────────────────────
 # GET /me/settings — настройки ресторана (только для restaurant_admin)
 # ──────────────────────────────────────────
 @router.get("/me/settings", response_model=RestaurantSettingsResponse)
 def get_restaurant_settings(
     restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
 ):
     """
     Возвращает текущие настройки ресторана.
+    S1-7: source of truth = первая активная Location ресторана.
     Требует авторизацию: restaurant_admin.
     """
+    loc = _get_primary_location(db, restaurant.id)
     return RestaurantSettingsResponse(
-        working_hours=restaurant.working_hours or "",
-        delivery_fee=restaurant.delivery_fee or 0,
-        min_order_amount=restaurant.min_order_amount or 0,
-        timezone=getattr(restaurant, "timezone", None) or "Asia/Tashkent",
-        currency=getattr(restaurant, "currency", None) or "UZS",
-        language=getattr(restaurant, "language", None) or "uz",
+        working_hours=loc.working_hours or "",
+        delivery_fee=loc.delivery_fee or 0,
+        min_order_amount=loc.min_order_amount or 0,
+        timezone=loc.timezone or "Asia/Tashkent",
+        currency=loc.currency or "UZS",
+        language=loc.language or "uz",
     )
 
 
@@ -125,25 +171,27 @@ def update_restaurant_settings(
 ):
     """
     Сохраняет настройки ресторана: рабочие часы, стоимость доставки,
-    минимальная сумма заказа.
+    минимальная сумма заказа, timezone, currency, language.
+
+    S1-7: запись идёт в Location (source of truth).
+    Backward compat до Migration 0015: поля restaurant.working_hours,
+    restaurant.min_order_amount, restaurant.currency синхронизируются,
+    потому что старый код (orders.py) ещё может их читать.
     Требует авторизацию: restaurant_admin.
     """
-    if data.working_hours is not None:
-        restaurant.working_hours = data.working_hours.strip()
-    if data.delivery_fee is not None:
-        if data.delivery_fee < 0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Стоимость доставки не может быть отрицательной",
-            )
-        restaurant.delivery_fee = data.delivery_fee
-    if data.min_order_amount is not None:
-        if data.min_order_amount < 0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Минимальная сумма не может быть отрицательной",
-            )
-        restaurant.min_order_amount = data.min_order_amount
+    loc = _get_primary_location(db, restaurant.id)
+
+    # ── Валидация ──────────────────────────────────────────────────────────
+    if data.delivery_fee is not None and data.delivery_fee < 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Стоимость доставки не может быть отрицательной",
+        )
+    if data.min_order_amount is not None and data.min_order_amount < 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Минимальная сумма не может быть отрицательной",
+        )
     if data.timezone is not None:
         tz = data.timezone.strip()
         if not _SAFE_TZ_RE_SETTINGS.match(tz):
@@ -151,8 +199,7 @@ def update_restaurant_settings(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Невалидный timezone. Пример: Asia/Tashkent, Asia/Almaty, UTC",
             )
-        restaurant.timezone = tz
-
+        data = data.model_copy(update={"timezone": tz})
     if data.currency is not None:
         cur = data.currency.strip().upper()
         if cur not in _SUPPORTED_CURRENCIES:
@@ -163,8 +210,7 @@ def update_restaurant_settings(
                     f"Допустимые: {', '.join(sorted(_SUPPORTED_CURRENCIES))}"
                 ),
             )
-        restaurant.currency = cur
-
+        data = data.model_copy(update={"currency": cur})
     if data.language is not None:
         lang = data.language.strip().lower()
         if lang not in _SUPPORTED_LANGUAGES:
@@ -175,11 +221,36 @@ def update_restaurant_settings(
                     f"Допустимые: {', '.join(sorted(_SUPPORTED_LANGUAGES))}"
                 ),
             )
-        restaurant.language = lang
+        data = data.model_copy(update={"language": lang})
+
+    # ── Запись в Location (S1-7 source of truth) ───────────────────────────
+    if data.working_hours is not None:
+        loc.working_hours = data.working_hours.strip()
+    if data.delivery_fee is not None:
+        loc.delivery_fee = data.delivery_fee
+    if data.min_order_amount is not None:
+        loc.min_order_amount = data.min_order_amount
+    if data.timezone is not None:
+        loc.timezone = data.timezone
+    if data.currency is not None:
+        loc.currency = data.currency
+    if data.language is not None:
+        loc.language = data.language
+
+    # ── Backward compat: синхронизируем поля Restaurant ────────────────────
+    # orders.py читает restaurant.min_order_amount и restaurant.currency при
+    # создании заказа. Синхронизируем до Migration 0015 (DROP legacy columns).
+    # working_hours: роутер меню читает из restaurant — тоже синхронизируем.
+    if data.working_hours is not None:
+        restaurant.working_hours = loc.working_hours
+    if data.min_order_amount is not None:
+        restaurant.min_order_amount = loc.min_order_amount
+    if data.currency is not None:
+        restaurant.currency = loc.currency
 
     try:
         db.commit()
-        db.refresh(restaurant)
+        db.refresh(loc)
     except Exception:
         db.rollback()
         logger.exception(
@@ -192,25 +263,22 @@ def update_restaurant_settings(
         )
 
     logger.info(
-        "Restaurant settings updated: slug=%s working_hours=%s "
-        "delivery_fee=%s min_order_amount=%s timezone=%s currency=%s language=%s",
-        restaurant.slug,
-        restaurant.working_hours,
-        restaurant.delivery_fee,
-        restaurant.min_order_amount,
-        restaurant.timezone,
-        restaurant.currency,
-        getattr(restaurant, "language", "uz"),
+        "Restaurant settings updated (S1-7 → Location id=%s): slug=%s "
+        "working_hours=%s delivery_fee=%s min_order_amount=%s "
+        "timezone=%s currency=%s language=%s",
+        loc.id, restaurant.slug,
+        loc.working_hours, loc.delivery_fee, loc.min_order_amount,
+        loc.timezone, loc.currency, loc.language,
     )
 
     return RestaurantSettingsUpdateResponse(
         ok=True,
-        working_hours=restaurant.working_hours or "",
-        delivery_fee=restaurant.delivery_fee or 0,
-        min_order_amount=restaurant.min_order_amount or 0,
-        timezone=getattr(restaurant, "timezone", None) or "Asia/Tashkent",
-        currency=getattr(restaurant, "currency", None) or "UZS",
-        language=getattr(restaurant, "language", None) or "uz",
+        working_hours=loc.working_hours or "",
+        delivery_fee=loc.delivery_fee or 0,
+        min_order_amount=loc.min_order_amount or 0,
+        timezone=loc.timezone or "Asia/Tashkent",
+        currency=loc.currency or "UZS",
+        language=loc.language or "uz",
     )
 
 
@@ -242,6 +310,20 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
             detail="Ресторан не найден",
         )
 
+    # S1-7: operational settings берутся из первой активной Location.
+    # Если Location не найдена (баг данных) — fallback на Restaurant поля,
+    # чтобы публичный эндпоинт не упал с 500 (graceful degradation).
+    _loc = (
+        db.query(Location)
+        .filter(
+            Location.restaurant_id == restaurant.id,
+            Location.is_active == True,
+        )
+        .order_by(Location.id)
+        .first()
+    )
+    _settings_source = _loc if _loc is not None else restaurant
+
     categories = (
         db.query(Category)
         .filter(Category.restaurant_id == restaurant.id)
@@ -258,20 +340,20 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
         "phone": restaurant.phone,
         "address": restaurant.address,
         "is_waiter_call_enabled": restaurant.is_waiter_call_enabled,
-        # White Label branding
+        # White Label branding (остаётся на Restaurant — не операционные настройки)
         "logo_url": restaurant.logo_url,
         "primary_color": restaurant.primary_color,
         "secondary_color": restaurant.secondary_color,
         "accent_color": restaurant.accent_color,
         "welcome_text": restaurant.welcome_text,
-        # Настройки доставки и рабочие часы (для клиента)
-        "working_hours": restaurant.working_hours or "",
-        "delivery_fee": restaurant.delivery_fee or 0,
-        "min_order_amount": restaurant.min_order_amount or 0,
+        # S1-7: Operational settings из Location (source of truth)
+        "working_hours": (_settings_source.working_hours or ""),
+        "delivery_fee": (_settings_source.delivery_fee or 0),
+        "min_order_amount": (_settings_source.min_order_amount or 0),
         # Валюта ресторана: UZS, KZT, RUB, USD, TRY, AED
-        "currency": getattr(restaurant, "currency", None) or "UZS",
+        "currency": (getattr(_settings_source, "currency", None) or "UZS"),
         # Язык клиентского UI: uz, ru, en
-        "language": getattr(restaurant, "language", None) or "uz",
+        "language": (getattr(_settings_source, "language", None) or "uz"),
         # telegram_bot_token_encrypted намеренно не включён
         "categories": [
             {
