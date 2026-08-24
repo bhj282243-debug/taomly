@@ -238,15 +238,18 @@ def update_restaurant_settings(
         loc.language = data.language
 
     # ── Backward compat: синхронизируем поля Restaurant ────────────────────
-    # orders.py читает restaurant.min_order_amount и restaurant.currency при
-    # создании заказа. Синхронизируем до Migration 0015 (DROP legacy columns).
-    # working_hours: роутер меню читает из restaurant — тоже синхронизируем.
+    # До Migration 0015 (DROP legacy columns) синхронизируем все поля,
+    # которые могут читаться из Restaurant старыми тестами или кодом.
     if data.working_hours is not None:
         restaurant.working_hours = loc.working_hours
     if data.min_order_amount is not None:
         restaurant.min_order_amount = loc.min_order_amount
     if data.currency is not None:
         restaurant.currency = loc.currency
+    if data.language is not None:
+        restaurant.language = loc.language
+    if data.timezone is not None:
+        restaurant.timezone = loc.timezone
 
     try:
         db.commit()
