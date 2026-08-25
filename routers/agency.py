@@ -15,6 +15,7 @@ routers/agency.py — Taomly Platform
 """
 
 import logging
+from typing import Optional
 
 import sentry_sdk
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -495,6 +496,37 @@ def update_restaurant(
     for field, value in update_fields.items():
         setattr(restaurant, field, value)
 
+    # S1-8: при смене Telegram credentials — синхронно обновить Location в той же транзакции.
+    # Invariant I-2: Restaurant + Location обновляются атомарно, коммит один.
+    location_for_cache: Optional["Location"] = None
+    if token_changed or ("telegram_dispatcher_id" in update_fields):
+        default_location = (
+            db.query(Location)
+            .filter(
+                Location.restaurant_id == restaurant_id,
+                Location.is_active == True,
+            )
+            .first()
+        )
+        if default_location:
+            location_for_cache = default_location
+            if token_changed:
+                default_location.telegram_bot_token_encrypted = (
+                    restaurant.telegram_bot_token_encrypted
+                )
+            if "telegram_dispatcher_id" in update_fields:
+                default_location.telegram_dispatcher_id = restaurant.telegram_dispatcher_id
+            logger.info(
+                "S1-8: Telegram credentials синхронизированы в Location (location_id=%s)",
+                default_location.id,
+            )
+        else:
+            logger.warning(
+                "S1-8: активная Location для restaurant_id=%s не найдена — "
+                "синхронизация credentials пропущена",
+                restaurant_id,
+            )
+
     try:
         db.commit()
         db.refresh(restaurant)
@@ -516,19 +548,30 @@ def update_restaurant(
         )
 
     if token_changed:
-        old_bot = handlers._BOT_CACHE.get(restaurant_id)
+        # S1-8: инвалидируем кэш по location.id (Invariant I-3).
+        # Также инвалидируем по restaurant_id для backward compat
+        # (legacy код мог положить бот в кэш по restaurant.id через get_restaurant_bot).
+        _cache_key = location_for_cache.id if location_for_cache else restaurant_id
+        old_bot = handlers._BOT_CACHE.get(_cache_key)
         if old_bot:
             try:
                 old_bot.remove_webhook()
-                logger.info("Token changed: старый webhook снят (restaurant_id=%s)", restaurant_id)
+                logger.info(
+                    "Token changed: старый webhook снят (cache_key=%s)", _cache_key
+                )
             except Exception:
                 logger.exception(
-                    "Token changed: не удалось снять старый webhook (restaurant_id=%s)",
-                    restaurant_id,
+                    "Token changed: не удалось снять старый webhook (cache_key=%s)",
+                    _cache_key,
                 )
 
-        handlers.invalidate_bot_cache(restaurant_id)
-        logger.info("BOT_CACHE сброшен после смены токена: restaurant_id=%s", restaurant_id)
+        handlers.invalidate_bot_cache(_cache_key)
+        # Также чистим restaurant_id из кэша если он там есть (backward compat)
+        if _cache_key != restaurant_id and restaurant_id in handlers._BOT_CACHE:
+            handlers.invalidate_bot_cache(restaurant_id)
+        logger.info(
+            "BOT_CACHE сброшен после смены токена: cache_key=%s", _cache_key
+        )
 
         result = telegram_service.register_restaurant_webhook(
             bot_token=new_plain_token,
@@ -597,6 +640,16 @@ def delete_restaurant(
                 restaurant_id,
             )
 
+    # S1-8: инвалидируем кэш по location.id (Invariant I-3).
+    # При деактивации ресторана ищем его Location чтобы сбросить кэш по location.id.
+    # Backward compat: также сбрасываем по restaurant_id.
+    _loc_for_delete = (
+        db.query(Location)
+        .filter(Location.restaurant_id == restaurant_id)
+        .first()
+    )
+    if _loc_for_delete:
+        handlers.invalidate_bot_cache(_loc_for_delete.id)
     handlers.invalidate_bot_cache(restaurant_id)
     logger.info(
         "Ресторан деактивирован: restaurant_id=%s agency_id=%s",
