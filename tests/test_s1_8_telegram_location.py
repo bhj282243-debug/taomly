@@ -33,7 +33,11 @@ class TestCheckA:
     """CheckA: POST /webhook/{slug} ищет Location по slug, не Restaurant."""
 
     def test_a1_webhook_finds_location_by_slug(self, client, db, location, restaurant):
-        """A1. Webhook с корректным slug находит Location и возвращает ok=True."""
+        """A1. Webhook с корректным slug находит Location и возвращает ok=True.
+        db.commit() нужен: webhook открывает отдельный SessionLocal() и
+        не видит незакоммиченные данные из test fixture сессии.
+        """
+        db.commit()  # flush fixtures to DB so webhook's SessionLocal() can see them
         update_payload = {"update_id": 1, "message": {"message_id": 1, "chat": {"id": 99}}}
 
         with patch("handlers.process_restaurant_webhook_update") as mock_proc:
@@ -46,7 +50,6 @@ class TestCheckA:
         assert resp.status_code == 200
         data = resp.json()
         assert data.get("ok") is True
-        # process_restaurant_webhook_update вызван с location
         mock_proc.assert_called_once()
         call_kwargs = mock_proc.call_args
         passed_location = call_kwargs.kwargs.get("location") or (
@@ -58,10 +61,9 @@ class TestCheckA:
     def test_a2_webhook_uses_location_token_not_restaurant_token(self, client, db, location, restaurant):
         """A2. Webhook использует location.telegram_bot_token_encrypted."""
         from auth import encrypt_token
-        # Устанавливаем разные токены в Restaurant и Location
         restaurant.telegram_bot_token_encrypted = encrypt_token("RESTAURANT_TOKEN_OLD")
         location.telegram_bot_token_encrypted = encrypt_token("LOCATION_TOKEN_NEW")
-        db.commit()
+        db.commit()  # webhook открывает отдельный SessionLocal()
 
         update_payload = {"update_id": 2, "message": {"message_id": 1, "chat": {"id": 99}}}
 
