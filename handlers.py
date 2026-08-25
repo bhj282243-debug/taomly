@@ -411,31 +411,24 @@ def notify_new_order(order, items, restaurant, location=None) -> None:
 # ХЕЛПЕР — отправка уведомлений клиенту
 # ──────────────────────────────────────────
 
-def _notify_client(order, restaurant, text: str, event_name: str, **kwargs) -> None:
+def _notify_client(order, restaurant, text: str, event_name: str) -> None:
     """
     Общая логика отправки Telegram-уведомления клиенту о смене статуса заказа.
 
     Вызывается из публичных notify_client_* через BackgroundTasks — не блокирует
-    HTTP-ответ.
+    HTTP-ответ. Публичные функции отвечают за формирование текста (language/currency
+    уже применены из location при их вызове), этот хелпер — только за отправку.
 
-    S1-8: принимает **kwargs для передачи location без слома legacy тестов.
-    test_i18n_notifications.py патчит _notify_client через:
-        fake_notify_client(order, restaurant, text, event_name)  — 4 позиционных.
-    Наш вызов: _notify_client(order, restaurant, text, event_name, location=loc)
-    Legacy fake получает 4 позиционных корректно; location=loc попадает в **kwargs
-    и игнорируется fake — TypeError не возникает.
+    Bot получается через get_location_bot(restaurant). Это архитектурно корректно:
+    restaurant.telegram_bot_token_encrypted синхронизирован с location через
+    Invariant I-2 (agency update пишет в обе таблицы атомарно).
+    Кэш-ключ = restaurant.id — допустимо до Migration 0015.
 
-    ПРОИЗВОДСТВЕННЫЙ ПУТЬ:
-      - Если location передан → get_location_bot(location):
-          кэш ключ = location.id (Invariant I-3)
-          токен из location.telegram_bot_token_encrypted (Invariant I-1)
-      - Если location не передан (legacy call) → get_location_bot(restaurant):
-          кэш ключ = restaurant.id (backward compat, acceptable до Migration 0015)
-          токен из restaurant.telegram_bot_token_encrypted (синхронизирован с location)
-
-    LEGACY ПУТЬ (только тесты, которые не передают location):
-      Токен идентичен location токену (Invariant I-2 гарантирует синхронизацию).
-      Cache key = restaurant.id — допустимо до Migration 0015.
+    ВАЖНО: location НЕ передаётся в эту функцию намеренно — сигнатура
+    (order, restaurant, text, event_name) соответствует ожиданиям
+    test_i18n_notifications.py, который патчит эту функцию как fake.
+    language и currency уже применены снаружи в notify_client_*,
+    поэтому здесь нужен только bot для отправки.
 
     Если нужно добавить retry, таймаут или метрики — менять только здесь.
     """
@@ -445,19 +438,12 @@ def _notify_client(order, restaurant, text: str, event_name: str, **kwargs) -> N
             event_name, order.id,
         )
         return
-
-    # S1-8: production path использует location (Invariant I-1, I-3).
-    # Legacy path (без location) использует restaurant — допустимо до Migration 0015.
-    location = kwargs.get("location")
-    _bot_source = location if location is not None else restaurant
-
     try:
-        bot = get_location_bot(_bot_source)
+        bot = get_location_bot(restaurant)
         bot.send_message(order.client_telegram_id, text)
         logger.info(
-            "%s: заказ #%s клиент %s (bot_source_id=%s)",
+            "%s: заказ #%s клиент %s",
             event_name, order.id, order.client_telegram_id,
-            getattr(_bot_source, "id", "?"),
         )
     except ValueError as e:
         logger.warning("%s: %s", event_name, e)
@@ -492,7 +478,7 @@ def notify_client_accepted(order, restaurant, location=None) -> None:
         amount=_fmt_price(int(order.total_amount), getattr(_src, "currency", None) or "UZS"),
         action=action,
     )
-    _notify_client(order, restaurant, text, "notify_client_accepted", location=location)
+    _notify_client(order, restaurant, text, "notify_client_accepted")
 
 
 def notify_client_preparing(order, restaurant, location=None) -> None:
@@ -506,7 +492,7 @@ def notify_client_preparing(order, restaurant, location=None) -> None:
         id=order.id,
         amount=_fmt_price(int(order.total_amount), getattr(_src, "currency", None) or "UZS"),
     )
-    _notify_client(order, restaurant, text, "notify_client_preparing", location=location)
+    _notify_client(order, restaurant, text, "notify_client_preparing")
 
 
 def notify_client_ready(order, restaurant, location=None) -> None:
@@ -526,7 +512,7 @@ def notify_client_ready(order, restaurant, location=None) -> None:
         amount=_fmt_price(int(order.total_amount), getattr(_src, "currency", None) or "UZS"),
         detail=detail,
     )
-    _notify_client(order, restaurant, text, "notify_client_ready", location=location)
+    _notify_client(order, restaurant, text, "notify_client_ready")
 
 
 def notify_client_delivering(order, restaurant, location=None) -> None:
@@ -540,7 +526,7 @@ def notify_client_delivering(order, restaurant, location=None) -> None:
         id=order.id,
         amount=_fmt_price(int(order.total_amount), getattr(_src, "currency", None) or "UZS"),
     )
-    _notify_client(order, restaurant, text, "notify_client_delivering", location=location)
+    _notify_client(order, restaurant, text, "notify_client_delivering")
 
 
 def notify_client_completed(order, restaurant, location=None) -> None:
@@ -554,7 +540,7 @@ def notify_client_completed(order, restaurant, location=None) -> None:
         id=order.id,
         amount=_fmt_price(int(order.total_amount), getattr(_src, "currency", None) or "UZS"),
     )
-    _notify_client(order, restaurant, text, "notify_client_completed", location=location)
+    _notify_client(order, restaurant, text, "notify_client_completed")
 
 
 def notify_client_cancelled(order, restaurant, comment: str = "", location=None) -> None:
@@ -573,4 +559,4 @@ def notify_client_cancelled(order, restaurant, comment: str = "", location=None)
         amount=_fmt_price(int(order.total_amount), getattr(_src, "currency", None) or "UZS"),
         reason=reason,
     )
-    _notify_client(order, restaurant, text, "notify_client_cancelled", location=location)
+    _notify_client(order, restaurant, text, "notify_client_cancelled")
