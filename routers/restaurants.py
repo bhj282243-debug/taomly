@@ -342,7 +342,12 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
         "description": restaurant.description,
         "phone": restaurant.phone,
         "address": restaurant.address,
-        "is_waiter_call_enabled": restaurant.is_waiter_call_enabled,
+        # S1-8: is_waiter_call_enabled из Location (source of truth, Invariant I-6)
+        "is_waiter_call_enabled": (
+            getattr(_settings_source, "is_waiter_call_enabled", None)
+            if _settings_source is not restaurant
+            else restaurant.is_waiter_call_enabled
+        ),
         # White Label branding (остаётся на Restaurant — не операционные настройки)
         "logo_url": restaurant.logo_url,
         "primary_color": restaurant.primary_color,
