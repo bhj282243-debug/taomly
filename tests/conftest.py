@@ -294,7 +294,10 @@ def product_unavailable(db, restaurant, category) -> Product:
 
 @pytest.fixture
 def location(db, restaurant) -> Location:
-    """Primary Location for the main test restaurant (S1-2)."""
+    """Primary Location for the main test restaurant (S1-2).
+    S1-8: telegram credentials добавлены для тестирования bot/dispatcher из Location.
+    """
+    from auth import encrypt_token as _enc
     loc = Location(
         restaurant_id=restaurant.id,
         name=restaurant.name,
@@ -306,6 +309,9 @@ def location(db, restaurant) -> Location:
         currency="UZS",
         language="uz",
         is_waiter_call_enabled=False,
+        # S1-8: telegram credentials в Location
+        telegram_bot_token_encrypted=_enc("1234567890:AAFakeTokenForTests"),
+        telegram_dispatcher_id=12345678,
     )
     db.add(loc)
     db.flush()
@@ -314,7 +320,10 @@ def location(db, restaurant) -> Location:
 
 @pytest.fixture
 def location2(db, restaurant2) -> Location:
-    """Primary Location for the second test restaurant (S1-2)."""
+    """Primary Location for the second test restaurant (S1-2).
+    S1-8: telegram credentials добавлены.
+    """
+    from auth import encrypt_token as _enc
     loc = Location(
         restaurant_id=restaurant2.id,
         name=restaurant2.name,
@@ -326,6 +335,9 @@ def location2(db, restaurant2) -> Location:
         currency="USD",
         language="uz",
         is_waiter_call_enabled=False,
+        # S1-8: telegram credentials в Location
+        telegram_bot_token_encrypted=_enc("9876543210:AAFakeTokenForTests2"),
+        telegram_dispatcher_id=87654321,
     )
     db.add(loc)
     db.flush()
