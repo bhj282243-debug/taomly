@@ -367,6 +367,7 @@ def create_order(
         handlers.notify_client_accepted,
         order_with_items,
         restaurant,
+        location,   # S1-8: language/currency из Location
     )
 
     logger.info(
@@ -628,6 +629,15 @@ def update_order_status(
         order_id, old_status, data.status, restaurant.id,
     )
 
+    # S1-8: загружаем Location для передачи в notify_client_*.
+    # language/currency клиентских уведомлений берутся из Location (Invariant I-5).
+    # Один SELECT без joinedload — не создаёт N+1.
+    _order_location = None
+    if order.location_id:
+        _order_location = db.query(Location).filter(
+            Location.id == order.location_id,
+        ).first()
+
     _status_notify = {
         "accepted":           handlers.notify_client_accepted,
         "preparing":          handlers.notify_client_preparing,
@@ -636,13 +646,16 @@ def update_order_status(
         "completed":          handlers.notify_client_completed,
     }
     if data.status in _status_notify:
-        background_tasks.add_task(_status_notify[data.status], order, restaurant)
+        background_tasks.add_task(
+            _status_notify[data.status], order, restaurant, _order_location
+        )
     elif data.status == "cancelled":
         background_tasks.add_task(
             handlers.notify_client_cancelled,
             order,
             restaurant,
             "",
+            _order_location,
         )
 
     return order
