@@ -682,17 +682,29 @@ def restaurant_webhook(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
     with SessionLocal() as db:
-        restaurant = db.query(models.Restaurant).filter(
-            models.Restaurant.slug == slug,
-            models.Restaurant.is_active == True,
+        # S1-8: lookup по Location.slug (source of truth для Telegram credentials).
+        # Telegram webhook URL вида /webhook/{slug} не меняется — только то,
+        # из какой таблицы берётся запись и токен.
+        location = db.query(models.Location).filter(
+            models.Location.slug == slug,
+            models.Location.is_active == True,
         ).first()
 
-        if not restaurant or not restaurant.telegram_bot_token_encrypted:
-            logger.warning("Webhook[%s]: ресторан не найден или бот не настроен", slug)
+        if not location or not location.telegram_bot_token_encrypted:
+            logger.warning("Webhook[%s]: Location не найдена или бот не настроен", slug)
+            return {"ok": False, "detail": "Ресторан не найден"}
+
+        # Загружаем Restaurant для process_restaurant_webhook_update (welcome message, slug)
+        restaurant = db.query(models.Restaurant).filter(
+            models.Restaurant.id == location.restaurant_id,
+        ).first()
+
+        if not restaurant:
+            logger.warning("Webhook[%s]: Restaurant для Location не найден", slug)
             return {"ok": False, "detail": "Ресторан не найден"}
 
         try:
-            handlers.process_restaurant_webhook_update(restaurant, update)
+            handlers.process_restaurant_webhook_update(restaurant, update, location=location)
             return {"ok": True}
         except Exception as exc:
             # Отвечаем 200/{"ok": False} — это намеренно (не HTTPException):
