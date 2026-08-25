@@ -1,5 +1,4 @@
 """
-from config import settings
 tests/test_s1_8_telegram_location.py — S1-8: Telegram Credentials Migration to Location
 
 Проверяет:
@@ -23,6 +22,7 @@ tests/test_s1_8_telegram_location.py — S1-8: Telegram Credentials Migration to
 import pytest
 from unittest.mock import MagicMock, patch, call
 from fastapi.testclient import TestClient
+from config import settings
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -488,11 +488,15 @@ class TestCheckH:
             handlers.notify_client_accepted(mock_order, mock_rest, location=mock_loc)
 
         text = captured.get("text", "")
-        assert "USD" in text, (
-            f"Ожидалась валюта USD из Location, текст: {text!r}"
+        # format_price для USD возвращает символ "$", не строку "USD"
+        # Проверяем что текст сформирован с USD-форматированием (символ $)
+        assert "$" in text, (
+            f"Ожидался символ $ (USD) из Location.currency=USD, текст: {text!r}"
         )
-        # UZS не должна быть в тексте (если только не совпадает)
-        # Проверяем что именно USD присутствует
+        # Проверяем что UZS-формат (₽ или ₸) не используется
+        assert "so'm" not in text.lower() and "sum" not in text.lower(), (
+            f"В тексте найдена валюта UZS вместо USD: {text!r}"
+        )
         clear_cache()
 
 
@@ -780,7 +784,7 @@ class TestCheckN:
         resp = client.post(
             "/api/orders/",
             json={
-                "order_type": "dine_in",
+                "order_type": "takeaway",
                 "items": [{"product_id": product.id, "quantity": 2}],
                 "client_telegram_id": 12345,
                 "client_name": "Test Client",
@@ -874,7 +878,8 @@ class TestCheckO:
         assert len(sent_messages) == 1
         chat_id, text = sent_messages[0]
         assert chat_id == 77777, f"Отправлено на {chat_id}, ожидался 77777"
-        assert "KZT" in text, f"Ожидалась валюта KZT в тексте: {text!r}"
+        # format_price для KZT возвращает символ ₸, не строку "KZT"
+        assert "₸" in text, f"Ожидался символ ₸ (KZT) в тексте: {text!r}"
         assert "99" in text  # order id
 
         handlers._BOT_CACHE.pop(801, None)
