@@ -34,13 +34,22 @@ class TestCheckA:
 
     def test_a1_webhook_finds_location_by_slug(self, client, db, location, restaurant):
         """A1. Webhook с корректным slug находит Location и возвращает ok=True.
-        db.commit() нужен: webhook открывает отдельный SessionLocal() и
-        не видит незакоммиченные данные из test fixture сессии.
+
+        Webhook открывает SessionLocal() напрямую (не через get_db dependency),
+        поэтому patch SessionLocal чтобы вернуть тот же db из fixture.
         """
-        db.commit()  # flush fixtures to DB so webhook's SessionLocal() can see them
         update_payload = {"update_id": 1, "message": {"message_id": 1, "chat": {"id": 99}}}
 
-        with patch("handlers.process_restaurant_webhook_update") as mock_proc:
+        # Webhook вызывает SessionLocal() как контекстный менеджер: `with SessionLocal() as db:`
+        # Нужно чтобы он вернул тот же db, в котором зафлушены fixtures.
+        from contextlib import contextmanager
+
+        @contextmanager
+        def fake_session_local():
+            yield db
+
+        with patch("api.SessionLocal", fake_session_local), \
+             patch("handlers.process_restaurant_webhook_update") as mock_proc:
             resp = client.post(
                 f"/webhook/{location.slug}",
                 json=update_payload,
@@ -49,7 +58,7 @@ class TestCheckA:
 
         assert resp.status_code == 200
         data = resp.json()
-        assert data.get("ok") is True
+        assert data.get("ok") is True, f"Webhook вернул: {data}"
         mock_proc.assert_called_once()
         call_kwargs = mock_proc.call_args
         passed_location = call_kwargs.kwargs.get("location") or (
@@ -59,11 +68,16 @@ class TestCheckA:
         assert passed_location.id == location.id
 
     def test_a2_webhook_uses_location_token_not_restaurant_token(self, client, db, location, restaurant):
-        """A2. Webhook использует location.telegram_bot_token_encrypted."""
+        """A2. Webhook использует location.telegram_bot_token_encrypted.
+
+        Патчим SessionLocal чтобы webhook видел fixture данные.
+        """
         from auth import encrypt_token
+        from contextlib import contextmanager
+
         restaurant.telegram_bot_token_encrypted = encrypt_token("RESTAURANT_TOKEN_OLD")
         location.telegram_bot_token_encrypted = encrypt_token("LOCATION_TOKEN_NEW")
-        db.commit()  # webhook открывает отдельный SessionLocal()
+        db.flush()
 
         update_payload = {"update_id": 2, "message": {"message_id": 1, "chat": {"id": 99}}}
 
@@ -72,7 +86,12 @@ class TestCheckA:
         def fake_process(rest, upd, location=None):
             captured["location_id"] = location.id if location else None
 
-        with patch("handlers.process_restaurant_webhook_update", side_effect=fake_process):
+        @contextmanager
+        def fake_session_local():
+            yield db
+
+        with patch("api.SessionLocal", fake_session_local), \
+             patch("handlers.process_restaurant_webhook_update", side_effect=fake_process):
             resp = client.post(
                 f"/webhook/{location.slug}",
                 json=update_payload,
@@ -140,8 +159,13 @@ class TestCheckC:
 
         handlers._BOT_CACHE.pop(999, None)
 
-    def test_c2_restaurant_token_not_used_when_location_provided(self):
-        """C2. Если location передан — restaurant.telegram_bot_token_encrypted не читается."""
+    def test_c2_location_token_used_not_restaurant_token(self):
+        """C2. get_location_bot читает location.telegram_bot_token_encrypted,
+        а не restaurant.telegram_bot_token_encrypted.
+
+        Доказывается через mock_dec: decrypt вызван с LOC токеном ("LOC_ENC_TOKEN"),
+        а не с REST токеном ("REST_ENC_TOKEN"). Оба объекта имеют разные токены.
+        """
         import handlers
 
         mock_loc = MagicMock()
@@ -610,8 +634,7 @@ class TestCheckK:
 
         new_token = "8888888888:AAInvalidateCacheToken"
 
-        with patch("telegram_service.register_restaurant_webhook") as mock_reg, \
-             patch("handlers._BOT_CACHE", handlers._BOT_CACHE):
+        with patch("telegram_service.register_restaurant_webhook") as mock_reg:
             mock_reg.return_value = MagicMock(ok=True)
             resp = client.patch(
                 f"/api/agency/restaurants/{restaurant.id}",
@@ -635,14 +658,16 @@ class TestCheckL:
     def test_l1_notify_client_receives_location(
         self, client, db, restaurant_token, restaurant, location, product
     ):
-        """L1. notify_client_accepted вызывается с location (не None)."""
-        from models import Order
+        """L1. notify_client_preparing вызывается с location (не None) при смене статуса.
 
-        # Создаём заказ через API
+        Доказывает Invariant I-5: location передаётся из update_order_status
+        в notify_client_*. Если production-код не передаёт location — тест упадёт.
+        """
+        # Создаём заказ через API (takeaway — не требует table_id)
         create_resp = client.post(
             "/api/orders/",
             json={
-                "order_type": "dine_in",
+                "order_type": "takeaway",
                 "items": [{"product_id": product.id, "quantity": 1}],
                 "client_telegram_id": 12345,
                 "client_name": "Test",
@@ -652,20 +677,16 @@ class TestCheckL:
                 "X-Location-Id": str(location.id),
             },
         )
-        # Если 201 — заказ создан
         if create_resp.status_code not in (200, 201):
             pytest.skip(f"Не удалось создать заказ: {create_resp.status_code} {create_resp.text}")
 
         order_id = create_resp.json()["id"]
 
-        # Меняем статус на "preparing"
         captured = {}
 
-        original_notify = __import__("handlers").notify_client_preparing
-
         def capturing_notify(order, rest, loc=None):
-            captured["location"] = loc
             captured["called"] = True
+            captured["location"] = loc
 
         with patch("handlers.notify_client_preparing", side_effect=capturing_notify):
             resp = client.patch(
@@ -675,22 +696,37 @@ class TestCheckL:
             )
 
         assert resp.status_code == 200
-        # location передана (может быть None если fixture не имеет location_id,
-        # но должна быть Location объектом если location_id установлен)
-        # Проверяем только что crash не произошёл
         assert resp.json()["status"] == "preparing"
+
+        # Критические проверки I-5: location должна быть передана
+        assert captured.get("called") is True, (
+            "notify_client_preparing не был вызван"
+        )
+        assert captured.get("location") is not None, (
+            "notify_client_preparing вызван без location=... (location=None). "
+            "Invariant I-5 нарушен: production-код не передаёт location в notify_client_*"
+        )
+        assert captured["location"].id == location.id, (
+            f"Передана неверная location: id={captured['location'].id}, "
+            f"ожидался id={location.id}"
+        )
 
     def test_l2_location_language_used_in_status_notification(
         self, client, db, restaurant_token, restaurant, location, product
     ):
-        """L2. Язык клиентского уведомления при смене статуса берётся из Location."""
+        """L2. Язык клиентского уведомления при смене статуса берётся из Location.
+
+        Location.language=ru, Restaurant.language=uz — намеренно разные.
+        Если production-код не передаёт location, loc_language будет None → тест упадёт.
+        """
         location.language = "ru"
-        db.commit()
+        restaurant.language = "uz"  # намеренно отличается — доказывает source of truth
+        db.flush()
 
         create_resp = client.post(
             "/api/orders/",
             json={
-                "order_type": "dine_in",
+                "order_type": "takeaway",
                 "items": [{"product_id": product.id, "quantity": 1}],
                 "client_telegram_id": 12345,
             },
@@ -704,7 +740,6 @@ class TestCheckL:
 
         order_id = create_resp.json()["id"]
 
-        # PATCH status — notify_client_preparing должен получить location с language=ru
         notify_kwargs = {}
 
         def capturing_notify(order, rest, loc=None):
@@ -718,10 +753,12 @@ class TestCheckL:
             )
 
         assert resp.status_code == 200
-        if notify_kwargs.get("loc_language") is not None:
-            assert notify_kwargs["loc_language"] == "ru", (
-                f"Location.language должен быть ru, получен {notify_kwargs['loc_language']}"
-            )
+        # Безусловный assert: если location не передана (loc=None) → loc_language=None → FAIL
+        assert notify_kwargs.get("loc_language") == "ru", (
+            f"Ожидался Location.language='ru' (не restaurant.language='uz'). "
+            f"Получено: {notify_kwargs.get('loc_language')!r}. "
+            f"Invariant I-5: notify_client_* должен получать location."
+        )
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -729,47 +766,88 @@ class TestCheckL:
 # ═══════════════════════════════════════════════════════════════
 
 class TestCheckM:
-    """CheckM: webhook чужого ресторана → graceful {"ok": False}."""
+    """CheckM: tenant isolation в webhook — process_restaurant_webhook_update
+    получает restaurant, соответствующий location.restaurant_id."""
 
-    def test_m1_wrong_tenant_webhook_returns_ok_false(
-        self, client, db, location2
+    def test_m1_webhook_routes_to_correct_restaurant(
+        self, client, db, location, restaurant
     ):
-        """M1. Webhook slug принадлежит другому ресторану — ok=False (без 500)."""
-        # location2 принадлежит restaurant2, не restaurant
-        update_payload = {"update_id": 100}
+        """M1. Webhook передаёт в process_restaurant_webhook_update именно тот
+        Restaurant, которому принадлежит найденная Location (location.restaurant_id).
 
-        with patch("handlers.process_restaurant_webhook_update") as mock_proc:
+        Tenant isolation в webhook: slug идентифицирует Location → Location.restaurant_id
+        определяет Restaurant. process_restaurant_webhook_update не может получить
+        Restaurant другого tenant, потому что restaurant загружается строго по
+        location.restaurant_id.
+
+        Патчим SessionLocal чтобы webhook видел fixture данные.
+        """
+        from contextlib import contextmanager
+
+        update_payload = {"update_id": 200}
+        captured = {}
+
+        def fake_process(rest, upd, location=None):
+            captured["restaurant_id"] = rest.id
+            captured["location_id"] = location.id if location else None
+
+        @contextmanager
+        def fake_session_local():
+            yield db
+
+        with patch("api.SessionLocal", fake_session_local), \
+             patch("handlers.process_restaurant_webhook_update", side_effect=fake_process):
             resp = client.post(
-                f"/webhook/{location2.slug}",
+                f"/webhook/{location.slug}",
                 json=update_payload,
                 headers={"X-Telegram-Bot-Api-Secret-Token": settings.WEBHOOK_SECRET},
             )
 
-        # Webhook должен найти location2 (она существует) и обработать
-        # Tenant isolation проверяется на уровне бизнес-логики: Restaurant загружается
-        # только по location.restaurant_id. Другой агент не может управлять чужим рестораном.
         assert resp.status_code == 200
+        assert resp.json().get("ok") is True, f"Webhook вернул: {resp.json()}"
 
-    def test_m2_location_of_deactivated_restaurant_returns_ok_false(
+        # Tenant isolation: restaurant передан правильный
+        assert captured.get("restaurant_id") == restaurant.id, (
+            f"process_restaurant_webhook_update получил restaurant_id="
+            f"{captured.get('restaurant_id')}, ожидался {restaurant.id}"
+        )
+        # Location привязана к правильному restaurant
+        assert captured.get("location_id") == location.id
+        assert location.restaurant_id == restaurant.id
+
+    def test_m2_location_of_deactivated_location_returns_ok_false(
         self, client, db, restaurant, location
     ):
-        """M2. Location деактивированного ресторана → ok=False."""
-        location.is_active = False
-        db.commit()
+        """M2. Деактивированная Location → webhook возвращает ok=False.
 
-        update_payload = {"update_id": 101}
-        resp = client.post(
-            f"/webhook/{location.slug}",
-            json=update_payload,
-            headers={"X-Telegram-Bot-Api-Secret-Token": settings.WEBHOOK_SECRET},
-        )
+        Использует SessionLocal patch — webhook не видит незакоммиченные данные.
+        """
+        from contextlib import contextmanager
+
+        location.is_active = False
+        db.flush()
+
+        @contextmanager
+        def fake_session_local():
+            yield db
+
+        update_payload = {"update_id": 201}
+
+        with patch("api.SessionLocal", fake_session_local):
+            resp = client.post(
+                f"/webhook/{location.slug}",
+                json=update_payload,
+                headers={"X-Telegram-Bot-Api-Secret-Token": settings.WEBHOOK_SECRET},
+            )
 
         assert resp.status_code == 200
-        assert resp.json().get("ok") is False
+        assert resp.json().get("ok") is False, (
+            f"Ожидался ok=False для деактивированной Location, получен: {resp.json()}"
+        )
 
         # Restore
         location.is_active = True
-        db.commit()
+        db.flush()
 
 
 # ═══════════════════════════════════════════════════════════════
