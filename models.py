@@ -38,6 +38,28 @@ SQLAlchemy ORM-модели для Multi-Tenant White Label архитектур
     working_hours    — текстовое поле, например "10:00-22:00"
     delivery_fee     — стоимость доставки в сомах (0 = бесплатно)
     min_order_amount — минимальная сумма заказа в сомах (0 = без ограничений)
+
+Изменения S2-2 (Phase 2 — Menu Engine Foundation):
+  Migration 0014. Только новые таблицы и два nullable-поля в order_items.
+  Product.price НЕ изменяется (остаётся NOT NULL).
+
+  ProductVariant — варианты товара (Плов: Полная порция / Половина).
+    product_id  → products.id CASCADE
+    price       — цена варианта в целых сомах, CHECK >= 0
+    is_active   — управляется админом вручную
+
+  ModifierGroup — группа модификаторов (Дополнительно).
+    product_id     → products.id CASCADE
+    min_selections — 0 = необязательная, >= 1 = обязательная (поле required отсутствует)
+    max_selections — 1 = radio, > 1 = checkbox
+
+  ModifierOption — опция модификатора (Extra meat +10 000).
+    modifier_group_id → modifier_groups.id CASCADE
+    price_adjustment  — знаковое целое, CHECK >= -1 000 000
+
+  OrderItem — добавлены два nullable-поля для будущей S2-5:
+    variant_id   → product_variants.id SET NULL, nullable
+    variant_name — snapshot имени варианта на момент заказа, nullable
 """
 
 from sqlalchemy import (
@@ -310,8 +332,23 @@ class Product(Base):
         nullable=False,
     )
 
-    restaurant = relationship("Restaurant", back_populates="products", lazy="select")
-    category   = relationship("Category", back_populates="products", lazy="select")
+    restaurant      = relationship("Restaurant", back_populates="products", lazy="select")
+    category        = relationship("Category", back_populates="products", lazy="select")
+    # S2-2: Phase 2 Menu Engine relationships
+    variants        = relationship(
+        "ProductVariant",
+        back_populates="product",
+        cascade="all, delete-orphan",
+        lazy="select",
+        order_by="ProductVariant.sort_order",
+    )
+    modifier_groups = relationship(
+        "ModifierGroup",
+        back_populates="product",
+        cascade="all, delete-orphan",
+        lazy="select",
+        order_by="ModifierGroup.sort_order",
+    )
 
     def __repr__(self) -> str:
         return f"<Product id={self.id} name={self.name!r} price={self.price}>"
@@ -463,11 +500,227 @@ class OrderItem(Base):
     price    = Column(Integer, nullable=False)
     quantity = Column(Integer, nullable=False)
 
+    # S2-2: Phase 2 — reserved for variant support (populated in S2-5).
+    # variant_id:   FK → product_variants.id SET NULL. NULL for all pre-S2-5 orders.
+    # variant_name: snapshot of variant name at order time. NULL for legacy orders.
+    # These columns are intentionally inert until S2-5 activates variant order path.
+    variant_id   = Column(
+        BigInteger,
+        ForeignKey("product_variants.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    variant_name = Column(String(255), nullable=True)
+
     order   = relationship("Order", back_populates="items", lazy="select")
     product = relationship("Product", lazy="select")
+    # S2-2: variant relationship — inert until S2-5.
+    variant = relationship("ProductVariant", lazy="select")
 
     def __repr__(self) -> str:
         return f"<OrderItem id={self.id} name={self.name!r} qty={self.quantity}>"
+
+
+# ──────────────────────────────────────────
+# PRODUCT VARIANT  (S2-2 / Phase 2)
+# ──────────────────────────────────────────
+class ProductVariant(Base):
+    """
+    Вариант товара — одна покупаемая версия продукта.
+
+    Архитектура:
+      Product (0 вариантов) → используется Product.price (legacy/simple режим).
+      Product (1+ вариантов) → каждый вариант имеет собственную цену.
+        Product.price в этом случае игнорируется (станет nullable в S2-5).
+
+    Примеры:
+      Плов → [Полная порция 35 000, Половина 20 000]
+      Компот → [1 L 20 000, 0.7 L 15 000]
+
+    Tenant-изоляция:
+      ProductVariant → product_id → Product.restaurant_id
+      API никогда не принимает variant_id без проверки через Product.
+
+    is_active: управляется администратором вручную.
+      Phase 3 добавит расписание для автоматической деактивации.
+
+    sort_order: порядок отображения вариантов в UI.
+      Первый активный вариант — дефолтный выбор.
+
+    Миграция: 0014_phase2_menu_engine.py
+    """
+    __tablename__ = "product_variants"
+    __table_args__ = (
+        CheckConstraint("price >= 0", name="ck_product_variants_price_nonnegative"),
+        Index("ix_variants_product_id", "product_id"),
+        Index("ix_variants_product_active_sort", "product_id", "is_active", "sort_order"),
+    )
+
+    id         = Column(BigInteger, primary_key=True)
+    product_id = Column(
+        BigInteger,
+        ForeignKey("products.id", ondelete="CASCADE"),
+        nullable=False,
+        index=False,  # covered by ix_variants_product_id above
+    )
+    name       = Column(String(255), nullable=False)
+    # price: цена варианта в целых сомах. CHECK >= 0 (бесплатные варианты допустимы).
+    price      = Column(Integer, nullable=False)
+    sort_order = Column(Integer, default=0, nullable=False, server_default="0")
+    is_active  = Column(Boolean, default=True, nullable=False, server_default="true")
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(
+        TIMESTAMP(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    product = relationship("Product", back_populates="variants", lazy="select")
+
+    def __repr__(self) -> str:
+        return f"<ProductVariant id={self.id} name={self.name!r} price={self.price}>"
+
+
+# ──────────────────────────────────────────
+# MODIFIER GROUP  (S2-2 / Phase 2)
+# ──────────────────────────────────────────
+class ModifierGroup(Base):
+    """
+    Группа модификаторов — набор опций для кастомизации блюда.
+
+    Примеры:
+      "Дополнительно" → [Extra meat +10 000, Яйцо +5 000, Острое +2 000]
+      "Соус" → [Кетчуп 0, Майонез 0, Сырный +3 000]
+
+    Семантика обязательности (поле required ОТСУТСТВУЕТ — намеренно):
+      min_selections = 0 → группа необязательная
+      min_selections >= 1 → группа обязательная (клиент обязан выбрать)
+
+    Семантика выбора:
+      max_selections = 1 → radio (только одна опция)
+      max_selections > 1 → checkbox (несколько опций)
+
+    Constraints:
+      min_selections >= 0
+      max_selections >= 1
+      max_selections >= min_selections
+
+    Tenant-изоляция:
+      ModifierGroup → product_id → Product.restaurant_id
+
+    Миграция: 0014_phase2_menu_engine.py
+    """
+    __tablename__ = "modifier_groups"
+    __table_args__ = (
+        CheckConstraint("min_selections >= 0", name="ck_modifier_groups_min_selections_nonneg"),
+        CheckConstraint("max_selections >= 1", name="ck_modifier_groups_max_selections_positive"),
+        CheckConstraint("max_selections >= min_selections", name="ck_modifier_groups_max_gte_min"),
+        Index("ix_modifier_groups_product_id", "product_id"),
+        Index("ix_modifier_groups_product_active", "product_id", "is_active"),
+    )
+
+    id         = Column(BigInteger, primary_key=True)
+    product_id = Column(
+        BigInteger,
+        ForeignKey("products.id", ondelete="CASCADE"),
+        nullable=False,
+        index=False,  # covered by ix_modifier_groups_product_id above
+    )
+    name           = Column(String(255), nullable=False)
+    # min_selections: 0 = необязательная группа, >= 1 = обязательная.
+    min_selections = Column(Integer, default=0, nullable=False, server_default="0")
+    # max_selections: 1 = radio, > 1 = checkbox.
+    max_selections = Column(Integer, default=1, nullable=False, server_default="1")
+    sort_order     = Column(Integer, default=0, nullable=False, server_default="0")
+    is_active      = Column(Boolean, default=True, nullable=False, server_default="true")
+    created_at     = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
+    updated_at     = Column(
+        TIMESTAMP(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    product = relationship("Product", back_populates="modifier_groups", lazy="select")
+    options = relationship(
+        "ModifierOption",
+        back_populates="group",
+        cascade="all, delete-orphan",
+        lazy="select",
+        order_by="ModifierOption.sort_order",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<ModifierGroup id={self.id} name={self.name!r} "
+            f"min={self.min_selections} max={self.max_selections}>"
+        )
+
+
+# ──────────────────────────────────────────
+# MODIFIER OPTION  (S2-2 / Phase 2)
+# ──────────────────────────────────────────
+class ModifierOption(Base):
+    """
+    Опция модификатора — одна позиция внутри группы.
+
+    Примеры:
+      Extra meat    price_adjustment=+10000
+      Яйцо          price_adjustment=+5000
+      Острое        price_adjustment=+2000
+      Стандартный   price_adjustment=0
+      Скидка        price_adjustment=-5000  (отрицательные разрешены)
+
+    price_adjustment: знаковое целое в сомах.
+      Итоговая цена: variant.price + sum(selected options.price_adjustment)
+      Реализуется в Phase 7 (Order Engine полный рефакторинг).
+      CHECK: price_adjustment >= -1 000 000 (защита от абсурдных скидок).
+
+    Tenant-изоляция:
+      ModifierOption → modifier_group_id → ModifierGroup → product_id → Product.restaurant_id
+
+    Миграция: 0014_phase2_menu_engine.py
+    """
+    __tablename__ = "modifier_options"
+    __table_args__ = (
+        CheckConstraint(
+            "price_adjustment >= -1000000",
+            name="ck_modifier_options_price_adjustment_range",
+        ),
+        Index("ix_modifier_options_group_id", "modifier_group_id"),
+        Index(
+            "ix_modifier_options_group_active_sort",
+            "modifier_group_id", "is_active", "sort_order",
+        ),
+    )
+
+    id                = Column(BigInteger, primary_key=True)
+    modifier_group_id = Column(
+        BigInteger,
+        ForeignKey("modifier_groups.id", ondelete="CASCADE"),
+        nullable=False,
+        index=False,  # covered by ix_modifier_options_group_id above
+    )
+    name             = Column(String(255), nullable=False)
+    # price_adjustment: надбавка (> 0) или скидка (< 0) в сомах. 0 = бесплатно.
+    price_adjustment = Column(Integer, default=0, nullable=False, server_default="0")
+    sort_order       = Column(Integer, default=0, nullable=False, server_default="0")
+    is_active        = Column(Boolean, default=True, nullable=False, server_default="true")
+    created_at       = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
+    updated_at       = Column(
+        TIMESTAMP(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    group = relationship("ModifierGroup", back_populates="options", lazy="select")
+
+    def __repr__(self) -> str:
+        return (
+            f"<ModifierOption id={self.id} name={self.name!r} "
+            f"price_adjustment={self.price_adjustment}>"
+        )
 
 
 # ──────────────────────────────────────────
