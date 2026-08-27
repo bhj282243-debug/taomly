@@ -1090,3 +1090,34 @@ class TableCreateResponse(BaseModel):
     ok:           bool
     id:           int
     table_number: str
+
+
+# ──────────────────────────────────────────
+# PRODUCT VARIANT SCHEMAS  (S2-3)
+# ──────────────────────────────────────────
+
+class VariantCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    price: int = Field(..., ge=0)
+    sort_order: int = Field(0, ge=0)
+    is_active: bool = True
+
+
+class VariantUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    price: Optional[int] = Field(None, ge=0)
+    sort_order: Optional[int] = Field(None, ge=0)
+    is_active: Optional[bool] = None
+
+
+class VariantResponse(BaseModel):
+    id:         int
+    product_id: int
+    name:       str
+    price:      int
+    sort_order: int
+    is_active:  bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
