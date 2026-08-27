@@ -34,7 +34,7 @@ from auth import get_current_restaurant_admin
 from config import settings
 from limiter import limiter
 from database import get_db
-from models import Category, Location, Product, ProductVariant, Restaurant, Subscription, SubscriptionPlan, UsageEvent
+from models import Category, Location, ModifierGroup, ModifierOption, Product, ProductVariant, Restaurant, Subscription, SubscriptionPlan, UsageEvent
 from sqlalchemy import func
 from schemas import (
     CategoryResponse,
@@ -46,6 +46,12 @@ from schemas import (
     VariantCreate,
     VariantUpdate,
     VariantResponse,
+    ModifierGroupCreate,
+    ModifierGroupUpdate,
+    ModifierGroupResponse,
+    ModifierOptionCreate,
+    ModifierOptionUpdate,
+    ModifierOptionResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -927,4 +933,395 @@ def delete_variant(
     logger.info(
         "Вариант удалён: variant_id=%s restaurant_id=%s",
         variant_id, restaurant.id,
+    )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# S2-4: MODIFIER GROUP CRUD
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ──────────────────────────────────────────
+# POST /product/{product_id}/modifier-groups/ — создать группу (S2-4)
+# ──────────────────────────────────────────
+@router.post(
+    "/product/{product_id}/modifier-groups/",
+    response_model=ModifierGroupResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_modifier_group(
+    product_id: int,
+    data: ModifierGroupCreate,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Создаёт ModifierGroup для продукта.
+    Tenant-изоляция P0: проверка Product.restaurant_id == JWT restaurant_id.
+    """
+    product = (
+        db.query(Product)
+        .filter(Product.id == product_id, Product.restaurant_id == restaurant.id)
+        .first()
+    )
+    if not product:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Продукт не найден")
+
+    group = ModifierGroup(
+        product_id=product_id,
+        name=data.name,
+        min_selections=data.min_selections,
+        max_selections=data.max_selections,
+        sort_order=data.sort_order,
+        is_active=data.is_active,
+    )
+    db.add(group)
+    try:
+        db.commit()
+        db.refresh(group)
+    except Exception:
+        logger.exception("Ошибка при создании modifier group: product_id=%s", product_id)
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при создании группы модификаторов",
+        )
+
+    logger.info(
+        "ModifierGroup создана: group_id=%s product_id=%s restaurant_id=%s",
+        group.id, product_id, restaurant.id,
+    )
+    return group
+
+
+# ──────────────────────────────────────────
+# GET /product/{product_id}/modifier-groups — список групп (S2-4)
+# ──────────────────────────────────────────
+@router.get(
+    "/product/{product_id}/modifier-groups",
+    response_model=List[ModifierGroupResponse],
+)
+def list_modifier_groups(
+    product_id: int,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Возвращает ModifierGroup продукта.
+    Tenant-изоляция P0: проверка Product.restaurant_id == JWT restaurant_id.
+    """
+    product = (
+        db.query(Product)
+        .filter(Product.id == product_id, Product.restaurant_id == restaurant.id)
+        .first()
+    )
+    if not product:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Продукт не найден")
+
+    groups = (
+        db.query(ModifierGroup)
+        .filter(ModifierGroup.product_id == product_id)
+        .order_by(ModifierGroup.sort_order.asc(), ModifierGroup.id.asc())
+        .all()
+    )
+    return groups
+
+
+# ──────────────────────────────────────────
+# PATCH /modifier-group/{group_id} — обновить группу (S2-4)
+# ──────────────────────────────────────────
+@router.patch("/modifier-group/{group_id}", response_model=ModifierGroupResponse)
+def update_modifier_group(
+    group_id: int,
+    data: ModifierGroupUpdate,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Обновляет ModifierGroup.
+    Tenant-изоляция P0: ModifierGroup → Product → restaurant_id.
+    После PATCH итоговые min/max обязаны удовлетворять инварианту.
+    """
+    group = (
+        db.query(ModifierGroup)
+        .join(Product, ModifierGroup.product_id == Product.id)
+        .filter(
+            ModifierGroup.id == group_id,
+            Product.restaurant_id == restaurant.id,
+        )
+        .first()
+    )
+    if not group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Группа не найдена")
+
+    new_min = data.min_selections if data.min_selections is not None else group.min_selections
+    new_max = data.max_selections if data.max_selections is not None else group.max_selections
+
+    if new_min > new_max:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="min_selections не может быть больше max_selections",
+        )
+
+    if data.name is not None:
+        group.name = data.name
+    if data.min_selections is not None:
+        group.min_selections = data.min_selections
+    if data.max_selections is not None:
+        group.max_selections = data.max_selections
+    if data.sort_order is not None:
+        group.sort_order = data.sort_order
+    if data.is_active is not None:
+        group.is_active = data.is_active
+
+    try:
+        db.commit()
+        db.refresh(group)
+    except Exception:
+        logger.exception("Ошибка при обновлении modifier group: group_id=%s", group_id)
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при обновлении группы модификаторов",
+        )
+
+    logger.info(
+        "ModifierGroup обновлена: group_id=%s restaurant_id=%s",
+        group_id, restaurant.id,
+    )
+    return group
+
+
+# ──────────────────────────────────────────
+# DELETE /modifier-group/{group_id} — удалить группу (S2-4)
+# ──────────────────────────────────────────
+@router.delete("/modifier-group/{group_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_modifier_group(
+    group_id: int,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Удаляет ModifierGroup (и все его ModifierOption через FK CASCADE).
+    Tenant-изоляция P0: ModifierGroup → Product → restaurant_id.
+    """
+    group = (
+        db.query(ModifierGroup)
+        .join(Product, ModifierGroup.product_id == Product.id)
+        .filter(
+            ModifierGroup.id == group_id,
+            Product.restaurant_id == restaurant.id,
+        )
+        .first()
+    )
+    if not group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Группа не найдена")
+
+    try:
+        db.delete(group)
+        db.commit()
+    except Exception:
+        logger.exception("Ошибка при удалении modifier group: group_id=%s", group_id)
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при удалении группы модификаторов",
+        )
+
+    logger.info(
+        "ModifierGroup удалена: group_id=%s restaurant_id=%s",
+        group_id, restaurant.id,
+    )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# S2-4: MODIFIER OPTION CRUD
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ──────────────────────────────────────────
+# POST /modifier-group/{group_id}/options/ — создать опцию (S2-4)
+# ──────────────────────────────────────────
+@router.post(
+    "/modifier-group/{group_id}/options/",
+    response_model=ModifierOptionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_modifier_option(
+    group_id: int,
+    data: ModifierOptionCreate,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Создаёт ModifierOption.
+    Tenant-изоляция P0: ModifierGroup → Product → restaurant_id.
+    """
+    group = (
+        db.query(ModifierGroup)
+        .join(Product, ModifierGroup.product_id == Product.id)
+        .filter(
+            ModifierGroup.id == group_id,
+            Product.restaurant_id == restaurant.id,
+        )
+        .first()
+    )
+    if not group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Группа не найдена")
+
+    option = ModifierOption(
+        modifier_group_id=group_id,
+        name=data.name,
+        price_adjustment=data.price_adjustment,
+        sort_order=data.sort_order,
+        is_active=data.is_active,
+    )
+    db.add(option)
+    try:
+        db.commit()
+        db.refresh(option)
+    except Exception:
+        logger.exception("Ошибка при создании modifier option: group_id=%s", group_id)
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при создании опции модификатора",
+        )
+
+    logger.info(
+        "ModifierOption создана: option_id=%s group_id=%s restaurant_id=%s",
+        option.id, group_id, restaurant.id,
+    )
+    return option
+
+
+# ──────────────────────────────────────────
+# GET /modifier-group/{group_id}/options — список опций (S2-4)
+# ──────────────────────────────────────────
+@router.get(
+    "/modifier-group/{group_id}/options",
+    response_model=List[ModifierOptionResponse],
+)
+def list_modifier_options(
+    group_id: int,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Возвращает ModifierOption группы.
+    Tenant-изоляция P0: ModifierGroup → Product → restaurant_id.
+    """
+    group = (
+        db.query(ModifierGroup)
+        .join(Product, ModifierGroup.product_id == Product.id)
+        .filter(
+            ModifierGroup.id == group_id,
+            Product.restaurant_id == restaurant.id,
+        )
+        .first()
+    )
+    if not group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Группа не найдена")
+
+    options = (
+        db.query(ModifierOption)
+        .filter(ModifierOption.modifier_group_id == group_id)
+        .order_by(ModifierOption.sort_order.asc(), ModifierOption.id.asc())
+        .all()
+    )
+    return options
+
+
+# ──────────────────────────────────────────
+# PATCH /modifier-option/{option_id} — обновить опцию (S2-4)
+# ──────────────────────────────────────────
+@router.patch("/modifier-option/{option_id}", response_model=ModifierOptionResponse)
+def update_modifier_option(
+    option_id: int,
+    data: ModifierOptionUpdate,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Обновляет ModifierOption.
+    Tenant-изоляция P0: ModifierOption → ModifierGroup → Product → restaurant_id.
+    """
+    option = (
+        db.query(ModifierOption)
+        .join(ModifierGroup, ModifierOption.modifier_group_id == ModifierGroup.id)
+        .join(Product, ModifierGroup.product_id == Product.id)
+        .filter(
+            ModifierOption.id == option_id,
+            Product.restaurant_id == restaurant.id,
+        )
+        .first()
+    )
+    if not option:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Опция не найдена")
+
+    if data.name is not None:
+        option.name = data.name
+    if data.price_adjustment is not None:
+        option.price_adjustment = data.price_adjustment
+    if data.sort_order is not None:
+        option.sort_order = data.sort_order
+    if data.is_active is not None:
+        option.is_active = data.is_active
+
+    try:
+        db.commit()
+        db.refresh(option)
+    except Exception:
+        logger.exception("Ошибка при обновлении modifier option: option_id=%s", option_id)
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при обновлении опции модификатора",
+        )
+
+    logger.info(
+        "ModifierOption обновлена: option_id=%s restaurant_id=%s",
+        option_id, restaurant.id,
+    )
+    return option
+
+
+# ──────────────────────────────────────────
+# DELETE /modifier-option/{option_id} — удалить опцию (S2-4)
+# ──────────────────────────────────────────
+@router.delete("/modifier-option/{option_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_modifier_option(
+    option_id: int,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Удаляет ModifierOption.
+    Tenant-изоляция P0: ModifierOption → ModifierGroup → Product → restaurant_id.
+    """
+    option = (
+        db.query(ModifierOption)
+        .join(ModifierGroup, ModifierOption.modifier_group_id == ModifierGroup.id)
+        .join(Product, ModifierGroup.product_id == Product.id)
+        .filter(
+            ModifierOption.id == option_id,
+            Product.restaurant_id == restaurant.id,
+        )
+        .first()
+    )
+    if not option:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Опция не найдена")
+
+    try:
+        db.delete(option)
+        db.commit()
+    except Exception:
+        logger.exception("Ошибка при удалении modifier option: option_id=%s", option_id)
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при удалении опции модификатора",
+        )
+
+    logger.info(
+        "ModifierOption удалена: option_id=%s restaurant_id=%s",
+        option_id, restaurant.id,
     )
