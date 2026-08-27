@@ -34,7 +34,7 @@ from auth import get_current_restaurant_admin
 from config import settings
 from limiter import limiter
 from database import get_db
-from models import Category, Location, Product, Restaurant, Subscription, SubscriptionPlan, UsageEvent
+from models import Category, Location, Product, ProductVariant, Restaurant, Subscription, SubscriptionPlan, UsageEvent
 from sqlalchemy import func
 from schemas import (
     CategoryResponse,
@@ -43,6 +43,9 @@ from schemas import (
     ProductUpdate,
     CategoryCreate,
     CategoryUpdate,
+    VariantCreate,
+    VariantUpdate,
+    VariantResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -718,3 +721,210 @@ def delete_product(
     # Удаляем фото из R2 после успешного commit
     if photo_url:
         _delete_r2_photo(photo_url)
+
+
+# ──────────────────────────────────────────
+# POST /product/{product_id}/variants/ — создать вариант (S2-3)
+# ──────────────────────────────────────────
+@router.post(
+    "/product/{product_id}/variants/",
+    response_model=VariantResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_variant(
+    product_id: int,
+    data: VariantCreate,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Создаёт вариант продукта.
+
+    Tenant-изоляция P0: product_id проверяется на принадлежность ресторану из JWT.
+    Нельзя создать вариант для продукта чужого ресторана.
+    """
+    product = db.query(Product).filter(
+        Product.id == product_id,
+        Product.restaurant_id == restaurant.id,
+    ).first()
+    if not product:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Продукт не найден",
+        )
+
+    variant = ProductVariant(
+        product_id=product_id,
+        name=data.name,
+        price=data.price,
+        sort_order=data.sort_order,
+        is_active=data.is_active,
+    )
+    db.add(variant)
+
+    try:
+        db.commit()
+        db.refresh(variant)
+    except Exception:
+        logger.exception(
+            "Ошибка при создании варианта: product_id=%s name=%s",
+            product_id, data.name,
+        )
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при создании варианта",
+        )
+
+    logger.info(
+        "Вариант создан: variant_id=%s product_id=%s restaurant_id=%s",
+        variant.id, product_id, restaurant.id,
+    )
+    return variant
+
+
+# ──────────────────────────────────────────
+# GET /product/{product_id}/variants — список вариантов (S2-3)
+# ──────────────────────────────────────────
+@router.get(
+    "/product/{product_id}/variants",
+    response_model=List[VariantResponse],
+)
+def list_variants(
+    product_id: int,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Возвращает варианты продукта.
+
+    Tenant-изоляция P0: продукт проверяется на принадлежность ресторану из JWT.
+    Сортировка: sort_order ASC, id ASC.
+    """
+    product = db.query(Product).filter(
+        Product.id == product_id,
+        Product.restaurant_id == restaurant.id,
+    ).first()
+    if not product:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Продукт не найден",
+        )
+
+    variants = (
+        db.query(ProductVariant)
+        .filter(ProductVariant.product_id == product_id)
+        .order_by(ProductVariant.sort_order.asc(), ProductVariant.id.asc())
+        .all()
+    )
+    return variants
+
+
+# ──────────────────────────────────────────
+# PATCH /variant/{variant_id} — обновить вариант (S2-3)
+# ──────────────────────────────────────────
+@router.patch("/variant/{variant_id}", response_model=VariantResponse)
+def update_variant(
+    variant_id: int,
+    data: VariantUpdate,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Обновляет вариант продукта.
+
+    Tenant-изоляция P0: variant загружается через JOIN с Product,
+    проверяя Product.restaurant_id == JWT restaurant_id.
+    Нельзя изменить вариант продукта чужого ресторана.
+    """
+    variant = (
+        db.query(ProductVariant)
+        .join(Product, ProductVariant.product_id == Product.id)
+        .filter(
+            ProductVariant.id == variant_id,
+            Product.restaurant_id == restaurant.id,
+        )
+        .first()
+    )
+    if not variant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Вариант не найден",
+        )
+
+    if data.name is not None:
+        variant.name = data.name
+    if data.price is not None:
+        variant.price = data.price
+    if data.sort_order is not None:
+        variant.sort_order = data.sort_order
+    if data.is_active is not None:
+        variant.is_active = data.is_active
+
+    try:
+        db.commit()
+        db.refresh(variant)
+    except Exception:
+        logger.exception(
+            "Ошибка при обновлении варианта: variant_id=%s", variant_id
+        )
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при обновлении варианта",
+        )
+
+    logger.info(
+        "Вариант обновлён: variant_id=%s restaurant_id=%s",
+        variant_id, restaurant.id,
+    )
+    return variant
+
+
+# ──────────────────────────────────────────
+# DELETE /variant/{variant_id} — удалить вариант (S2-3)
+# ──────────────────────────────────────────
+@router.delete("/variant/{variant_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_variant(
+    variant_id: int,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Удаляет вариант продукта.
+
+    Tenant-изоляция P0: variant загружается через JOIN с Product,
+    проверяя Product.restaurant_id == JWT restaurant_id.
+    """
+    variant = (
+        db.query(ProductVariant)
+        .join(Product, ProductVariant.product_id == Product.id)
+        .filter(
+            ProductVariant.id == variant_id,
+            Product.restaurant_id == restaurant.id,
+        )
+        .first()
+    )
+    if not variant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Вариант не найден",
+        )
+
+    try:
+        db.delete(variant)
+        db.commit()
+    except Exception:
+        logger.exception(
+            "Ошибка при удалении варианта: variant_id=%s", variant_id
+        )
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при удалении варианта",
+        )
+
+    logger.info(
+        "Вариант удалён: variant_id=%s restaurant_id=%s",
+        variant_id, restaurant.id,
+    )
