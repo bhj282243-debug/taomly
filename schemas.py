@@ -1121,3 +1121,74 @@ class VariantResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ──────────────────────────────────────────
+# MODIFIER GROUP SCHEMAS  (S2-4)
+# ──────────────────────────────────────────
+
+class ModifierGroupCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    min_selections: int = Field(0, ge=0)
+    max_selections: int = Field(1, ge=1)
+    sort_order: int = Field(0, ge=0)
+    is_active: bool = True
+
+    @model_validator(mode="after")
+    def check_min_lte_max(self) -> "ModifierGroupCreate":
+        if self.min_selections > self.max_selections:
+            raise ValueError("min_selections не может быть больше max_selections")
+        return self
+
+
+class ModifierGroupUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    min_selections: Optional[int] = Field(None, ge=0)
+    max_selections: Optional[int] = Field(None, ge=1)
+    sort_order: Optional[int] = Field(None, ge=0)
+    is_active: Optional[bool] = None
+
+
+class ModifierGroupResponse(BaseModel):
+    id:             int
+    product_id:     int
+    name:           str
+    min_selections: int
+    max_selections: int
+    sort_order:     int
+    is_active:      bool
+    created_at:     datetime
+    updated_at:     datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ──────────────────────────────────────────
+# MODIFIER OPTION SCHEMAS  (S2-4)
+# ──────────────────────────────────────────
+
+class ModifierOptionCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    price_adjustment: int = Field(0, ge=-1000000)
+    sort_order: int = Field(0, ge=0)
+    is_active: bool = True
+
+
+class ModifierOptionUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    price_adjustment: Optional[int] = Field(None, ge=-1000000)
+    sort_order: Optional[int] = Field(None, ge=0)
+    is_active: Optional[bool] = None
+
+
+class ModifierOptionResponse(BaseModel):
+    id:                  int
+    modifier_group_id:   int
+    name:                str
+    price_adjustment:    int
+    sort_order:          int
+    is_active:           bool
+    created_at:          datetime
+    updated_at:          datetime
+
+    model_config = ConfigDict(from_attributes=True)
