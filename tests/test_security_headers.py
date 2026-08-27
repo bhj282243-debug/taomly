@@ -206,6 +206,26 @@ class TestCORS:
         exposed = resp.headers.get("access-control-expose-headers", "").lower()
         assert "authorization" not in exposed
 
+    def test_cors5_x_location_id_in_allow_headers(self):
+        """CORS-5: X-Location-Id разрешён в preflight (нужен для create_order/create_reservation из PWA).
+
+        Regression: X-Location-Id отсутствовал в allow_headers до этого фикса.
+        Без него браузерный/PWA клиент получал CORS rejection при POST /api/orders/create.
+        """
+        resp = client_no_db.options(
+            "/api/orders/create",
+            headers={
+                "Origin": "https://example.com",
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "X-Location-Id,X-Restaurant-Id,Content-Type",
+            },
+        )
+        assert resp.status_code in (200, 204)
+        allow_headers = resp.headers.get("access-control-allow-headers", "").lower()
+        assert "x-location-id" in allow_headers, (
+            f"X-Location-Id отсутствует в Access-Control-Allow-Headers: {allow_headers!r}"
+        )
+
 
 # ═══════════════════════════════════════════════════════════════════
 # RATE LIMITING
