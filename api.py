@@ -398,6 +398,7 @@ app.add_middleware(
         "Content-Type",
         "X-Telegram-Init-Data",
         "X-Restaurant-Id",
+        "X-Location-Id",
     ],
 )
 
