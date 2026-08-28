@@ -44,7 +44,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from auth import TelegramUser, get_current_restaurant_admin, get_telegram_user
 from database import get_db
-from models import Location, Order, OrderItem, Product, Restaurant, RestaurantTable, Subscription, SubscriptionPlan, UsageEvent, User
+from models import Location, Order, OrderItem, Product, ProductVariant, Restaurant, RestaurantTable, Subscription, SubscriptionPlan, UsageEvent, User
 from schemas import OrderCreate, OrderResponse, OrderStatusUpdate
 import handlers
 from limiter import limiter
@@ -240,6 +240,8 @@ def create_order(
     order_items_data: list[dict] = []
 
     for item in data.items:
+        # ── Tenant-изолированный поиск продукта ──────────────────────────
+        # restaurant.id из JWT — нельзя подменить через product_id из другого ресторана.
         product = db.query(Product).filter(
             Product.id == item.product_id,
             Product.restaurant_id == restaurant.id,
@@ -256,13 +258,89 @@ def create_order(
                 detail=f"Продукт «{product.name}» сейчас недоступен",
             )
 
-        total += product.price * item.quantity
-        order_items_data.append({
-            "product_id": product.id,
-            "name":       product.name,
-            "price":      product.price,
-            "quantity":   item.quantity,
-        })
+        # ── S2-5: Определяем наличие активных вариантов у продукта ───────
+        # Загружаем только активные варианты — неактивные не считаются "вариантами"
+        # для целей обязательности выбора.
+        active_variants = [v for v in product.variants if v.is_active]
+        has_variants = len(active_variants) > 0
+
+        # ── CASE A: Продукт без вариантов (legacy) ────────────────────────
+        # product.price НЕ NULL, variant_id == None → используем product.price.
+        if not has_variants:
+            if product.price is None:
+                # Аномалия: продукт без вариантов и без цены — некорректное состояние.
+                # Защищаемся явно, чтобы не получить TypeError при умножении.
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Продукт «{product.name}» не имеет цены и вариантов. "
+                        "Обратитесь к администратору ресторана."
+                    ),
+                )
+            # variant_id игнорируется если у продукта нет активных вариантов
+            item_price = product.price
+            order_items_data.append({
+                "product_id":   product.id,
+                "name":         product.name,
+                "variant_id":   None,
+                "variant_name": None,
+                "price":        item_price,
+                "quantity":     item.quantity,
+            })
+            total += item_price * item.quantity
+
+        # ── CASE B/C: Продукт с активными вариантами ─────────────────────
+        else:
+            # CASE B: variant_id не передан — обязательное поле
+            if item.variant_id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Продукт «{product.name}» имеет варианты. "
+                        "Выберите вариант продукта (variant_id)."
+                    ),
+                )
+
+            # CASE C: variant_id передан — полная валидация
+            # C.1: Variant существует И принадлежит именно этому продукту.
+            # Двойной фильтр: variant_id + product_id — защита от cross-product injection.
+            # (product_id=A, variant_id=variant_of_B → rejected)
+            variant = db.query(ProductVariant).filter(
+                ProductVariant.id == item.variant_id,
+                ProductVariant.product_id == product.id,  # C.2: tenant chain
+            ).first()
+
+            if not variant:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Вариант {item.variant_id} не найден "
+                        f"для продукта «{product.name}»."
+                    ),
+                )
+
+            # C.3: Variant должен быть активным
+            if not variant.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Вариант «{variant.name}» продукта «{product.name}» "
+                        "недоступен для заказа."
+                    ),
+                )
+
+            # C.4: SERVER-SIDE PRICE — цена всегда из БД, никогда от клиента.
+            # variant.price — доверенный источник. Snapshot'ится в OrderItem.price.
+            item_price = variant.price
+            order_items_data.append({
+                "product_id":   product.id,
+                "name":         product.name,         # snapshot имени продукта
+                "variant_id":   variant.id,            # аналитический FK
+                "variant_name": variant.name,          # snapshot имени варианта
+                "price":        item_price,            # snapshot цены варианта
+                "quantity":     item.quantity,
+            })
+            total += item_price * item.quantity
 
     # S1-7: min_order_amount и currency берутся из Location (source of truth).
     # location уже resolved выше и tenant-изолирован.
