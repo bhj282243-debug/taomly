@@ -212,7 +212,8 @@ class ProductResponse(BaseModel):
     id: int
     name: str
     description: Optional[str] = None
-    price: int
+    # S2-5: nullable — None для variant-продуктов (цена на уровне variants).
+    price: Optional[int] = None
     photo_url: Optional[str] = None
     is_available: bool
     sort_order: int
@@ -243,6 +244,9 @@ class CategoryResponse(BaseModel):
 class OrderItemCreate(BaseModel):
     product_id: int = Field(..., gt=0)
     quantity: int = Field(..., ge=1, le=99)
+    # S2-5: variant_id — опциональный. Обязателен только если у продукта есть варианты.
+    # Для legacy-продуктов без вариантов должен быть None/отсутствовать.
+    variant_id: Optional[int] = Field(None, gt=0)
 
 
 def _validate_coordinate(value: Optional[float], min_val: float, max_val: float, name: str) -> Optional[float]:
@@ -306,6 +310,8 @@ class OrderCreate(BaseModel):
 class OrderItemResponse(BaseModel):
     id: int
     name: str
+    # S2-5: variant_name — snapshot имени варианта. NULL для legacy-заказов.
+    variant_name: Optional[str] = None
     price: int
     quantity: int
 
@@ -582,7 +588,10 @@ class RestaurantAdminLogin(BaseModel):
 class ProductCreate(BaseModel):
     category_id: int = Field(..., gt=0)
     name: str = Field(..., min_length=1, max_length=255)
-    price: int = Field(..., gt=0)
+    # S2-5: price nullable — None для продуктов с вариантами.
+    # Если передана — должна быть >= 0. Отрицательная цена недопустима.
+    # Примечание: продукт без price должен иметь варианты — иначе заказ невозможен.
+    price: Optional[int] = Field(None, ge=0)
     description: Optional[str] = Field(None, max_length=1000)
     photo_url: Optional[str] = None
     is_available: bool = True
@@ -741,7 +750,8 @@ class ProductPublicResponse(BaseModel):
     id:            int
     name:          str
     description:   Optional[str] = None
-    price:         int
+    # S2-5: nullable — None для variant-продуктов.
+    price:         Optional[int] = None
     photo_url:     Optional[str] = None
     is_available:  bool
     sort_order:    int
