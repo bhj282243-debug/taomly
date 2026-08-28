@@ -470,7 +470,7 @@ def test_public_menu_legacy_product_has_price_and_empty_variants(
     client, restaurant, product_no_variants
 ):
     """TEST 19: Legacy продукт → price=int, variants=[]."""
-    resp = client.get(f"/api/v1/restaurants/{restaurant.slug}/menu")
+    resp = client.get(f"/api/v1/restaurants/{restaurant.slug}")
     assert resp.status_code == 200
     data = resp.json()
     all_products = [
@@ -488,7 +488,7 @@ def test_public_menu_variant_product_has_null_price_and_variants(
     client, restaurant, product_with_variants, variant_small, variant_large
 ):
     """TEST 20: Variant продукт → price=null, variants=[{id,name,price}]."""
-    resp = client.get(f"/api/v1/restaurants/{restaurant.slug}/menu")
+    resp = client.get(f"/api/v1/restaurants/{restaurant.slug}")
     assert resp.status_code == 200
     data = resp.json()
     all_products = [
@@ -508,7 +508,7 @@ def test_public_menu_inactive_variants_excluded(
     client, restaurant, product_with_variants, variant_small, variant_inactive
 ):
     """TEST 21: Неактивные варианты не попадают в public menu."""
-    resp = client.get(f"/api/v1/restaurants/{restaurant.slug}/menu")
+    resp = client.get(f"/api/v1/restaurants/{restaurant.slug}")
     assert resp.status_code == 200
     data = resp.json()
     all_products = [
