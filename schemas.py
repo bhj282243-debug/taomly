@@ -746,6 +746,17 @@ class RestaurantSettingsUpdateResponse(RestaurantSettingsResponse):
     ok: bool = True
 
 
+# S2-5: Минимальный public response для варианта.
+# Только активные варианты попадают сюда (фильтрация в restaurants.py).
+class VariantPublicResponse(BaseModel):
+    id:         int
+    name:       str
+    price:      int
+    sort_order: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ProductPublicResponse(BaseModel):
     id:            int
     name:          str
@@ -760,6 +771,8 @@ class ProductPublicResponse(BaseModel):
     is_spicy:      bool
     is_chef_choice: bool
     is_popular:    bool
+    # S2-5: активные варианты продукта. Пустой список для legacy-продуктов.
+    variants:      List[VariantPublicResponse] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 
