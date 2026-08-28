@@ -385,6 +385,46 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 .photo-url-row{display:flex;align-items:center;gap:6px;margin-top:6px;}
 .photo-url-label{font-size:10px;color:var(--iv4);flex-shrink:0;letter-spacing:.3px;}
 .photo-url-val{font-size:10px;color:var(--iv3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+
+/* ══ VARIANTS SECTION (S2-6) ══ */
+.variants-section{margin-top:16px;border-top:1px solid rgba(247,245,240,0.07);padding-top:16px;}
+.variants-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.variants-title{font-size:11px;font-weight:600;color:var(--iv3);text-transform:uppercase;letter-spacing:1.1px;}
+.variants-add-btn{padding:7px 14px;background:rgba(212,175,55,0.08);color:var(--g2);border:1px solid var(--gl);border-radius:100px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.3px;display:flex;align-items:center;gap:5px;transition:background .15s;}
+.variants-add-btn:active{background:rgba(212,175,55,0.15);}
+.variants-add-btn svg{width:13px;height:13px;stroke:currentColor;stroke-width:2.2;fill:none;}
+.variant-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
+.variant-item{background:rgba(5,5,5,0.5);border:1px solid rgba(247,245,240,0.07);border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:8px;}
+.variant-item-info{flex:1;min-width:0;}
+.variant-item-name{font-size:13px;font-weight:500;color:var(--ivory);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.variant-item-price{font-family:'Cormorant Garamond',serif;font-size:13px;color:var(--g2);margin-top:1px;}
+.variant-item-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:100px;letter-spacing:.4px;flex-shrink:0;}
+.variant-badge-active{background:rgba(46,125,50,0.15);color:#66BB6A;border:1px solid rgba(46,125,50,0.2);}
+.variant-badge-inactive{background:rgba(74,72,68,0.3);color:var(--iv3);border:1px solid rgba(74,72,68,0.25);}
+.variant-item-actions{display:flex;gap:5px;flex-shrink:0;}
+.variant-icon-btn{width:30px;height:30px;border-radius:8px;border:1px solid rgba(247,245,240,0.08);background:rgba(247,245,240,0.04);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--iv3);transition:background .15s,color .15s;}
+.variant-icon-btn:active{background:var(--stone);color:var(--g2);}
+.variant-icon-btn.del:active{background:rgba(176,28,28,0.15);color:#EF9A9A;}
+.variant-icon-btn svg{width:13px;height:13px;stroke:currentColor;stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.variants-empty{font-size:12px;color:var(--iv4);padding:8px 0 4px;letter-spacing:.2px;}
+.variants-loading{font-size:12px;color:var(--iv4);padding:8px 0;display:flex;align-items:center;gap:8px;}
+.variants-loading .spinner{width:14px;height:14px;border-width:1.5px;margin:0;}
+.price-mode-hint{font-size:11.5px;color:var(--iv3);padding:8px 12px;border-radius:10px;background:rgba(212,175,55,0.05);border:1px solid rgba(212,175,55,0.1);margin-bottom:12px;line-height:1.5;}
+.price-null-hint{font-size:11.5px;color:var(--iv4);padding:8px 12px;border-radius:10px;background:rgba(247,245,240,0.03);border:1px solid rgba(247,245,240,0.07);margin-bottom:12px;line-height:1.5;}
+
+/* Variant form inline */
+.variant-form{background:rgba(5,5,5,0.4);border:1px solid rgba(212,175,55,0.12);border-radius:14px;padding:14px;margin-top:8px;}
+.variant-form-title{font-size:11px;font-weight:600;color:var(--g2);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;}
+.variant-form-row{display:flex;gap:8px;}
+.variant-form-row .modal-input{flex:1;margin-bottom:8px;padding:12px 14px;font-size:13px;}
+.variant-form .modal-input{margin-bottom:8px;padding:12px 14px;font-size:13px;}
+.variant-form-toggle{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.variant-form-toggle-label{font-size:13px;color:var(--iv2);}
+.variant-form-btns{display:flex;gap:8px;}
+.variant-form-btn{flex:1;padding:11px;border:none;border-radius:100px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.3px;transition:transform .12s;}
+.variant-form-btn:active{transform:scale(0.97);}
+.variant-form-btn-save{background:var(--gs);color:var(--obs);box-shadow:0 1px 0 rgba(244,232,160,0.25) inset;}
+.variant-form-btn-cancel{background:rgba(247,245,240,0.06);color:var(--iv3);border:1px solid rgba(247,245,240,0.08);}
 </style>
 </head>
 <body>
@@ -670,7 +710,9 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
     <div class="modal-grip"></div>
     <div class="modal-title" data-i18n="admin.modal.edit_product_title">Taomni tahrirlash</div>
     <input class="modal-input" type="text" id="editProductName" data-i18n-placeholder="admin.modal.product_name_placeholder" placeholder="Taom nomi"/>
-    <input class="modal-input" type="number" id="editProductPrice" data-i18n-placeholder="admin.modal.product_price_placeholder" placeholder="Narxi (so'm)"/>
+    <div id="editPriceWrap">
+      <input class="modal-input" type="number" id="editProductPrice" data-i18n-placeholder="admin.modal.product_price_placeholder" placeholder="Narxi (so'm, ixtiyoriy)"/>
+    </div>
     <textarea class="modal-input modal-textarea" id="editProductDesc" data-i18n-placeholder="admin.modal.product_desc_placeholder" placeholder="Tavsif (ixtiyoriy)"></textarea>
     <div class="photo-upload-wrap">
       <div class="photo-preview" id="editPhotoPreview">
@@ -707,6 +749,46 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
       </div>
       <button class="toggle-btn off" id="editProductPopular" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button>
     </div>
+
+    <!-- S2-6: VARIANTS SECTION -->
+    <div class="variants-section">
+      <div class="variants-header">
+        <span class="variants-title">Варианты</span>
+        <button class="variants-add-btn" onclick="_openVariantCreate()">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          Добавить
+        </button>
+      </div>
+      <!-- Подсказка: цена управляется вариантами -->
+      <div class="price-mode-hint" id="priceModeHint" style="display:none">
+        Цена управляется вариантами. Поле «Цена» выше не используется.
+      </div>
+      <!-- Loading -->
+      <div class="variants-loading" id="variantsLoading">
+        <div class="spinner"></div><span style="font-size:12px;color:var(--iv4)">Загрузка...</span>
+      </div>
+      <!-- Список вариантов -->
+      <div class="variant-list" id="variantList"></div>
+      <!-- Inline форма создания/редактирования варианта -->
+      <div class="variant-form" id="variantForm" style="display:none">
+        <div class="variant-form-title" id="vfFormTitle">Новый вариант</div>
+        <input class="modal-input" type="text" id="vfName" placeholder="Название *" maxlength="255"/>
+        <div class="variant-form-row">
+          <input class="modal-input" type="number" id="vfPrice" placeholder="Цена *" min="0" step="100"/>
+          <input class="modal-input" type="number" id="vfSort" placeholder="Порядок" min="0" style="max-width:100px"/>
+        </div>
+        <div class="variant-form-toggle">
+          <span class="variant-form-toggle-label">Активен</span>
+          <button class="toggle-btn on" id="vfActiveBtn" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button>
+        </div>
+        <div class="variant-form-btns">
+          <button class="variant-form-btn variant-form-btn-cancel" onclick="_hideVariantForm()">Отмена</button>
+          <button class="variant-form-btn variant-form-btn-save" onclick="_saveVariantForm()">Сохранить</button>
+        </div>
+      </div>
+    </div>
+    <!-- /S2-6 VARIANTS SECTION -->
+
     <div class="modal-btns">
       <button class="modal-btn modal-btn-cancel" onclick="closeModal('editProductModal')" data-i18n="common.cancel">Bekor</button>
       <button class="modal-btn modal-btn-save" onclick="saveEditProduct()" data-i18n="common.save">Saqlash</button>
@@ -721,7 +803,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
     <div class="modal-title" data-i18n="admin.modal.add_product_title">Yangi taom</div>
     <select class="modal-select" id="newProductCategory"></select>
     <input class="modal-input" type="text" id="newProductName" data-i18n-placeholder="admin.modal.product_name_placeholder" placeholder="Taom nomi"/>
-    <input class="modal-input" type="number" id="newProductPrice" data-i18n-placeholder="admin.modal.product_price_placeholder" placeholder="Narxi (so'm)"/>
+    <input class="modal-input" type="number" id="newProductPrice" placeholder="Narxi (so'm, ixtiyoriy)"/>
     <textarea class="modal-input modal-textarea" id="newProductDesc" data-i18n-placeholder="admin.modal.product_desc_placeholder" placeholder="Tavsif (ixtiyoriy)"></textarea>
     <div class="modal-btns">
       <button class="modal-btn modal-btn-cancel" onclick="closeModal('addProductModal')" data-i18n="common.cancel">Bekor</button>
@@ -1226,6 +1308,48 @@ function renderMenu(){
     else{const e=document.createElement('div');e.className='empty';e.style.padding='12px 0';e.textContent=t('admin.menu.category_empty');block.appendChild(e);}
     content.appendChild(block);
   });
+  // S2-6: фоново загружаем варианты для обновления price display в product rows
+  _loadVariantCountsForMenu();
+}
+
+// S2-6: загружает variantCount для каждого продукта и обновляет row
+async function _loadVariantCountsForMenu(){
+  if(!menuData)return;
+  const allProducts=[];
+  menuData.forEach(cat=>{(cat.products||[]).forEach(p=>allProducts.push(p));});
+  if(!allProducts.length)return;
+  // Параллельно запрашиваем варианты для всех продуктов
+  const fetches=allProducts.map(p=>
+    apiFetch(`${API}/api/menu/product/${p.id}/variants`,{headers:authHeaders()})
+      .then(r=>r.ok?r.json():[])
+      .catch(()=>[])
+  );
+  const results=await Promise.all(fetches);
+  allProducts.forEach((p,i)=>{
+    const variants=results[i]||[];
+    const active=variants.filter(v=>v.is_active);
+    const prices=active.map(v=>v.price);
+    p._variantCount=variants.length;
+    p._variantMin=prices.length?Math.min(...prices):null;
+    p._variantMax=prices.length?Math.max(...prices):null;
+    // Обновляем существующий product-row без полного перерисовки
+    const row=document.getElementById('product-'+p.id);
+    if(row&&variants.length>0){
+      const metaEl=row.querySelector('.product-row-meta');
+      if(metaEl){
+        let priceHtml;
+        if(p._variantMin!==null&&p._variantMax!==null&&p._variantMin!==p._variantMax){
+          priceHtml=`<span class="product-row-price" style="font-size:12px">${fmt(p._variantMin)}–${fmt(p._variantMax)}</span>`;
+        }else if(p._variantMin!==null){
+          priceHtml=`<span class="product-row-price" style="font-size:12px">${fmt(p._variantMin)} · ${variants.length} вар.</span>`;
+        }else{
+          priceHtml=`<span class="product-row-price" style="font-size:12px;color:var(--iv3)">${variants.length} вар.</span>`;
+        }
+        const popularBadge=metaEl.querySelector('.popular-badge');
+        metaEl.innerHTML=priceHtml+(popularBadge?popularBadge.outerHTML:'');
+      }
+    }
+  });
 }
 
 function makeProductRow(p){
@@ -1235,12 +1359,29 @@ function makeProductRow(p){
     ?`<div class="product-row-photo"><img src="${esc(p.photo_url)}" alt="${esc(p.name)}" loading="lazy"></div>`
     :`<div class="product-row-ph"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a4 4 0 0 1 0 8M6 4v16M6 4c0 2.5 2.5 2.5 2.5 5S6 11.5 6 14"/></svg></div>`;
   const popularHtml=p.is_popular?`<span class="popular-badge">${esc(t('admin.menu.popular_badge'))}</span>`:'';
+  // S2-6: price display — variants vs single price
+  let priceHtml;
+  const vc=p._variantCount||0;
+  if(vc>0){
+    // Продукт с вариантами — показываем диапазон или количество
+    if(p._variantMin!=null&&p._variantMax!=null&&p._variantMin!==p._variantMax){
+      priceHtml=`<span class="product-row-price" style="font-size:12px">${fmt(p._variantMin)}–${fmt(p._variantMax)}</span>`;
+    }else if(p._variantMin!=null){
+      priceHtml=`<span class="product-row-price" style="font-size:12px">${fmt(p._variantMin)} · ${vc} вар.</span>`;
+    }else{
+      priceHtml=`<span class="product-row-price" style="font-size:12px;color:var(--iv3)">${vc} вар.</span>`;
+    }
+  }else if(p.price!=null&&p.price!==''&&p.price!==undefined){
+    priceHtml=`<span class="product-row-price">${fmt(p.price)}</span>`;
+  }else{
+    priceHtml=`<span class="product-row-price" style="font-size:11px;color:var(--iv4)">Цена не задана</span>`;
+  }
   div.innerHTML=`
     ${photoHtml}
     <div class="product-row-info">
       <div class="product-row-name">${esc(p.name)}</div>
       <div class="product-row-meta">
-        <span class="product-row-price">${fmt(p.price)}</span>
+        ${priceHtml}
         ${popularHtml}
       </div>
     </div>
@@ -1265,7 +1406,8 @@ function openEditProduct(productId){
   if(!product)return;
   editingProductId=productId;
   document.getElementById('editProductName').value=product.name||'';
-  document.getElementById('editProductPrice').value=product.price||'';
+  // S2-6: price может быть null (product с вариантами)
+  document.getElementById('editProductPrice').value=(product.price!=null?product.price:'');
   document.getElementById('editProductDesc').value=product.description||'';
   // Устанавливаем фото превью
   if(product.photo_url){
@@ -1275,19 +1417,37 @@ function openEditProduct(productId){
   }
   const popBtn=document.getElementById('editProductPopular');
   popBtn.className='toggle-btn '+(product.is_popular?'on':'off');
+  // S2-6: сбросить состояние variant секции
+  _resetVariantSection();
   document.getElementById('editProductModal').classList.add('active');
+  // S2-6: загрузить варианты
+  _loadVariantsForEdit(productId);
 }
 
 async function saveEditProduct(){
   const name=document.getElementById('editProductName').value.trim();
-  const price=parseInt(document.getElementById('editProductPrice').value);
+  const priceRaw=document.getElementById('editProductPrice').value.trim();
   const description=document.getElementById('editProductDesc').value.trim();
   const photo_url=document.getElementById('editProductPhoto').value.trim();
   const is_popular=document.getElementById('editProductPopular').classList.contains('on');
   if(!name){showToast(t('admin.modal.error_name_required'),true);return;}
-  if(!price||price<=0){showToast(t('admin.modal.error_price_required'),true);return;}
+  // S2-6: price необязателен — если пустой, передаём null (продукт с вариантами)
+  // Если задан — должен быть >= 0
+  let price=null;
+  if(priceRaw!==''){
+    price=parseInt(priceRaw);
+    if(isNaN(price)||price<0){showToast('Цена должна быть числом >= 0',true);return;}
+  }
+  // Если нет ни цены, ни вариантов — предупреждаем (но не блокируем)
+  const variantCount=document.getElementById('variantList')?.children?.length||0;
+  if(price===null&&variantCount===0){
+    // Позволяем сохранить, но предупреждаем
+    showToast('Цена не задана — добавьте вариант или укажите цену',false);
+  }
   try{
-    const res=await apiFetch(`${API}/api/menu/product/${editingProductId}`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify({name,price,description:description||null,photo_url:photo_url||null,is_popular})});
+    const body={name,description:description||null,photo_url:photo_url||null,is_popular};
+    if(price!==null)body.price=price;
+    const res=await apiFetch(`${API}/api/menu/product/${editingProductId}`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify(body)});
     if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Xato');}
     closeModal('editProductModal');
     showToast(t('admin.modal.saved'));
@@ -1320,16 +1480,200 @@ function openAddModal(){
 async function saveNewProduct(){
   const categoryId=parseInt(document.getElementById('newProductCategory').value);
   const name=document.getElementById('newProductName').value.trim();
-  const price=parseInt(document.getElementById('newProductPrice').value);
+  const priceRaw=document.getElementById('newProductPrice').value.trim();
   const description=document.getElementById('newProductDesc').value.trim();
   if(!name){showToast(t('admin.modal.error_name_required'),true);return;}
-  if(!price||price<=0){showToast(t('admin.modal.error_price_required'),true);return;}
+  // S2-6: price необязателен — продукт можно создать без цены, добавив варианты позже
+  let price=null;
+  if(priceRaw!==''){
+    price=parseInt(priceRaw);
+    if(isNaN(price)||price<0){showToast('Цена должна быть числом >= 0',true);return;}
+  }
   try{
-    const res=await apiFetch(`${API}/api/menu/product/`,{method:'POST',headers:authHeaders(),body:JSON.stringify({category_id:categoryId,name,price,description:description||null,is_available:true})});
+    const body={category_id:categoryId,name,description:description||null,is_available:true};
+    if(price!==null)body.price=price;
+    const res=await apiFetch(`${API}/api/menu/product/`,{method:'POST',headers:authHeaders(),body:JSON.stringify(body)});
     if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Xato');}
-    closeModal('addProductModal');showToast(t('admin.modal.product_added'));await loadMenu();
+    closeModal('addProductModal');
+    showToast(t('admin.modal.product_added'));
+    await loadMenu();
   }catch(e){showToast(t('admin.common.error_prefix',{msg:e.message}),true);}
 }
+
+// ── VARIANTS (S2-6) ──────────────────────────────────────────────────────────
+// Состояние variant формы
+let _variantFormMode=null; // 'create' | 'edit'
+let _editingVariantId=null;
+let _variantIsActive=true;
+
+function _resetVariantSection(){
+  const list=document.getElementById('variantList');
+  if(list)list.innerHTML='';
+  _hideVariantForm();
+  _variantFormMode=null;
+  _editingVariantId=null;
+  // Показать loading-заглушку
+  const loading=document.getElementById('variantsLoading');
+  if(loading)loading.style.display='flex';
+}
+
+async function _loadVariantsForEdit(productId){
+  const loading=document.getElementById('variantsLoading');
+  const list=document.getElementById('variantList');
+  const priceWrap=document.getElementById('editPriceWrap');
+  const priceModeHint=document.getElementById('priceModeHint');
+  if(loading)loading.style.display='flex';
+  if(list)list.innerHTML='';
+  try{
+    const res=await apiFetch(`${API}/api/menu/product/${productId}/variants`,{headers:authHeaders()});
+    if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Ошибка загрузки вариантов');}
+    const variants=await res.json();
+    if(loading)loading.style.display='none';
+    _renderVariantList(variants);
+    // Показать подсказку по цене
+    if(variants.length>0){
+      if(priceWrap)priceWrap.style.display='none';
+      if(priceModeHint)priceModeHint.style.display='block';
+    }else{
+      if(priceWrap)priceWrap.style.display='block';
+      if(priceModeHint)priceModeHint.style.display='none';
+    }
+  }catch(e){
+    if(loading)loading.style.display='none';
+    if(list)list.innerHTML=`<div class="variants-empty" style="color:#EF9A9A">${esc(e.message)}</div>`;
+  }
+}
+
+function _renderVariantList(variants){
+  const list=document.getElementById('variantList');
+  if(!list)return;
+  if(!variants||variants.length===0){
+    list.innerHTML=`<div class="variants-empty">Вариантов нет — продукт использует единую цену</div>`;
+    return;
+  }
+  list.innerHTML='';
+  variants.forEach(v=>{
+    const item=document.createElement('div');
+    item.className='variant-item';
+    item.id='vitem-'+v.id;
+    const badge=v.is_active
+      ?`<span class="variant-item-badge variant-badge-active">Активен</span>`
+      :`<span class="variant-item-badge variant-badge-inactive">Выкл.</span>`;
+    item.innerHTML=`
+      <div class="variant-item-info">
+        <div class="variant-item-name">${esc(v.name)}</div>
+        <div class="variant-item-price">${fmt(v.price)}</div>
+      </div>
+      ${badge}
+      <div class="variant-item-actions">
+        <button class="variant-icon-btn" onclick="_openVariantEdit(${v.id},'${esc(v.name)}',${v.price},${v.sort_order},${v.is_active})" title="Изменить">
+          <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="variant-icon-btn del" onclick="_deleteVariant(${v.id},'${esc(v.name)}')" title="Удалить">
+          <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>
+      </div>`;
+    list.appendChild(item);
+  });
+}
+
+function _openVariantCreate(){
+  _variantFormMode='create';
+  _editingVariantId=null;
+  _variantIsActive=true;
+  document.getElementById('vfName').value='';
+  document.getElementById('vfPrice').value='';
+  document.getElementById('vfSort').value='0';
+  const activeBtn=document.getElementById('vfActiveBtn');
+  if(activeBtn){activeBtn.className='toggle-btn on';}
+  document.getElementById('vfFormTitle').textContent='Новый вариант';
+  document.getElementById('variantForm').style.display='block';
+  document.getElementById('vfName').focus();
+}
+
+function _openVariantEdit(variantId,name,price,sortOrder,isActive){
+  _variantFormMode='edit';
+  _editingVariantId=variantId;
+  _variantIsActive=isActive;
+  document.getElementById('vfName').value=name;
+  document.getElementById('vfPrice').value=price;
+  document.getElementById('vfSort').value=sortOrder;
+  const activeBtn=document.getElementById('vfActiveBtn');
+  if(activeBtn){activeBtn.className='toggle-btn '+(isActive?'on':'off');}
+  document.getElementById('vfFormTitle').textContent='Редактировать вариант';
+  document.getElementById('variantForm').style.display='block';
+  document.getElementById('vfName').focus();
+}
+
+function _hideVariantForm(){
+  const form=document.getElementById('variantForm');
+  if(form)form.style.display='none';
+  _variantFormMode=null;
+  _editingVariantId=null;
+}
+
+async function _saveVariantForm(){
+  const name=document.getElementById('vfName').value.trim();
+  const priceRaw=document.getElementById('vfPrice').value.trim();
+  const sortRaw=document.getElementById('vfSort').value.trim();
+  const isActive=document.getElementById('vfActiveBtn').classList.contains('on');
+
+  // Validation
+  if(!name){showToast('Название обязательно',true);return;}
+  const price=parseInt(priceRaw);
+  if(priceRaw===''||isNaN(price)||price<0){showToast('Цена: число >= 0',true);return;}
+  const sortOrder=parseInt(sortRaw)||0;
+  if(sortOrder<0){showToast('Порядок: число >= 0',true);return;}
+
+  if(_variantFormMode==='create'){
+    await _createVariant({name,price,sort_order:sortOrder,is_active:isActive});
+  }else if(_variantFormMode==='edit'&&_editingVariantId!=null){
+    await _updateVariant(_editingVariantId,{name,price,sort_order:sortOrder,is_active:isActive});
+  }
+}
+
+async function _createVariant(data){
+  if(!editingProductId)return;
+  try{
+    const res=await apiFetch(`${API}/api/menu/product/${editingProductId}/variants/`,{
+      method:'POST',headers:authHeaders(),body:JSON.stringify(data)
+    });
+    if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Ошибка создания варианта');}
+    _hideVariantForm();
+    showToast('Вариант добавлен');
+    await _loadVariantsForEdit(editingProductId);
+  }catch(e){showToast(e.message,true);}
+}
+
+async function _updateVariant(variantId,data){
+  try{
+    const res=await apiFetch(`${API}/api/menu/variant/${variantId}`,{
+      method:'PATCH',headers:authHeaders(),body:JSON.stringify(data)
+    });
+    if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Ошибка обновления варианта');}
+    _hideVariantForm();
+    showToast('Вариант обновлён');
+    await _loadVariantsForEdit(editingProductId);
+  }catch(e){showToast(e.message,true);}
+}
+
+function _deleteVariant(variantId,variantName){
+  showConfirm(
+    `Удалить вариант «${variantName}»?`,
+    'Это действие нельзя отменить.',
+    async()=>{
+      try{
+        const res=await apiFetch(`${API}/api/menu/variant/${variantId}`,{
+          method:'DELETE',headers:authHeaders()
+        });
+        if(res.status!==204&&!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Ошибка удаления варианта');}
+        showToast('Вариант удалён');
+        await _loadVariantsForEdit(editingProductId);
+      }catch(e){showToast(e.message,true);}
+    }
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 function closeModal(id){document.getElementById(id).classList.remove('active');}
 document.querySelectorAll('.modal-overlay').forEach(overlay=>{
