@@ -327,10 +327,13 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
     )
     _settings_source = _loc if _loc is not None else restaurant
 
+    from models import Product
     categories = (
         db.query(Category)
         .filter(Category.restaurant_id == restaurant.id)
-        .options(joinedload(Category.products))
+        .options(
+            joinedload(Category.products).joinedload(Product.variants)
+        )
         .order_by(Category.sort_order)
         .all()
     )
@@ -373,6 +376,9 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
                         "id": p.id,
                         "name": p.name,
                         "description": p.description,
+                        # S2-5: price nullable для variant-продуктов.
+                        # Legacy: price=int, variants=[].
+                        # Variant: price=null, variants=[{id,name,price},...].
                         "price": p.price,
                         "photo_url": p.photo_url,
                         "is_available": p.is_available,
@@ -382,6 +388,18 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
                         "is_spicy": p.is_spicy,
                         "is_chef_choice": p.is_chef_choice,
                         "is_popular": p.is_popular,
+                        # Public API: только активные варианты.
+                        # Неактивные скрыты от клиента (admin видит все через /menu).
+                        "variants": [
+                            {
+                                "id": v.id,
+                                "name": v.name,
+                                "price": v.price,
+                                "sort_order": v.sort_order,
+                            }
+                            for v in sorted(p.variants, key=lambda x: x.sort_order)
+                            if v.is_active
+                        ],
                     }
                     for p in sorted(cat.products, key=lambda x: x.sort_order)
                     if p.is_available
