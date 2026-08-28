@@ -288,7 +288,8 @@ class Category(Base):
 class Product(Base):
     __tablename__ = "products"
     __table_args__ = (
-        CheckConstraint("price >= 0", name="ck_products_price_nonnegative"),
+        # S2-5: NULL разрешён для variant-продуктов; price >= 0 для legacy-продуктов.
+        CheckConstraint("price IS NULL OR price >= 0", name="ck_products_price_nonneg_or_null"),
         Index("ix_products_restaurant_available_sort", "restaurant_id", "is_available", "sort_order"),
         Index("ix_products_category", "category_id"),
     )
@@ -310,7 +311,9 @@ class Product(Base):
 
     # ЦЕНА: хранится в целых сомах (UZS).
     # Например: price=45000 → 45 000 сум.
-    price        = Column(Integer, nullable=False)
+    # S2-5: nullable — NULL для продуктов с вариантами (цена берётся из ProductVariant).
+    #        NOT NULL для legacy-продуктов без вариантов.
+    price        = Column(Integer, nullable=True)
 
     photo_url    = Column(Text)
     is_available = Column(Boolean, default=True, nullable=False)
