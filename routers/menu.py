@@ -37,6 +37,7 @@ from database import get_db
 from models import Category, Location, ModifierGroup, ModifierOption, Product, ProductVariant, Restaurant, Subscription, SubscriptionPlan, UsageEvent
 from sqlalchemy import func
 from schemas import (
+    CategoryPublicResponse,
     CategoryResponse,
     ProductCreate,
     ProductResponse,
@@ -299,7 +300,7 @@ async def upload_photo(
 # ──────────────────────────────────────────
 # GET /{restaurant_id} — публичное меню (клиент Mini App)
 # ──────────────────────────────────────────
-@router.get("/{restaurant_id}", response_model=List[CategoryResponse])
+@router.get("/{restaurant_id}", response_model=List[CategoryPublicResponse])
 def get_menu(restaurant_id: int, db: Session = Depends(get_db)):
     """
     Возвращает публичное меню ресторана — только доступные продукты.
