@@ -322,10 +322,15 @@ def get_menu(restaurant_id: int, db: Session = Depends(get_db)):
     )
 
     for c in categories:
-        c.products = sorted(
-            [p for p in (c.products or []) if p.is_available],
-            key=lambda p: p.sort_order,
-        )
+        available_products = [p for p in (c.products or []) if p.is_available]
+        # S2-8: фильтруем неактивные modifier_groups и их неактивные options.
+        # joinedload загружает ВСЕ записи — фильтрация в Python до сериализации.
+        for p in available_products:
+            active_groups = [g for g in (p.modifier_groups or []) if g.is_active]
+            for g in active_groups:
+                g.options = [o for o in (g.options or []) if o.is_active]
+            p.modifier_groups = active_groups
+        c.products = sorted(available_products, key=lambda p: p.sort_order)
 
     return [c for c in categories if c.products]
 
