@@ -327,12 +327,16 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
     )
     _settings_source = _loc if _loc is not None else restaurant
 
-    from models import Product
+    from models import ModifierGroup, ModifierOption, Product
     categories = (
         db.query(Category)
         .filter(Category.restaurant_id == restaurant.id)
         .options(
-            joinedload(Category.products).joinedload(Product.variants)
+            joinedload(Category.products)
+            .joinedload(Product.variants),
+            joinedload(Category.products)
+            .joinedload(Product.modifier_groups)
+            .joinedload(ModifierGroup.options),
         )
         .order_by(Category.sort_order)
         .all()
@@ -399,6 +403,29 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
                             }
                             for v in sorted(p.variants, key=lambda x: x.sort_order)
                             if v.is_active
+                        ],
+                        # S2-8: только активные группы с активными опциями.
+                        # Неактивные группы/опции скрыты от клиента.
+                        "modifier_groups": [
+                            {
+                                "id": g.id,
+                                "name": g.name,
+                                "min_selections": g.min_selections,
+                                "max_selections": g.max_selections,
+                                "sort_order": g.sort_order,
+                                "options": [
+                                    {
+                                        "id": o.id,
+                                        "name": o.name,
+                                        "price_adjustment": o.price_adjustment,
+                                        "sort_order": o.sort_order,
+                                    }
+                                    for o in sorted(g.options, key=lambda x: x.sort_order)
+                                    if o.is_active
+                                ],
+                            }
+                            for g in sorted(p.modifier_groups, key=lambda x: x.sort_order)
+                            if g.is_active
                         ],
                     }
                     for p in sorted(cat.products, key=lambda x: x.sort_order)
