@@ -247,6 +247,29 @@ class OrderItemCreate(BaseModel):
     # S2-5: variant_id — опциональный. Обязателен только если у продукта есть варианты.
     # Для legacy-продуктов без вариантов должен быть None/отсутствовать.
     variant_id: Optional[int] = Field(None, gt=0)
+    # S2-8: список id выбранных ModifierOption.
+    # Пустой список → нет модификаторов (backward compatible).
+    # Дубликаты нормализуются: уникальные id (set), порядок не гарантируется.
+    # Валидация min/max selections и tenant-цепочка — в routers/orders.py.
+    modifier_option_ids: List[int] = Field(default_factory=list)
+
+    @field_validator("modifier_option_ids", mode="before")
+    @classmethod
+    def deduplicate_modifier_ids(cls, v: list) -> list:
+        """
+        Нормализация дубликатов: уникальные id без изменения типа.
+        Семантика: дважды выбрать одну опцию = выбрать один раз.
+        Порядок не сохраняется (set → list) — сортировка не требуется API.
+        """
+        if not v:
+            return []
+        seen = []
+        seen_set = set()
+        for item in v:
+            if item not in seen_set:
+                seen_set.add(item)
+                seen.append(item)
+        return seen
 
 
 def _validate_coordinate(value: Optional[float], min_val: float, max_val: float, name: str) -> Optional[float]:
@@ -307,6 +330,20 @@ class OrderCreate(BaseModel):
 
 
 # ЗАКАЗЫ — ответ
+class SelectedModifierResponse(BaseModel):
+    """
+    S2-8: Snapshot выбранного модификатора в ответе на заказ.
+    Данные берутся из order_item_modifiers (не из modifier_options),
+    поэтому остаются неизменными даже после удаления опции из меню.
+    """
+    id:                  int
+    modifier_option_id:  Optional[int] = None  # NULL если опция удалена
+    name:                str
+    price_adjustment:    int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class OrderItemResponse(BaseModel):
     id: int
     name: str
@@ -314,8 +351,10 @@ class OrderItemResponse(BaseModel):
     variant_name: Optional[str] = None
     price: int
     quantity: int
+    # S2-8: snapshot выбранных модификаторов. Пустой список для заказов без модификаторов.
+    selected_modifiers: List[SelectedModifierResponse] = Field(default_factory=list)
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OrderResponse(BaseModel):
@@ -757,6 +796,32 @@ class VariantPublicResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# ──────────────────────────────────────────
+# S2-8: PUBLIC MODIFIER SCHEMAS
+# ──────────────────────────────────────────
+
+class ModifierOptionPublicResponse(BaseModel):
+    """Публичная схема опции модификатора. Только активные опции."""
+    id:              int
+    name:            str
+    price_adjustment: int
+    sort_order:      int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ModifierGroupPublicResponse(BaseModel):
+    """Публичная схема группы модификаторов. Только активные группы с активными опциями."""
+    id:             int
+    name:           str
+    min_selections: int
+    max_selections: int
+    sort_order:     int
+    options:        List[ModifierOptionPublicResponse] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ProductPublicResponse(BaseModel):
     id:            int
     name:          str
@@ -773,6 +838,8 @@ class ProductPublicResponse(BaseModel):
     is_popular:    bool
     # S2-5: активные варианты продукта. Пустой список для legacy-продуктов.
     variants:      List[VariantPublicResponse] = Field(default_factory=list)
+    # S2-8: активные группы модификаторов с активными опциями.
+    modifier_groups: List[ModifierGroupPublicResponse] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 
