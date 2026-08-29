@@ -311,7 +311,11 @@ def get_menu(restaurant_id: int, db: Session = Depends(get_db)):
     categories = (
         db.query(Category)
         .filter(Category.restaurant_id == restaurant_id)
-        .options(joinedload(Category.products))
+        .options(
+            joinedload(Category.products)
+            .joinedload(Product.modifier_groups)
+            .joinedload(ModifierGroup.options)
+        )
         .order_by(Category.sort_order)
         .all()
     )
@@ -349,7 +353,11 @@ def get_menu_all(
     categories = (
         db.query(Category)
         .filter(Category.restaurant_id == restaurant_id)
-        .options(joinedload(Category.products))
+        .options(
+            joinedload(Category.products)
+            .joinedload(Product.modifier_groups)
+            .joinedload(ModifierGroup.options)
+        )
         .order_by(Category.sort_order)
         .all()
     )
