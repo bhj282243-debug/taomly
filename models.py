@@ -518,9 +518,75 @@ class OrderItem(Base):
     product = relationship("Product", lazy="select")
     # S2-2: variant relationship — inert until S2-5.
     variant = relationship("ProductVariant", lazy="select")
+    # S2-8: snapshot выбранных модификаторов на момент заказа.
+    selected_modifiers = relationship(
+        "OrderItemModifier",
+        back_populates="order_item",
+        cascade="all, delete-orphan",
+        lazy="select",
+    )
 
     def __repr__(self) -> str:
         return f"<OrderItem id={self.id} name={self.name!r} qty={self.quantity}>"
+
+
+# ──────────────────────────────────────────
+# ORDER ITEM MODIFIER  (S2-8)
+# ──────────────────────────────────────────
+class OrderItemModifier(Base):
+    """
+    Snapshot выбранной ModifierOption в позиции заказа.
+
+    Один OrderItem → N записей (по одной на каждую выбранную опцию).
+
+    Поля snapshot (берутся из БД на момент заказа, не от клиента):
+      name:             имя опции (ModifierOption.name)
+      price_adjustment: надбавка/скидка (ModifierOption.price_adjustment)
+
+    ВАЖНО: OrderItem.price НЕ включает price_adjustment — Phase 7.
+
+    Tenant-изоляция (через API, не через constraint):
+      OrderItemModifier → order_item_id → OrderItem → order_id →
+      Order → restaurant_id == JWT.restaurant_id
+
+    Миграция: 0016_s2_8_order_item_modifiers.py
+
+    FK поведение:
+      order_item_id:      CASCADE DELETE (удаление OrderItem → удаление модификаторов)
+      modifier_option_id: SET NULL (удаление ModifierOption сохраняет snapshot)
+    """
+    __tablename__ = "order_item_modifiers"
+    __table_args__ = (
+        Index("ix_order_item_modifiers_order_item_id", "order_item_id"),
+        Index("ix_order_item_modifiers_option_id", "modifier_option_id"),
+    )
+
+    id                 = Column(BigInteger, primary_key=True)
+    order_item_id      = Column(
+        BigInteger,
+        ForeignKey("order_items.id", ondelete="CASCADE"),
+        nullable=False,
+        index=False,  # covered by ix_order_item_modifiers_order_item_id
+    )
+    modifier_option_id = Column(
+        BigInteger,
+        ForeignKey("modifier_options.id", ondelete="SET NULL"),
+        nullable=True,
+        index=False,  # covered by ix_order_item_modifiers_option_id
+    )
+    # Snapshot полей ModifierOption на момент заказа.
+    # Клиентские значения не принимаются — только из БД (ADR-S2-8-2).
+    name             = Column(String(255), nullable=False)
+    price_adjustment = Column(Integer, nullable=False)
+
+    order_item = relationship("OrderItem", back_populates="selected_modifiers")
+
+    def __repr__(self) -> str:
+        return (
+            f"<OrderItemModifier id={self.id} "
+            f"order_item_id={self.order_item_id} "
+            f"name={self.name!r} adj={self.price_adjustment}>"
+        )
 
 
 # ──────────────────────────────────────────
