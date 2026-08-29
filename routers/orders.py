@@ -44,7 +44,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from auth import TelegramUser, get_current_restaurant_admin, get_telegram_user
 from database import get_db
-from models import Location, Order, OrderItem, Product, ProductVariant, Restaurant, RestaurantTable, Subscription, SubscriptionPlan, UsageEvent, User
+from models import Location, ModifierGroup, ModifierOption, Order, OrderItem, OrderItemModifier, Product, ProductVariant, Restaurant, RestaurantTable, Subscription, SubscriptionPlan, UsageEvent, User
 from schemas import OrderCreate, OrderResponse, OrderStatusUpdate
 import handlers
 from limiter import limiter
@@ -147,6 +147,124 @@ from status_transitions import ORDER_STATUS_TRANSITIONS as VALID_STATUS_TRANSITI
 
 
 # ──────────────────────────────────────────
+# S2-8: MODIFIER VALIDATION HELPER
+# ──────────────────────────────────────────
+
+def _validate_and_snapshot_modifiers(
+    db: "Session",
+    product: "Product",
+    modifier_option_ids: list[int],
+) -> list[dict]:
+    """
+    Валидация выбранных modifier_option_ids и формирование snapshot-списка.
+
+    Алгоритм:
+      1. Загрузить ВСЕ active ModifierGroup данного продукта (включая options).
+      2. Для каждой группы: проверить min_selections / max_selections.
+      3. Для каждого переданного id: убедиться что опция принадлежит этому продукту
+         И её группа активна И сама опция активна (tenant chain P0).
+      4. Вернуть snapshot list — данные исключительно из БД (ADR-S2-8-2).
+
+    Не принимает и не возвращает клиентские name / price_adjustment.
+
+    Raises HTTPException 400 при:
+      - modifier_option_id не принадлежит ни одной группе этого продукта
+      - modifier_option_id неактивен или его группа неактивна
+      - нарушение min_selections (обязательная группа без выбора)
+      - нарушение max_selections (слишком много опций в группе)
+    """
+    if not modifier_option_ids:
+        # Быстрый путь: опции не переданы — проверяем только обязательные группы.
+        active_groups = [g for g in product.modifier_groups if g.is_active]
+        for group in active_groups:
+            if group.min_selections > 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Группа модификаторов «{group.name}» обязательна "
+                        f"(минимум {group.min_selections} вариант(а)). "
+                        "Передайте modifier_option_ids."
+                    ),
+                )
+        return []
+
+    # Строим map: option_id → (ModifierGroup, ModifierOption) для этого продукта.
+    # Только активные группы и активные опции.
+    option_map: dict[int, tuple] = {}  # option_id → (group, option)
+    active_groups = [g for g in product.modifier_groups if g.is_active]
+    for group in active_groups:
+        for opt in group.options:
+            if opt.is_active:
+                option_map[opt.id] = (group, opt)
+
+    # Также строим map для неактивных групп/опций — для точных сообщений об ошибках.
+    inactive_group_options: set[int] = set()  # option_id из неактивных групп
+    for group in product.modifier_groups:
+        if not group.is_active:
+            for opt in group.options:
+                inactive_group_options.add(opt.id)
+
+    # Проверяем каждый переданный option_id.
+    # modifier_option_ids уже дедуплицированы Pydantic валидатором.
+    snapshots: list[dict] = []
+    group_selections: dict[int, int] = {}  # group_id → count выбранных опций
+
+    for opt_id in modifier_option_ids:
+        # T5/T14: option из другого tenant (продукта) → 400.
+        # Сначала проверяем неактивные группы (T13).
+        if opt_id in inactive_group_options:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Модификатор {opt_id} принадлежит неактивной группе "
+                    "и недоступен для заказа."
+                ),
+            )
+
+        if opt_id not in option_map:
+            # Не принадлежит ни активной, ни неактивной группе этого продукта.
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Модификатор {opt_id} не найден для продукта "
+                    f"«{product.name}» или недоступен."
+                ),
+            )
+
+        group, opt = option_map[opt_id]
+        group_selections[group.id] = group_selections.get(group.id, 0) + 1
+
+        # Snapshot из БД — не от клиента (ADR-S2-8-2).
+        snapshots.append({
+            "modifier_option_id": opt.id,
+            "name":               opt.name,
+            "price_adjustment":   opt.price_adjustment,
+        })
+
+    # Проверяем min/max selections для каждой активной группы.
+    for group in active_groups:
+        selected = group_selections.get(group.id, 0)
+        if selected < group.min_selections:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Группа «{group.name}»: выбрано {selected}, "
+                    f"минимум {group.min_selections}."
+                ),
+            )
+        if selected > group.max_selections:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Группа «{group.name}»: выбрано {selected}, "
+                    f"максимум {group.max_selections}."
+                ),
+            )
+
+    return snapshots
+
+
+# ──────────────────────────────────────────
 # POST / — создать заказ (клиент Mini App)
 # ──────────────────────────────────────────
 @router.post("/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
@@ -237,6 +355,7 @@ def create_order(
             )
 
     total = 0
+    # Каждый элемент: {"item_data": dict, "modifier_snapshots": list[dict]}
     order_items_data: list[dict] = []
 
     for item in data.items:
@@ -279,15 +398,14 @@ def create_order(
                 )
             # variant_id игнорируется если у продукта нет активных вариантов
             item_price = product.price
-            order_items_data.append({
+            item_dict = {
                 "product_id":   product.id,
                 "name":         product.name,
                 "variant_id":   None,
                 "variant_name": None,
                 "price":        item_price,
                 "quantity":     item.quantity,
-            })
-            total += item_price * item.quantity
+            }
 
         # ── CASE B/C: Продукт с активными вариантами ─────────────────────
         else:
@@ -332,15 +450,29 @@ def create_order(
             # C.4: SERVER-SIDE PRICE — цена всегда из БД, никогда от клиента.
             # variant.price — доверенный источник. Snapshot'ится в OrderItem.price.
             item_price = variant.price
-            order_items_data.append({
+            item_dict = {
                 "product_id":   product.id,
                 "name":         product.name,         # snapshot имени продукта
                 "variant_id":   variant.id,            # аналитический FK
                 "variant_name": variant.name,          # snapshot имени варианта
                 "price":        item_price,            # snapshot цены варианта
                 "quantity":     item.quantity,
-            })
-            total += item_price * item.quantity
+            }
+
+        # ── S2-8: Валидация и snapshot модификаторов ─────────────────────
+        # Выполняется для ВСЕХ типов продукта (CASE A и B/C).
+        # modifier_option_ids дедуплицированы Pydantic валидатором в schemas.py.
+        modifier_snapshots = _validate_and_snapshot_modifiers(
+            db=db,
+            product=product,
+            modifier_option_ids=item.modifier_option_ids,
+        )
+
+        total += item_price * item.quantity
+        order_items_data.append({
+            "item_data": item_dict,
+            "modifier_snapshots": modifier_snapshots,
+        })
 
     # S1-7: min_order_amount и currency берутся из Location (source of truth).
     # location уже resolved выше и tenant-изолирован.
@@ -394,8 +526,24 @@ def create_order(
     db.add(order)
     db.flush()
 
-    for item_data in order_items_data:
-        db.add(OrderItem(order_id=order.id, **item_data))
+    # S2-8: OrderItem + OrderItemModifier создаются в одной транзакции.
+    # Алгоритм:
+    #   1. add(OrderItem) → flush → получаем order_item.id
+    #   2. add(OrderItemModifier × N) для каждого snapshot
+    #   3. commit() в конце — один раз для всего заказа (atomicity).
+    # Если flush упадёт на любом шаге — rollback в except ниже.
+    for entry in order_items_data:
+        order_item = OrderItem(order_id=order.id, **entry["item_data"])
+        db.add(order_item)
+        db.flush()  # получаем order_item.id для FK в OrderItemModifier
+
+        for snap in entry["modifier_snapshots"]:
+            db.add(OrderItemModifier(
+                order_item_id=order_item.id,
+                modifier_option_id=snap["modifier_option_id"],
+                name=snap["name"],
+                price_adjustment=snap["price_adjustment"],
+            ))
 
     try:
         db.commit()
@@ -412,7 +560,10 @@ def create_order(
 
     order_with_items = (
         db.query(Order)
-        .options(joinedload(Order.items))
+        .options(
+            joinedload(Order.items)
+            .joinedload(OrderItem.selected_modifiers)
+        )
         .filter(Order.id == order.id)
         .first()
     )
@@ -480,7 +631,10 @@ def get_my_orders(
 
     orders = (
         db.query(Order)
-        .options(joinedload(Order.items))
+        .options(
+            joinedload(Order.items)
+            .joinedload(OrderItem.selected_modifiers)
+        )
         .filter(
             Order.restaurant_id == tg_user.restaurant_id,
             Order.client_telegram_id == tg_user.id,
@@ -521,7 +675,10 @@ def get_my_order(
 
     order = (
         db.query(Order)
-        .options(joinedload(Order.items))
+        .options(
+            joinedload(Order.items)
+            .joinedload(OrderItem.selected_modifiers)
+        )
         .filter(
             Order.id == order_id,
             Order.restaurant_id == tg_user.restaurant_id,
@@ -580,7 +737,10 @@ def get_restaurant_orders(
 
     query = (
         db.query(Order)
-        .options(joinedload(Order.items))
+        .options(
+            joinedload(Order.items)
+            .joinedload(OrderItem.selected_modifiers)
+        )
         .filter(Order.restaurant_id == restaurant_id)
     )
 
@@ -615,7 +775,10 @@ def get_order(
     """
     order = (
         db.query(Order)
-        .options(joinedload(Order.items))
+        .options(
+            joinedload(Order.items)
+            .joinedload(OrderItem.selected_modifiers)
+        )
         .filter(
             Order.id == order_id,
             Order.restaurant_id == restaurant.id,
