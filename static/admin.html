@@ -750,6 +750,25 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
       <button class="toggle-btn off" id="editProductPopular" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button>
     </div>
 
+    <!-- Phase 3: Schedule — расписание доступности -->
+    <div class="modal-toggle-row" style="flex-direction:column;align-items:flex-start;gap:8px">
+      <div class="modal-toggle-label">Расписание доступности</div>
+      <div class="modal-toggle-sub" style="margin-bottom:4px">Оставьте пустым — продукт доступен весь день. Поддерживается overnight: 22:00–02:00</div>
+      <div style="display:flex;gap:8px;width:100%">
+        <div style="flex:1">
+          <div style="font-size:11px;color:var(--iv3);margin-bottom:4px">С</div>
+          <input class="modal-input" type="time" id="editProductFrom" style="padding:8px 10px;font-size:14px"/>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:11px;color:var(--iv3);margin-bottom:4px">До (не включая)</div>
+          <input class="modal-input" type="time" id="editProductUntil" style="padding:8px 10px;font-size:14px"/>
+        </div>
+        <div style="display:flex;align-items:flex-end;padding-bottom:2px">
+          <button class="variant-form-btn variant-form-btn-cancel" onclick="document.getElementById('editProductFrom').value='';document.getElementById('editProductUntil').value=''" style="font-size:11px;padding:8px 10px">Сбросить</button>
+        </div>
+      </div>
+    </div>
+
     <!-- S2-6: VARIANTS SECTION -->
     <div class="variants-section">
       <div class="variants-header">
@@ -780,6 +799,11 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
         <div class="variant-form-toggle">
           <span class="variant-form-toggle-label">Активен</span>
           <button class="toggle-btn on" id="vfActiveBtn" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button>
+        </div>
+        <!-- Phase 3: is_available — временная недоступность (Sold out) -->
+        <div class="variant-form-toggle">
+          <span class="variant-form-toggle-label">Доступен (не sold out)</span>
+          <button class="toggle-btn on" id="vfAvailBtn" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button>
         </div>
         <div class="variant-form-btns">
           <button class="variant-form-btn variant-form-btn-cancel" onclick="_hideVariantForm()">Отмена</button>
@@ -1383,6 +1407,7 @@ function makeProductRow(p){
       <div class="product-row-meta">
         ${priceHtml}
         ${popularHtml}
+        ${p.available_from&&p.available_until?`<span style="font-size:10px;color:var(--iv3);background:rgba(212,175,55,0.08);padding:2px 6px;border-radius:4px">${p.available_from}–${p.available_until}</span>`:''}
       </div>
     </div>
     <div class="product-row-actions">
@@ -1417,6 +1442,11 @@ function openEditProduct(productId){
   }
   const popBtn=document.getElementById('editProductPopular');
   popBtn.className='toggle-btn '+(product.is_popular?'on':'off');
+  // Phase 3: расписание доступности
+  const fromFld=document.getElementById('editProductFrom');
+  const untilFld=document.getElementById('editProductUntil');
+  if(fromFld)fromFld.value=product.available_from||'';
+  if(untilFld)untilFld.value=product.available_until||'';
   // S2-6: сбросить состояние variant секции
   _resetVariantSection();
   document.getElementById('editProductModal').classList.add('active');
@@ -1447,6 +1477,11 @@ async function saveEditProduct(){
   try{
     const body={name,description:description||null,photo_url:photo_url||null,is_popular};
     if(price!==null)body.price=price;
+    // Phase 3: расписание доступности
+    const fromVal=document.getElementById('editProductFrom')?.value||'';
+    const untilVal=document.getElementById('editProductUntil')?.value||'';
+    body.available_from=fromVal||null;
+    body.available_until=untilVal||null;
     const res=await apiFetch(`${API}/api/menu/product/${editingProductId}`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify(body)});
     if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Xato');}
     closeModal('editProductModal');
@@ -1559,14 +1594,17 @@ function _renderVariantList(variants){
     const badge=v.is_active
       ?`<span class="variant-item-badge variant-badge-active">Активен</span>`
       :`<span class="variant-item-badge variant-badge-inactive">Выкл.</span>`;
+    const availBadge=v.is_active&&!v.is_available
+      ?`<span class="variant-item-badge variant-badge-soldout">Sold out</span>`
+      :'';
     item.innerHTML=`
       <div class="variant-item-info">
         <div class="variant-item-name">${esc(v.name)}</div>
         <div class="variant-item-price">${fmt(v.price)}</div>
       </div>
-      ${badge}
+      ${badge}${availBadge}
       <div class="variant-item-actions">
-        <button class="variant-icon-btn" onclick="_openVariantEdit(${v.id},'${esc(v.name)}',${v.price},${v.sort_order},${v.is_active})" title="Изменить">
+        <button class="variant-icon-btn" onclick="_openVariantEdit(${v.id},'${esc(v.name)}',${v.price},${v.sort_order},${v.is_active},${v.is_available!==undefined?v.is_available:true})" title="Изменить">
           <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
         <button class="variant-icon-btn del" onclick="_deleteVariant(${v.id},'${esc(v.name)}')" title="Удалить">
@@ -1591,7 +1629,7 @@ function _openVariantCreate(){
   document.getElementById('vfName').focus();
 }
 
-function _openVariantEdit(variantId,name,price,sortOrder,isActive){
+function _openVariantEdit(variantId,name,price,sortOrder,isActive,isAvailable){
   _variantFormMode='edit';
   _editingVariantId=variantId;
   _variantIsActive=isActive;
@@ -1600,6 +1638,9 @@ function _openVariantEdit(variantId,name,price,sortOrder,isActive){
   document.getElementById('vfSort').value=sortOrder;
   const activeBtn=document.getElementById('vfActiveBtn');
   if(activeBtn){activeBtn.className='toggle-btn '+(isActive?'on':'off');}
+  // Phase 3: is_available toggle
+  const availBtn=document.getElementById('vfAvailBtn');
+  if(availBtn){availBtn.className='toggle-btn '+(isAvailable!==false?'on':'off');}
   document.getElementById('vfFormTitle').textContent='Редактировать вариант';
   document.getElementById('variantForm').style.display='block';
   document.getElementById('vfName').focus();
@@ -1617,6 +1658,8 @@ async function _saveVariantForm(){
   const priceRaw=document.getElementById('vfPrice').value.trim();
   const sortRaw=document.getElementById('vfSort').value.trim();
   const isActive=document.getElementById('vfActiveBtn').classList.contains('on');
+  // Phase 3: is_available — отдельно от is_active (Sold out)
+  const isAvailable=!document.getElementById('vfAvailBtn')||document.getElementById('vfAvailBtn').classList.contains('on');
 
   // Validation
   if(!name){showToast('Название обязательно',true);return;}
@@ -1626,9 +1669,9 @@ async function _saveVariantForm(){
   if(sortOrder<0){showToast('Порядок: число >= 0',true);return;}
 
   if(_variantFormMode==='create'){
-    await _createVariant({name,price,sort_order:sortOrder,is_active:isActive});
+    await _createVariant({name,price,sort_order:sortOrder,is_active:isActive,is_available:isAvailable});
   }else if(_variantFormMode==='edit'&&_editingVariantId!=null){
-    await _updateVariant(_editingVariantId,{name,price,sort_order:sortOrder,is_active:isActive});
+    await _updateVariant(_editingVariantId,{name,price,sort_order:sortOrder,is_active:isActive,is_available:isAvailable});
   }
 }
 
