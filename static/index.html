@@ -1251,6 +1251,19 @@ svg{display:block;}
   border-color:rgba(122,92,16,0.50);
   background:var(--gt);
 }
+/* Phase 3: sold-out variant — visible but not selectable */
+.vp-item.vp-item-soldout{
+  opacity:0.45;
+  cursor:default;
+  pointer-events:none;
+}
+.vp-item.vp-item-soldout .vp-radio{border-color:var(--bg7);}
+.vp-soldout-badge{
+  font-size:10px;color:var(--iv3);
+  background:rgba(255,255,255,0.07);
+  padding:2px 6px;border-radius:4px;margin-left:6px;
+  white-space:nowrap;
+}
 .vp-radio{
   width:20px;height:20px;border-radius:50%;flex-shrink:0;
   border:1.5px solid var(--bg7);
@@ -2069,10 +2082,15 @@ function _renderVariantPicker(p,variants){
   // Строим список вариантов
   let listHtml='<div class="vp-list" id="vpList">';
   variants.forEach(v=>{
-    listHtml+=`<div class="vp-item" id="vp-${v.id}" onclick="_vpSelect(${p.id},${v.id})">
+    // Phase 3: is_available=false → visible but disabled ("Sold out")
+    const soldOut=v.is_available===false;
+    const itemCls='vp-item'+(soldOut?' vp-item-soldout':'');
+    const clickHandler=soldOut?'':'onclick="_vpSelect('+p.id+','+v.id+')"';
+    const soldBadge=soldOut?'<span class="vp-soldout-badge">Sold out</span>':'';
+    listHtml+=`<div class="${itemCls}" id="vp-${v.id}" ${clickHandler}>
       <div class="vp-radio"><div class="vp-radio-dot"></div></div>
       <span class="vp-name">${esc(v.name)}</span>
-      <span class="vp-price">${v.price!=null?fmt(v.price):''}</span>
+      <span class="vp-price">${v.price!=null?fmt(v.price):''}${soldBadge}</span>
     </div>`;
   });
   listHtml+='</div>';
