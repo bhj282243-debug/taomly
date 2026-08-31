@@ -8,10 +8,21 @@ format_price(amount, currency) — единый форматтер цен для
   Используется в routers/orders.py и handlers.py вместо hardcoded 'so\'m'.
   Поддерживаемые валюты: UZS, KZT, RUB, USD, TRY, AED.
   Дефолт: UZS (обратная совместимость для ресторанов без явно заданной валюты).
+
+is_within_schedule(available_from, available_until, tz_str) → bool  [Phase 3]
+  Единственная реализация schedule logic для всего проекта.
+  Используется в: routers/menu.py, routers/restaurants.py, routers/orders.py.
+  Никаких копий этой логики не существует.
 """
+
+import datetime
+import logging
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+
+logger = logging.getLogger(__name__)
 
 
 # ──────────────────────────────────────────
@@ -58,6 +69,80 @@ def format_price(amount: int | float, currency: str | None = None) -> str:
         formatted = f"{float(amount):.{decimals}f}"
 
     return f"{prefix}{formatted}{suffix}"
+
+
+# ──────────────────────────────────────────
+# SCHEDULE HELPER  (Phase 3)
+# ──────────────────────────────────────────
+
+def is_within_schedule(
+    available_from: datetime.time | None,
+    available_until: datetime.time | None,
+    tz_str: str,
+) -> bool:
+    """
+    Определяет, находится ли текущий момент внутри окна доступности.
+
+    Это единственная реализация schedule logic в проекте.
+    Используется в routers/menu.py, routers/restaurants.py, routers/orders.py.
+
+    Правила:
+      NULL / NULL             → True  (нет расписания, всегда доступно)
+      from == until           → True  (24 часа, всегда доступно)
+      from < until            → нормальное окно: from <= current < until
+      from > until (overnight)→ current >= from OR current < until
+
+    Граница:
+      available_from  — включается (>=)
+      available_until — не включается (<)  [half-open interval]
+
+    Timezone:
+      tz_str — IANA timezone string из Location.timezone.
+      Текущее время вычисляется в этой timezone.
+      Никакого fallback — вызывающий код несёт ответственность за валидный tz_str.
+
+    Raises:
+      Не поднимает исключений — при невалидном tz_str возвращает True с WARNING
+      (безопасная сторона для расписания: продукт без валидной tz показывается,
+      но Order engine обработает это отдельно — там tz всегда из Location).
+    """
+    # NULL/NULL → нет расписания → всегда доступно
+    if available_from is None and available_until is None:
+        return True
+
+    # Получаем текущее локальное время ресторана
+    try:
+        tz = ZoneInfo(tz_str)
+    except (ZoneInfoNotFoundError, Exception):
+        logger.warning(
+            "is_within_schedule: невалидный timezone %r — schedule не применяется",
+            tz_str,
+        )
+        return True
+
+    now_local = datetime.datetime.now(tz=tz).time().replace(second=0, microsecond=0)
+
+    # Если одно поле NULL а другое нет — некорректное состояние данных.
+    # Fail safe: считаем доступным (не наказываем клиента за баг данных).
+    if available_from is None or available_until is None:
+        logger.warning(
+            "is_within_schedule: одно поле расписания NULL, другое NOT NULL — некорректные данные, "
+            "считаем доступным. from=%r until=%r",
+            available_from, available_until,
+        )
+        return True
+
+    # from == until → 24 часа, всегда доступно
+    if available_from == available_until:
+        return True
+
+    # Нормальное окно: from < until → [from, until)
+    if available_from < available_until:
+        return available_from <= now_local < available_until
+
+    # Overnight: from > until → например 22:00–02:00
+    # Доступно если: current >= from (вечер) ИЛИ current < until (ранее утро)
+    return now_local >= available_from or now_local < available_until
 
 
 def pg_advisory_lock(db: Session, lock_key: int) -> bool:
