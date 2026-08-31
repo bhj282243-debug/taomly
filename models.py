@@ -65,7 +65,7 @@ SQLAlchemy ORM-модели для Multi-Tenant White Label архитектур
 from sqlalchemy import (
     BigInteger, Boolean, Column, Float,
     ForeignKey, Index, Integer, String, Text,
-    TIMESTAMP, UniqueConstraint, CheckConstraint,
+    TIMESTAMP, Time, UniqueConstraint, CheckConstraint,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -318,6 +318,15 @@ class Product(Base):
     photo_url    = Column(Text)
     is_available = Column(Boolean, default=True, nullable=False)
     sort_order   = Column(Integer, default=0, nullable=False)
+
+    # Phase 3: расписание доступности (TIME без timezone, локальное время ресторана).
+    # NULL/NULL = нет расписания (доступность определяется только is_available).
+    # from < until  → нормальное окно: 11:00–22:00
+    # from > until  → overnight:       22:00–02:00
+    # from == until → 24 часа (всегда доступно)
+    # Timezone для вычисления берётся из Location.timezone (runtime source of truth).
+    available_from  = Column(Time(), nullable=True)
+    available_until = Column(Time(), nullable=True)
 
     # ── Badges ────────────────────────────────────────────────────────
     is_bestseller  = Column(Boolean, default=False, nullable=False, server_default="false")
@@ -635,7 +644,12 @@ class ProductVariant(Base):
     # price: цена варианта в целых сомах. CHECK >= 0 (бесплатные варианты допустимы).
     price      = Column(Integer, nullable=False)
     sort_order = Column(Integer, default=0, nullable=False, server_default="0")
-    is_active  = Column(Boolean, default=True, nullable=False, server_default="true")
+    is_active     = Column(Boolean, default=True, nullable=False, server_default="true")
+    # Phase 3: временная недоступность (sold-out).
+    # is_active=false  → скрыт полностью (admin отключил)
+    # is_available=false → виден, но disabled ("Sold out", временно)
+    # is_available=true  → доступен для выбора
+    is_available  = Column(Boolean, default=True, nullable=False, server_default="true")
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(
         TIMESTAMP(timezone=True),
@@ -775,6 +789,11 @@ class ModifierOption(Base):
     price_adjustment = Column(Integer, default=0, nullable=False, server_default="0")
     sort_order       = Column(Integer, default=0, nullable=False, server_default="0")
     is_active        = Column(Boolean, default=True, nullable=False, server_default="true")
+    # Phase 3: временная недоступность опции (sold-out).
+    # is_active=false    → скрыта полностью
+    # is_available=false → видна, но disabled ("Нет в наличии")
+    # ModifierGroup.is_available НЕ добавляется — группы управляются только через is_active.
+    is_available     = Column(Boolean, default=True, nullable=False, server_default="true")
     created_at       = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
     updated_at       = Column(
         TIMESTAMP(timezone=True),
