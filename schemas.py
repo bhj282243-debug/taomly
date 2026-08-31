@@ -33,7 +33,7 @@ schemas.py — Taomly Platform
 
 import math
 import re
-from datetime import datetime, timezone
+from datetime import datetime, time, timezone
 from typing import List, Literal, Optional
 from urllib.parse import urlparse
 
@@ -222,6 +222,9 @@ class ProductResponse(BaseModel):
     is_spicy: bool = False
     is_chef_choice: bool = False
     is_popular: bool = False
+    # Phase 3: расписание доступности (admin response — показываем оба поля).
+    available_from:  Optional[time] = None
+    available_until: Optional[time] = None
 
     model_config = {"from_attributes": True}
 
@@ -640,6 +643,9 @@ class ProductCreate(BaseModel):
     is_spicy: bool = False
     is_chef_choice: bool = False
     is_popular: bool = False
+    # Phase 3: расписание доступности. NULL/NULL = без расписания.
+    available_from:  Optional[time] = None
+    available_until: Optional[time] = None
 
     @field_validator("photo_url", mode="before")
     @classmethod
@@ -660,6 +666,9 @@ class ProductUpdate(BaseModel):
     is_spicy: Optional[bool] = None
     is_chef_choice: Optional[bool] = None
     is_popular: Optional[bool] = None
+    # Phase 3: расписание доступности. Передать None чтобы очистить поле.
+    available_from:  Optional[time] = None
+    available_until: Optional[time] = None
 
     @field_validator("photo_url", mode="before")
     @classmethod
@@ -788,10 +797,14 @@ class RestaurantSettingsUpdateResponse(RestaurantSettingsResponse):
 # S2-5: Минимальный public response для варианта.
 # Только активные варианты попадают сюда (фильтрация в restaurants.py).
 class VariantPublicResponse(BaseModel):
-    id:         int
-    name:       str
-    price:      int
-    sort_order: int
+    id:           int
+    name:         str
+    price:        int
+    sort_order:   int
+    # Phase 3: is_available передаётся клиенту для отображения "Sold out".
+    # Варианты с is_active=false скрыты полностью (не включаются в response).
+    # Варианты с is_active=true, is_available=false → в response, но disabled.
+    is_available: bool
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -802,10 +815,14 @@ class VariantPublicResponse(BaseModel):
 
 class ModifierOptionPublicResponse(BaseModel):
     """Публичная схема опции модификатора. Только активные опции."""
-    id:              int
-    name:            str
+    id:               int
+    name:             str
     price_adjustment: int
-    sort_order:      int
+    sort_order:       int
+    # Phase 3: is_available передаётся клиенту для disabled state.
+    # Опции с is_active=false скрыты полностью.
+    # Опции с is_active=true, is_available=false → в response, но disabled.
+    is_available:     bool
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -836,7 +853,11 @@ class ProductPublicResponse(BaseModel):
     is_spicy:      bool
     is_chef_choice: bool
     is_popular:    bool
+    # Phase 3: расписание (передаётся для информации фронтенду, не для клиентской фильтрации).
+    available_from:  Optional[time] = None
+    available_until: Optional[time] = None
     # S2-5: активные варианты продукта. Пустой список для legacy-продуктов.
+    # Phase 3: варианты с is_active=true, is_available=false включаются (disabled state).
     variants:      List[VariantPublicResponse] = Field(default_factory=list)
     # S2-8: активные группы модификаторов с активными опциями.
     modifier_groups: List[ModifierGroupPublicResponse] = Field(default_factory=list)
@@ -1191,6 +1212,8 @@ class VariantCreate(BaseModel):
     price: int = Field(..., ge=0)
     sort_order: int = Field(0, ge=0)
     is_active: bool = True
+    # Phase 3: временная недоступность варианта ("Sold out").
+    is_available: bool = True
 
 
 class VariantUpdate(BaseModel):
@@ -1198,17 +1221,21 @@ class VariantUpdate(BaseModel):
     price: Optional[int] = Field(None, ge=0)
     sort_order: Optional[int] = Field(None, ge=0)
     is_active: Optional[bool] = None
+    # Phase 3: управление временной недоступностью варианта.
+    is_available: Optional[bool] = None
 
 
 class VariantResponse(BaseModel):
-    id:         int
-    product_id: int
-    name:       str
-    price:      int
-    sort_order: int
-    is_active:  bool
-    created_at: datetime
-    updated_at: datetime
+    id:           int
+    product_id:   int
+    name:         str
+    price:        int
+    sort_order:   int
+    is_active:    bool
+    # Phase 3: is_available для admin UI.
+    is_available: bool
+    created_at:   datetime
+    updated_at:   datetime
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -1262,6 +1289,8 @@ class ModifierOptionCreate(BaseModel):
     price_adjustment: int = Field(0, ge=-1000000)
     sort_order: int = Field(0, ge=0)
     is_active: bool = True
+    # Phase 3: временная недоступность опции ("Нет в наличии").
+    is_available: bool = True
 
 
 class ModifierOptionUpdate(BaseModel):
@@ -1269,16 +1298,20 @@ class ModifierOptionUpdate(BaseModel):
     price_adjustment: Optional[int] = Field(None, ge=-1000000)
     sort_order: Optional[int] = Field(None, ge=0)
     is_active: Optional[bool] = None
+    # Phase 3: управление временной недоступностью опции.
+    is_available: Optional[bool] = None
 
 
 class ModifierOptionResponse(BaseModel):
-    id:                  int
-    modifier_group_id:   int
-    name:                str
-    price_adjustment:    int
-    sort_order:          int
-    is_active:           bool
-    created_at:          datetime
-    updated_at:          datetime
+    id:               int
+    modifier_group_id: int
+    name:             str
+    price_adjustment: int
+    sort_order:       int
+    is_active:        bool
+    # Phase 3: is_available для admin UI.
+    is_available:     bool
+    created_at:       datetime
+    updated_at:       datetime
 
     model_config = ConfigDict(from_attributes=True)
