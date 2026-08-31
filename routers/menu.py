@@ -54,6 +54,7 @@ from schemas import (
     ModifierOptionUpdate,
     ModifierOptionResponse,
 )
+from utils import is_within_schedule
 
 logger = logging.getLogger(__name__)
 
@@ -306,12 +307,46 @@ def get_menu(restaurant_id: int, db: Session = Depends(get_db)):
     Возвращает публичное меню ресторана — только доступные продукты.
     Авторизация не требуется (публичный эндпоинт для клиентов).
     Пустые категории (без доступных продуктов) не возвращаются.
+
+    Phase 3: schedule enforcement.
+    - Продукты с is_available=False исключаются полностью.
+    - Продукты с расписанием вне окна исключаются полностью (fail closed).
+    - Варианты с is_active=False скрыты; is_available=False → visible+disabled.
+    - Опции модификаторов: is_active=False скрыты; is_available=False → visible+disabled.
+    - Timezone: Location.timezone первой активной Location ресторана.
+    - Если Location не найдена: продукты без расписания отображаются,
+      продукты с расписанием — fail closed (не отображаются).
     """
     _get_active_restaurant(restaurant_id, db)
+
+    # Phase 3: получаем timezone из первой активной Location ресторана.
+    # Это единственный runtime source of truth для schedule evaluation.
+    active_location = (
+        db.query(Location)
+        .filter(
+            Location.restaurant_id == restaurant_id,
+            Location.is_active == True,
+        )
+        .order_by(Location.id)
+        .first()
+    )
+
+    if active_location is None:
+        logger.warning(
+            "No active Location found for restaurant_id=%s — scheduled products treated as unavailable",
+            restaurant_id,
+        )
+        tz_str = None  # сигнал: нет Location → fail closed для scheduled products
+    else:
+        tz_str = active_location.timezone
 
     categories = (
         db.query(Category)
         .filter(Category.restaurant_id == restaurant_id)
+        .options(
+            joinedload(Category.products)
+            .joinedload(Product.variants)
+        )
         .options(
             joinedload(Category.products)
             .joinedload(Product.modifier_groups)
@@ -322,14 +357,35 @@ def get_menu(restaurant_id: int, db: Session = Depends(get_db)):
     )
 
     for c in categories:
-        available_products = [p for p in (c.products or []) if p.is_available]
-        # S2-8: фильтруем неактивные modifier_groups и их неактивные options.
-        # joinedload загружает ВСЕ записи — фильтрация в Python до сериализации.
+        available_products = []
+        for p in (c.products or []):
+            # Фильтр 1: is_available
+            if not p.is_available:
+                continue
+            # Фильтр 2: schedule
+            if p.available_from is not None or p.available_until is not None:
+                # Продукт имеет расписание
+                if tz_str is None:
+                    # Нет Location → fail closed
+                    continue
+                if not is_within_schedule(p.available_from, p.available_until, tz_str):
+                    continue
+            available_products.append(p)
+
+        # Phase 3: variant filtering.
+        # is_active=False → скрыт полностью.
+        # is_active=True, is_available=False → остаётся в response (Sold out).
         for p in available_products:
+            active_variants = [v for v in (p.variants or []) if v.is_active]
+            p.variants = sorted(active_variants, key=lambda v: (v.sort_order, v.id))
+
+            # Phase 3: modifier option filtering.
+            # is_active=False → скрыт. is_available=False → остаётся (disabled).
             active_groups = [g for g in (p.modifier_groups or []) if g.is_active]
             for g in active_groups:
                 g.options = [o for o in (g.options or []) if o.is_active]
             p.modifier_groups = active_groups
+
         c.products = sorted(available_products, key=lambda p: p.sort_order)
 
     return [c for c in categories if c.products]
@@ -547,6 +603,9 @@ def create_product(
         is_spicy=data.is_spicy,
         is_chef_choice=data.is_chef_choice,
         is_popular=data.is_popular,
+        # Phase 3: расписание доступности
+        available_from=data.available_from,
+        available_until=data.available_until,
     )
     db.add(product)
 
@@ -652,6 +711,12 @@ def update_product(
         product.is_chef_choice = data.is_chef_choice
     if data.is_popular is not None:
         product.is_popular = data.is_popular
+    # Phase 3: расписание доступности. Используем __contains__ None check
+    # чтобы отличить "поле не передано" от "передано явно как None (очистить)".
+    if "available_from" in data.model_fields_set:
+        product.available_from = data.available_from
+    if "available_until" in data.model_fields_set:
+        product.available_until = data.available_until
 
     try:
         db.commit()
@@ -779,6 +844,8 @@ def create_variant(
         price=data.price,
         sort_order=data.sort_order,
         is_active=data.is_active,
+        # Phase 3: временная недоступность варианта
+        is_available=data.is_available,
     )
     db.add(variant)
 
@@ -880,6 +947,9 @@ def update_variant(
         variant.sort_order = data.sort_order
     if data.is_active is not None:
         variant.is_active = data.is_active
+    # Phase 3: временная недоступность варианта
+    if data.is_available is not None:
+        variant.is_available = data.is_available
 
     try:
         db.commit()
@@ -1187,6 +1257,8 @@ def create_modifier_option(
         price_adjustment=data.price_adjustment,
         sort_order=data.sort_order,
         is_active=data.is_active,
+        # Phase 3: временная недоступность опции
+        is_available=data.is_available,
     )
     db.add(option)
     try:
@@ -1279,6 +1351,9 @@ def update_modifier_option(
         option.sort_order = data.sort_order
     if data.is_active is not None:
         option.is_active = data.is_active
+    # Phase 3: временная недоступность опции
+    if data.is_available is not None:
+        option.is_available = data.is_available
 
     try:
         db.commit()
