@@ -58,7 +58,7 @@ from typing import Optional
 
 from auth import get_current_restaurant_admin
 from database import get_db
-from models import Category, Location, Restaurant, RestaurantTable
+from models import Category, Location, ModifierGroup, ModifierOption, Product, ProductVariant, Restaurant, RestaurantTable
 from schemas import (
     CategoryPublicResponse,
     LocationCreate,
@@ -75,6 +75,7 @@ from schemas import (
     TablesListResponse,
     TableResponse,
 )
+from utils import is_within_schedule
 
 logger = logging.getLogger(__name__)
 
@@ -327,7 +328,17 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
     )
     _settings_source = _loc if _loc is not None else restaurant
 
-    from models import ModifierGroup, ModifierOption, Product
+    # Phase 3: timezone для schedule evaluation.
+    # Если Location не найдена → tz_str=None → fail closed для scheduled products.
+    if _loc is not None:
+        tz_str = _loc.timezone
+    else:
+        logger.warning(
+            "No active Location found for restaurant_id=%s — scheduled products treated as unavailable",
+            restaurant.id,
+        )
+        tz_str = None
+
     categories = (
         db.query(Category)
         .filter(Category.restaurant_id == restaurant.id)
@@ -341,6 +352,17 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
         .order_by(Category.sort_order)
         .all()
     )
+
+    def _product_visible(p) -> bool:
+        """Phase 3: product visibility — is_available + schedule check."""
+        if not p.is_available:
+            return False
+        if p.available_from is not None or p.available_until is not None:
+            if tz_str is None:
+                return False  # fail closed
+            if not is_within_schedule(p.available_from, p.available_until, tz_str):
+                return False
+        return True
 
     return {
         "id": restaurant.id,
@@ -381,8 +403,6 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
                         "name": p.name,
                         "description": p.description,
                         # S2-5: price nullable для variant-продуктов.
-                        # Legacy: price=int, variants=[].
-                        # Variant: price=null, variants=[{id,name,price},...].
                         "price": p.price,
                         "photo_url": p.photo_url,
                         "is_available": p.is_available,
@@ -392,20 +412,22 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
                         "is_spicy": p.is_spicy,
                         "is_chef_choice": p.is_chef_choice,
                         "is_popular": p.is_popular,
-                        # Public API: только активные варианты.
-                        # Неактивные скрыты от клиента (admin видит все через /menu).
+                        # Phase 3: расписание (информация для фронтенда)
+                        "available_from": p.available_from,
+                        "available_until": p.available_until,
+                        # Phase 3: is_active=False → скрыт; is_available=False → disabled.
                         "variants": [
                             {
                                 "id": v.id,
                                 "name": v.name,
                                 "price": v.price,
                                 "sort_order": v.sort_order,
+                                "is_available": v.is_available,
                             }
                             for v in sorted(p.variants, key=lambda x: x.sort_order)
                             if v.is_active
                         ],
-                        # S2-8: только активные группы с активными опциями.
-                        # Неактивные группы/опции скрыты от клиента.
+                        # Phase 3: is_active=False → скрыт; is_available=False → disabled.
                         "modifier_groups": [
                             {
                                 "id": g.id,
@@ -419,6 +441,7 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
                                         "name": o.name,
                                         "price_adjustment": o.price_adjustment,
                                         "sort_order": o.sort_order,
+                                        "is_available": o.is_available,
                                     }
                                     for o in sorted(g.options, key=lambda x: x.sort_order)
                                     if o.is_active
@@ -429,11 +452,11 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
                         ],
                     }
                     for p in sorted(cat.products, key=lambda x: x.sort_order)
-                    if p.is_available
+                    if _product_visible(p)
                 ],
             }
             for cat in categories
-            if any(p.is_available for p in cat.products)
+            if any(_product_visible(p) for p in cat.products)
         ],
     }
 
