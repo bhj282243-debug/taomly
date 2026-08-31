@@ -57,7 +57,7 @@ router = APIRouter()
 # ──────────────────────────────────────────
 # HELPER — PostgreSQL advisory lock (F-32: вынесен в utils.py)
 # ──────────────────────────────────────────
-from utils import pg_advisory_lock as _pg_advisory_lock, format_price as _fmt_price
+from utils import pg_advisory_lock as _pg_advisory_lock, format_price as _fmt_price, is_within_schedule as _is_within_schedule
 
 
 # ──────────────────────────────────────────
@@ -232,6 +232,14 @@ def _validate_and_snapshot_modifiers(
             )
 
         group, opt = option_map[opt_id]
+
+        # Phase 3: проверяем is_available опции (P0 — backend не доверяет frontend).
+        if not opt.is_available:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Модификатор «{opt.name}» временно недоступен.",
+            )
+
         group_selections[group.id] = group_selections.get(group.id, 0) + 1
 
         # Snapshot из БД — не от клиента (ADR-S2-8-2).
@@ -374,8 +382,27 @@ def create_order(
         if not product.is_available:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Продукт «{product.name}» сейчас недоступен",
+                detail=f"Продукт «{product.name}» временно недоступен",
             )
+
+        # Phase 3: schedule check (P0 — backend enforcement).
+        # location уже резолвлен выше из X-Location-Id header.
+        # location.timezone — единственный runtime source of truth.
+        if product.available_from is not None or product.available_until is not None:
+            if not _is_within_schedule(
+                product.available_from,
+                product.available_until,
+                location.timezone,
+            ):
+                _from = product.available_from.strftime("%H:%M") if product.available_from else ""
+                _until = product.available_until.strftime("%H:%M") if product.available_until else ""
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Продукт «{product.name}» доступен "
+                        f"с {_from} до {_until}"
+                    ),
+                )
 
         # ── S2-5: Определяем наличие активных вариантов у продукта ───────
         # Загружаем только активные варианты — неактивные не считаются "вариантами"
@@ -447,7 +474,14 @@ def create_order(
                     ),
                 )
 
-            # C.4: SERVER-SIDE PRICE — цена всегда из БД, никогда от клиента.
+            # Phase 3: C.4 — Variant должен быть доступен (не sold-out).
+            if not variant.is_available:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Вариант «{variant.name}» временно недоступен.",
+                )
+
+            # C.5: SERVER-SIDE PRICE — цена всегда из БД, никогда от клиента.
             # variant.price — доверенный источник. Snapshot'ится в OrderItem.price.
             item_price = variant.price
             item_dict = {
