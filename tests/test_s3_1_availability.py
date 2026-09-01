@@ -63,7 +63,7 @@ from utils import is_within_schedule
 
 def _auth(restaurant: Restaurant) -> dict:
     """JWT-заголовок для restaurant_admin."""
-    token = create_restaurant_token(restaurant.id)
+    token = create_restaurant_token(restaurant)
     return {"Authorization": f"Bearer {token}"}
 
 
