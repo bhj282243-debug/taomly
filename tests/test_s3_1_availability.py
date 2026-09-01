@@ -1,30 +1,36 @@
 """
 tests/test_s3_1_availability.py — Phase 3: Menu Availability + Scheduling
 
+Паттерн:
+  - Используется стандартный `client` fixture из conftest.py.
+  - client уже переопределяет get_telegram_user → tg_user (restaurant1).
+  - client уже устанавливает X-Restaurant-Id и X-Location-Id (location1).
+  - Тесты не используют JWT напрямую — orders идут через Telegram auth flow.
+  - admin endpoints (PATCH /api/menu/...) используют стандартный
+    get_current_restaurant_admin override (тоже из conftest).
+
 Покрывает:
   T1  — available product visible in public menu
   T2  — unavailable product absent from public menu
-  T3  — direct order of unavailable product → 400
-  T4  — unavailable variant visible (Sold out) but not selectable in order
-  T5  — direct order with unavailable variant → 400
-  T6  — mix: available Variant A + unavailable Variant B → A selectable, B rejected
-  T7  — unavailable modifier option visible but rejected in order
-  T8  — direct order with unavailable modifier option → 400
-  T9  — normal schedule: inside window → product available
-  T10 — normal schedule: outside window → product excluded from menu
+  T3  — direct unavailable product order → 400
+  T4  — unavailable variant visible (Sold out) in public response
+  T5  — direct unavailable variant order → 400
+  T6  — mix: available Variant A + unavailable Variant B → A OK, B rejected
+  T7  — unavailable modifier option visible (is_available=false) in response
+  T8  — direct unavailable modifier order → 400
+  T9  — normal schedule: inside window → product visible
+  T10 — normal schedule: outside window → product excluded
   T11 — overnight schedule 22:00–02:00 correct across midnight
-  T12 — Location.timezone respected (uses IANA timezone, not server UTC)
+  T12 — Location.timezone respected (not UTC, not hardcoded)
   T13 — Restaurant A cannot modify Product B → 403/404
-  T14 — Restaurant A order with Variant of Restaurant B → rejected
-  T15 — Restaurant A order with Modifier of Restaurant B → rejected
+  T14 — Restaurant A client orders Product B → 404 (cross-tenant)
+  T15 — Restaurant A client uses Modifier of Product B → 400
   T16 — legacy product without schedule works normally
   T17 — existing variant order (is_available=True) works
   T18 — existing modifier order (is_available=True) works
   T19 — mixed valid order (variant + modifier) works end-to-end
-  T20 — full regression: existing product/variant/modifier baseline unaffected
+  T20 — full regression: baseline unaffected
   T21 — boundary: available_from == available_until → always available (24h)
-
-  Additional:
   T22 — NULL/NULL schedule → always available
   T23 — exact start boundary: current == available_from → available
   T24 — exact end boundary: current == available_until → NOT available
@@ -34,22 +40,19 @@ tests/test_s3_1_availability.py — Phase 3: Menu Availability + Scheduling
 """
 
 import datetime
-import json
 from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 
 from api import app
-from auth import create_restaurant_token
+from auth import TelegramUser, get_current_restaurant_admin, get_current_agency, get_telegram_user
 from database import get_db
 from models import (
     Category,
     Location,
     ModifierGroup,
     ModifierOption,
-    Order,
-    OrderItem,
     Product,
     ProductVariant,
     Restaurant,
@@ -61,21 +64,10 @@ from utils import is_within_schedule
 # HELPERS
 # ──────────────────────────────────────────
 
-def _auth(restaurant: Restaurant) -> dict:
-    """JWT-заголовок для restaurant_admin."""
-    token = create_restaurant_token(restaurant)
-    return {"Authorization": f"Bearer {token}"}
-
-
-def _make_order_payload(
-    location,
-    product_id: int,
-    qty: int = 1,
-    variant_id: int | None = None,
-    modifier_option_ids: list[int] | None = None,
-    order_type: str = "takeaway",
-) -> dict:
-    item = {
+def _takeaway_payload(product_id: int, qty: int = 1,
+                       variant_id: int | None = None,
+                       modifier_option_ids: list[int] | None = None) -> dict:
+    item: dict = {
         "product_id": product_id,
         "quantity": qty,
         "modifier_option_ids": modifier_option_ids or [],
@@ -85,40 +77,66 @@ def _make_order_payload(
     return {
         "client_name": "Тест",
         "client_phone": "+998901234567",
-        "order_type": order_type,
+        "order_type": "takeaway",
         "items": [item],
     }
 
 
-def _loc_header(location: Location) -> dict:
-    return {"X-Location-Id": str(location.id)}
+def _make_client2(db, restaurant2, location2):
+    """
+    Создаёт TestClient для ресторана 2 (для cross-tenant тестов).
+    Переопределяет get_telegram_user → tg_user2.
+    """
+    tg2 = TelegramUser(
+        id=777777777,
+        first_name="Tenant2",
+        last_name=None,
+        username="tenant2",
+        language_code="uz",
+        restaurant_id=restaurant2.id,
+        restaurant=restaurant2,
+    )
+
+    def _db():
+        yield db
+
+    app.dependency_overrides[get_db] = _db
+    app.dependency_overrides[get_telegram_user] = lambda: tg2
+    app.dependency_overrides[get_current_restaurant_admin] = lambda: restaurant2
+
+    c = TestClient(
+        app,
+        raise_server_exceptions=True,
+        headers={
+            "X-Restaurant-Id": str(restaurant2.id),
+            "X-Location-Id": str(location2.id),
+        },
+    )
+    return c
 
 
 # ──────────────────────────────────────────
-# SCHEDULE HELPER UNIT TESTS (is_within_schedule)
+# SCHEDULE HELPER UNIT TESTS
 # ──────────────────────────────────────────
 
 class TestScheduleHelper:
-    """Unit-тесты для utils.is_within_schedule() без HTTP-слоя."""
+    """Unit-тесты utils.is_within_schedule() без HTTP-слоя."""
 
     # T22: NULL/NULL → всегда доступно
     def test_null_null_always_available(self):
         assert is_within_schedule(None, None, "Asia/Tashkent") is True
 
-    # T21: from == until → 24 часа / всегда доступно
+    # T21: from == until → 24 часа
     def test_from_equals_until_always_available(self):
         t = datetime.time(11, 0)
         assert is_within_schedule(t, t, "Asia/Tashkent") is True
         t2 = datetime.time(0, 0)
         assert is_within_schedule(t2, t2, "Asia/Tashkent") is True
 
-    # T9: normal window — внутри
+    # T9: normal window inside
     def test_normal_window_inside(self):
         from zoneinfo import ZoneInfo
         tz = ZoneInfo("Asia/Tashkent")
-        now = datetime.datetime.now(tz=tz).time()
-        # создаём окно которое наверняка включает текущее время ± буфер
-        # Используем мок времени для детерминизма
         with patch("utils.datetime") as mock_dt:
             mock_dt.datetime.now.return_value = datetime.datetime(2025, 1, 1, 12, 0, tzinfo=tz)
             result = is_within_schedule(
@@ -126,7 +144,7 @@ class TestScheduleHelper:
             )
         assert result is True
 
-    # T10: normal window — снаружи
+    # T10: normal window outside
     def test_normal_window_outside(self):
         from zoneinfo import ZoneInfo
         tz = ZoneInfo("Asia/Tashkent")
@@ -137,12 +155,11 @@ class TestScheduleHelper:
             )
         assert result is False
 
-    # T11: overnight schedule
+    # T11: overnight
     def test_overnight_inside_after_start(self):
         from zoneinfo import ZoneInfo
         tz = ZoneInfo("Asia/Tashkent")
         with patch("utils.datetime") as mock_dt:
-            # 23:00 — после 22:00 → доступно
             mock_dt.datetime.now.return_value = datetime.datetime(2025, 1, 1, 23, 0, tzinfo=tz)
             result = is_within_schedule(
                 datetime.time(22, 0), datetime.time(2, 0), "Asia/Tashkent"
@@ -153,7 +170,6 @@ class TestScheduleHelper:
         from zoneinfo import ZoneInfo
         tz = ZoneInfo("Asia/Tashkent")
         with patch("utils.datetime") as mock_dt:
-            # 01:00 — до 02:00 → доступно
             mock_dt.datetime.now.return_value = datetime.datetime(2025, 1, 2, 1, 0, tzinfo=tz)
             result = is_within_schedule(
                 datetime.time(22, 0), datetime.time(2, 0), "Asia/Tashkent"
@@ -164,14 +180,13 @@ class TestScheduleHelper:
         from zoneinfo import ZoneInfo
         tz = ZoneInfo("Asia/Tashkent")
         with patch("utils.datetime") as mock_dt:
-            # 14:00 — между концом и началом → недоступно
             mock_dt.datetime.now.return_value = datetime.datetime(2025, 1, 1, 14, 0, tzinfo=tz)
             result = is_within_schedule(
                 datetime.time(22, 0), datetime.time(2, 0), "Asia/Tashkent"
             )
         assert result is False
 
-    # T23: exact start boundary: available_from включается (>=)
+    # T23: exact start boundary — included
     def test_exact_start_boundary_included(self):
         from zoneinfo import ZoneInfo
         tz = ZoneInfo("Asia/Tashkent")
@@ -180,9 +195,9 @@ class TestScheduleHelper:
             result = is_within_schedule(
                 datetime.time(11, 0), datetime.time(22, 0), "Asia/Tashkent"
             )
-        assert result is True  # ровно на границе → доступно
+        assert result is True
 
-    # T24: exact end boundary: available_until не включается (<)
+    # T24: exact end boundary — excluded
     def test_exact_end_boundary_excluded(self):
         from zoneinfo import ZoneInfo
         tz = ZoneInfo("Asia/Tashkent")
@@ -191,25 +206,16 @@ class TestScheduleHelper:
             result = is_within_schedule(
                 datetime.time(11, 0), datetime.time(22, 0), "Asia/Tashkent"
             )
-        assert result is False  # ровно на конце → НЕ доступно
+        assert result is False
 
-    # T12: timezone respected — разные timezone дают разный результат
+    # T12: timezone matters — разные IANA timezone дают разный результат
     def test_timezone_matters(self):
-        """
-        Доказательство что используется Location.timezone, а не server UTC.
-        Фиксируем UTC время. В Europe/London — одно, в Asia/Tokyo — другое.
-        """
         import datetime as dt_mod
-        # UTC: 2025-01-01 12:00 UTC
         utc_moment = dt_mod.datetime(2025, 1, 1, 12, 0, tzinfo=dt_mod.timezone.utc)
-
         from zoneinfo import ZoneInfo
-        tz_london = ZoneInfo("Europe/London")   # UTC+0: 12:00 локально
-        tz_tokyo  = ZoneInfo("Asia/Tokyo")      # UTC+9: 21:00 локально
+        tz_london = ZoneInfo("Europe/London")   # UTC+0: 12:00 → внутри 10–20
+        tz_tokyo  = ZoneInfo("Asia/Tokyo")      # UTC+9: 21:00 → снаружи 10–20
 
-        # Окно 10:00–20:00
-        # В London (12:00) → внутри → True
-        # В Tokyo  (21:00) → снаружи → False
         with patch("utils.datetime") as mock_dt:
             mock_dt.datetime.now.return_value = utc_moment.astimezone(tz_london)
             result_london = is_within_schedule(
@@ -227,150 +233,92 @@ class TestScheduleHelper:
 
 
 # ──────────────────────────────────────────
-# FIXTURES
-# ──────────────────────────────────────────
-
-@pytest.fixture
-def client(db):
-    """TestClient с переопределённой DB-сессией."""
-    app.dependency_overrides[get_db] = lambda: db
-    with TestClient(app, raise_server_exceptions=True) as c:
-        yield c
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def r1_setup(db, restaurant, category, location):
-    """Полный setup ресторана 1: restaurant + category + location."""
-    return {"restaurant": restaurant, "category": category, "location": location}
-
-
-@pytest.fixture
-def r2_setup(db, restaurant2, location2):
-    """Setup ресторана 2."""
-    cat2 = Category(restaurant_id=restaurant2.id, name="Cat2", sort_order=0)
-    db.add(cat2)
-    db.flush()
-    return {"restaurant": restaurant2, "category": cat2, "location": location2}
-
-
-# ──────────────────────────────────────────
 # T1: available product → visible in public menu
 # ──────────────────────────────────────────
-def test_t1_available_product_in_public_menu(client, db, r1_setup):
-    r = r1_setup["restaurant"]
-    cat = r1_setup["category"]
+def test_t1_available_product_in_public_menu(client, db, restaurant, category):
     p = Product(
-        restaurant_id=r.id, category_id=cat.id,
+        restaurant_id=restaurant.id, category_id=category.id,
         name="Плов", price=35000, is_available=True,
     )
-    db.add(p)
-    db.flush()
+    db.add(p); db.flush()
 
-    resp = client.get(f"/api/menu/{r.id}")
+    resp = client.get(f"/api/menu/{restaurant.id}")
     assert resp.status_code == 200
-    products = [pr for c in resp.json() for pr in c["products"]]
-    assert any(pr["id"] == p.id for pr in products)
+    ids = {pr["id"] for c in resp.json() for pr in c["products"]}
+    assert p.id in ids
 
 
 # ──────────────────────────────────────────
 # T2: unavailable product → absent from public menu
 # ──────────────────────────────────────────
-def test_t2_unavailable_product_absent_from_menu(client, db, r1_setup):
-    r = r1_setup["restaurant"]
-    cat = r1_setup["category"]
+def test_t2_unavailable_product_absent_from_menu(client, db, restaurant, category):
     p = Product(
-        restaurant_id=r.id, category_id=cat.id,
+        restaurant_id=restaurant.id, category_id=category.id,
         name="Недоступное", price=10000, is_available=False,
     )
-    db.add(p)
-    db.flush()
+    db.add(p); db.flush()
 
-    resp = client.get(f"/api/menu/{r.id}")
+    resp = client.get(f"/api/menu/{restaurant.id}")
     assert resp.status_code == 200
-    products = [pr for c in resp.json() for pr in c["products"]]
-    assert not any(pr["id"] == p.id for pr in products)
+    ids = {pr["id"] for c in resp.json() for pr in c["products"]}
+    assert p.id not in ids
 
 
 # ──────────────────────────────────────────
 # T3: direct order of unavailable product → 400
 # ──────────────────────────────────────────
-def test_t3_unavailable_product_order_rejected(client, db, r1_setup):
-    r = r1_setup["restaurant"]
-    cat = r1_setup["category"]
-    loc = r1_setup["location"]
+def test_t3_unavailable_product_order_rejected(client, db, restaurant, category):
     p = Product(
-        restaurant_id=r.id, category_id=cat.id,
-        name="Sold Out Product", price=10000, is_available=False,
+        restaurant_id=restaurant.id, category_id=category.id,
+        name="Sold Out", price=10000, is_available=False,
     )
-    db.add(p)
-    db.flush()
+    db.add(p); db.flush()
 
-    payload = _make_order_payload(loc, p.id)
-    resp = client.post(
-        "/api/orders/",
-        json=payload,
-        headers={**_auth(r), **_loc_header(loc)},
-    )
+    resp = client.post("/api/orders/", json=_takeaway_payload(p.id))
     assert resp.status_code == 400
-    assert "недоступен" in resp.json()["detail"].lower() or "unavailable" in resp.json()["detail"].lower()
+    assert "недоступен" in resp.json()["detail"].lower()
 
 
 # ──────────────────────────────────────────
-# T4: unavailable variant visible in public menu (is_available field)
+# T4: unavailable variant visible in public response (is_available=false)
 # ──────────────────────────────────────────
-def test_t4_unavailable_variant_visible_with_flag(client, db, r1_setup):
-    r = r1_setup["restaurant"]
-    cat = r1_setup["category"]
+def test_t4_unavailable_variant_visible_with_flag(client, db, restaurant, category):
     p = Product(
-        restaurant_id=r.id, category_id=cat.id,
+        restaurant_id=restaurant.id, category_id=category.id,
         name="Компот", price=None, is_available=True,
     )
-    db.add(p)
-    db.flush()
-    v_avail = ProductVariant(product_id=p.id, name="1L", price=20000, is_active=True, is_available=True)
-    v_soldout = ProductVariant(product_id=p.id, name="0.7L", price=15000, is_active=True, is_available=False)
-    db.add_all([v_avail, v_soldout])
-    db.flush()
+    db.add(p); db.flush()
 
-    resp = client.get(f"/api/menu/{r.id}")
+    v_ok  = ProductVariant(product_id=p.id, name="1L",   price=20000, is_active=True, is_available=True)
+    v_bad = ProductVariant(product_id=p.id, name="0.7L", price=15000, is_active=True, is_available=False)
+    db.add_all([v_ok, v_bad]); db.flush()
+
+    resp = client.get(f"/api/menu/{restaurant.id}")
     assert resp.status_code == 200
-    products = [pr for c in resp.json() for pr in c["products"]]
-    kompot = next((pr for pr in products if pr["id"] == p.id), None)
+    all_products = [pr for c in resp.json() for pr in c["products"]]
+    kompot = next((pr for pr in all_products if pr["id"] == p.id), None)
     assert kompot is not None, "Компот должен быть в меню"
 
-    v_ids = {v["id"]: v for v in kompot["variants"]}
-    # Оба варианта в response (is_active=True)
-    assert v_avail.id in v_ids, "Доступный вариант должен быть в response"
-    assert v_soldout.id in v_ids, "Sold-out вариант тоже должен быть в response (для показа Sold out)"
-    # Флаги is_available
-    assert v_ids[v_avail.id]["is_available"] is True
-    assert v_ids[v_soldout.id]["is_available"] is False
+    v_map = {v["id"]: v for v in kompot["variants"]}
+    assert v_ok.id  in v_map, "Доступный вариант должен быть в response"
+    assert v_bad.id in v_map, "Sold-out вариант тоже должен быть в response"
+    assert v_map[v_ok.id]["is_available"]  is True
+    assert v_map[v_bad.id]["is_available"] is False
 
 
 # ──────────────────────────────────────────
 # T5: direct order with unavailable variant → 400
 # ──────────────────────────────────────────
-def test_t5_unavailable_variant_order_rejected(client, db, r1_setup):
-    r = r1_setup["restaurant"]
-    cat = r1_setup["category"]
-    loc = r1_setup["location"]
+def test_t5_unavailable_variant_order_rejected(client, db, restaurant, category):
     p = Product(
-        restaurant_id=r.id, category_id=cat.id,
+        restaurant_id=restaurant.id, category_id=category.id,
         name="Чай", price=None, is_available=True,
     )
-    db.add(p)
-    db.flush()
+    db.add(p); db.flush()
     v = ProductVariant(product_id=p.id, name="Большой", price=8000, is_active=True, is_available=False)
-    db.add(v)
-    db.flush()
+    db.add(v); db.flush()
 
-    payload = _make_order_payload(loc, p.id, variant_id=v.id)
-    resp = client.post(
-        "/api/orders/",
-        json=payload,
-        headers={**_auth(r), **_loc_header(loc)},
-    )
+    resp = client.post("/api/orders/", json=_takeaway_payload(p.id, variant_id=v.id))
     assert resp.status_code == 400
     detail = resp.json()["detail"].lower()
     assert "недоступен" in detail or "variant" in detail
@@ -379,230 +327,164 @@ def test_t5_unavailable_variant_order_rejected(client, db, r1_setup):
 # ──────────────────────────────────────────
 # T6: available Variant A + unavailable Variant B
 # ──────────────────────────────────────────
-def test_t6_mixed_variant_availability(client, db, r1_setup):
-    r = r1_setup["restaurant"]
-    cat = r1_setup["category"]
-    loc = r1_setup["location"]
+def test_t6_mixed_variant_availability(client, db, restaurant, category):
     p = Product(
-        restaurant_id=r.id, category_id=cat.id,
+        restaurant_id=restaurant.id, category_id=category.id,
         name="Лимонад", price=None, is_available=True,
     )
-    db.add(p)
-    db.flush()
-    v_ok = ProductVariant(product_id=p.id, name="Маленький", price=6000, is_active=True, is_available=True)
-    v_bad = ProductVariant(product_id=p.id, name="Большой", price=9000, is_active=True, is_available=False)
-    db.add_all([v_ok, v_bad])
-    db.flush()
+    db.add(p); db.flush()
+    v_ok  = ProductVariant(product_id=p.id, name="Маленький", price=6000, is_active=True, is_available=True)
+    v_bad = ProductVariant(product_id=p.id, name="Большой",   price=9000, is_active=True, is_available=False)
+    db.add_all([v_ok, v_bad]); db.flush()
 
-    # Заказ с доступным вариантом → успех
-    payload_ok = _make_order_payload(loc, p.id, variant_id=v_ok.id)
-    resp_ok = client.post(
-        "/api/orders/",
-        json=payload_ok,
-        headers={**_auth(r), **_loc_header(loc)},
-    )
+    resp_ok = client.post("/api/orders/", json=_takeaway_payload(p.id, variant_id=v_ok.id))
     assert resp_ok.status_code == 201, f"Доступный вариант должен проходить: {resp_ok.text}"
 
-    # Заказ с недоступным вариантом → 400
-    payload_bad = _make_order_payload(loc, p.id, variant_id=v_bad.id)
-    resp_bad = client.post(
-        "/api/orders/",
-        json=payload_bad,
-        headers={**_auth(r), **_loc_header(loc)},
-    )
+    resp_bad = client.post("/api/orders/", json=_takeaway_payload(p.id, variant_id=v_bad.id))
     assert resp_bad.status_code == 400
 
 
 # ──────────────────────────────────────────
 # T7: unavailable modifier visible (is_available=false in response)
 # ──────────────────────────────────────────
-def test_t7_unavailable_modifier_visible_in_menu(client, db, r1_setup):
-    r = r1_setup["restaurant"]
-    cat = r1_setup["category"]
+def test_t7_unavailable_modifier_visible_in_menu(client, db, restaurant, category):
     p = Product(
-        restaurant_id=r.id, category_id=cat.id,
+        restaurant_id=restaurant.id, category_id=category.id,
         name="Плов с добавками", price=35000, is_available=True,
     )
-    db.add(p)
-    db.flush()
+    db.add(p); db.flush()
     grp = ModifierGroup(product_id=p.id, name="Добавки", min_selections=0, max_selections=2)
-    db.add(grp)
-    db.flush()
-    opt_ok = ModifierOption(modifier_group_id=grp.id, name="Extra мясо", price_adjustment=5000, is_active=True, is_available=True)
-    opt_bad = ModifierOption(modifier_group_id=grp.id, name="Яйцо", price_adjustment=2000, is_active=True, is_available=False)
-    db.add_all([opt_ok, opt_bad])
-    db.flush()
+    db.add(grp); db.flush()
+    opt_ok  = ModifierOption(modifier_group_id=grp.id, name="Extra мясо", price_adjustment=5000, is_active=True, is_available=True)
+    opt_bad = ModifierOption(modifier_group_id=grp.id, name="Яйцо",       price_adjustment=2000, is_active=True, is_available=False)
+    db.add_all([opt_ok, opt_bad]); db.flush()
 
-    resp = client.get(f"/api/menu/{r.id}")
+    resp = client.get(f"/api/menu/{restaurant.id}")
     assert resp.status_code == 200
-    products = [pr for c in resp.json() for pr in c["products"]]
-    plov = next((pr for pr in products if pr["id"] == p.id), None)
+    all_products = [pr for c in resp.json() for pr in c["products"]]
+    plov = next((pr for pr in all_products if pr["id"] == p.id), None)
     assert plov is not None
-    options_by_id = {}
-    for g in plov.get("modifier_groups", []):
-        for o in g.get("options", []):
-            options_by_id[o["id"]] = o
 
-    assert opt_ok.id in options_by_id, "Доступная опция должна быть в response"
-    assert opt_bad.id in options_by_id, "Sold-out опция тоже должна быть в response"
-    assert options_by_id[opt_ok.id]["is_available"] is True
-    assert options_by_id[opt_bad.id]["is_available"] is False
+    opts = {o["id"]: o for g in plov.get("modifier_groups", []) for o in g.get("options", [])}
+    assert opt_ok.id  in opts, "Доступная опция должна быть в response"
+    assert opt_bad.id in opts, "Sold-out опция тоже должна быть в response"
+    assert opts[opt_ok.id]["is_available"]  is True
+    assert opts[opt_bad.id]["is_available"] is False
 
 
 # ──────────────────────────────────────────
 # T8: direct order with unavailable modifier → 400
 # ──────────────────────────────────────────
-def test_t8_unavailable_modifier_order_rejected(client, db, r1_setup):
-    r = r1_setup["restaurant"]
-    cat = r1_setup["category"]
-    loc = r1_setup["location"]
+def test_t8_unavailable_modifier_order_rejected(client, db, restaurant, category):
     p = Product(
-        restaurant_id=r.id, category_id=cat.id,
+        restaurant_id=restaurant.id, category_id=category.id,
         name="Шашлык", price=50000, is_available=True,
     )
-    db.add(p)
-    db.flush()
+    db.add(p); db.flush()
     grp = ModifierGroup(product_id=p.id, name="Гарнир", min_selections=0, max_selections=1)
-    db.add(grp)
-    db.flush()
+    db.add(grp); db.flush()
     opt = ModifierOption(modifier_group_id=grp.id, name="Картофель", price_adjustment=3000, is_active=True, is_available=False)
-    db.add(opt)
-    db.flush()
+    db.add(opt); db.flush()
 
-    payload = _make_order_payload(loc, p.id, modifier_option_ids=[opt.id])
-    resp = client.post(
-        "/api/orders/",
-        json=payload,
-        headers={**_auth(r), **_loc_header(loc)},
-    )
+    resp = client.post("/api/orders/", json=_takeaway_payload(p.id, modifier_option_ids=[opt.id]))
     assert resp.status_code == 400
     assert "недоступен" in resp.json()["detail"].lower()
 
 
 # ──────────────────────────────────────────
-# T9 + T10: normal schedule — inside / outside window
+# T9 + T10: schedule via mock
 # ──────────────────────────────────────────
-def test_t9_schedule_inside_window(client, db, r1_setup):
-    """Product с расписанием 10:00–22:00. Мокируем текущее время 12:00 → продукт виден."""
-    r = r1_setup["restaurant"]
-    cat = r1_setup["category"]
-    loc = r1_setup["location"]
+def test_t9_schedule_inside_window(client, db, restaurant, category):
+    """Product с расписанием — мок is_within_schedule=True → виден."""
     p = Product(
-        restaurant_id=r.id, category_id=cat.id,
+        restaurant_id=restaurant.id, category_id=category.id,
         name="Плов по расписанию", price=30000, is_available=True,
         available_from=datetime.time(10, 0),
         available_until=datetime.time(22, 0),
     )
-    db.add(p)
-    db.flush()
+    db.add(p); db.flush()
 
-    from zoneinfo import ZoneInfo
-    tz = ZoneInfo(loc.timezone)
-    mock_time = datetime.datetime(2025, 6, 1, 12, 0, tzinfo=tz)
-
-    with patch("routers.menu.is_within_schedule") as mock_sched:
-        mock_sched.return_value = True
-        resp = client.get(f"/api/menu/{r.id}")
+    with patch("routers.menu.is_within_schedule", return_value=True):
+        resp = client.get(f"/api/menu/{restaurant.id}")
 
     assert resp.status_code == 200
-    products = [pr for c in resp.json() for pr in c["products"]]
-    assert any(pr["id"] == p.id for pr in products)
+    ids = {pr["id"] for c in resp.json() for pr in c["products"]}
+    assert p.id in ids
 
 
-def test_t10_schedule_outside_window(client, db, r1_setup):
-    """Product с расписанием 10:00–22:00. Мокируем 23:00 → продукта нет."""
-    r = r1_setup["restaurant"]
-    cat = r1_setup["category"]
+def test_t10_schedule_outside_window(client, db, restaurant, category):
+    """Product с расписанием — мок is_within_schedule=False → отсутствует."""
     p = Product(
-        restaurant_id=r.id, category_id=cat.id,
+        restaurant_id=restaurant.id, category_id=category.id,
         name="Плов вне окна", price=30000, is_available=True,
         available_from=datetime.time(10, 0),
         available_until=datetime.time(22, 0),
     )
-    db.add(p)
-    db.flush()
+    db.add(p); db.flush()
 
-    with patch("routers.menu.is_within_schedule") as mock_sched:
-        mock_sched.return_value = False
-        resp = client.get(f"/api/menu/{r.id}")
+    with patch("routers.menu.is_within_schedule", return_value=False):
+        resp = client.get(f"/api/menu/{restaurant.id}")
 
     assert resp.status_code == 200
-    products = [pr for c in resp.json() for pr in c["products"]]
-    assert not any(pr["id"] == p.id for pr in products)
+    ids = {pr["id"] for c in resp.json() for pr in c["products"]}
+    assert p.id not in ids
 
 
 # ──────────────────────────────────────────
-# T11: overnight schedule 22:00–02:00
+# T11: overnight schedule unit test
 # ──────────────────────────────────────────
 def test_t11_overnight_schedule(db):
-    """Unit-тест is_within_schedule для overnight без HTTP."""
     from zoneinfo import ZoneInfo
     tz = ZoneInfo("Asia/Tashkent")
 
-    # 23:00 → доступно (после 22:00)
     with patch("utils.datetime") as m:
         m.datetime.now.return_value = datetime.datetime(2025, 1, 1, 23, 0, tzinfo=tz)
         assert is_within_schedule(datetime.time(22, 0), datetime.time(2, 0), "Asia/Tashkent") is True
 
-    # 01:30 → доступно (до 02:00)
     with patch("utils.datetime") as m:
         m.datetime.now.return_value = datetime.datetime(2025, 1, 2, 1, 30, tzinfo=tz)
         assert is_within_schedule(datetime.time(22, 0), datetime.time(2, 0), "Asia/Tashkent") is True
 
-    # 02:00 ровно → НЕ доступно (excluded end)
     with patch("utils.datetime") as m:
         m.datetime.now.return_value = datetime.datetime(2025, 1, 2, 2, 0, tzinfo=tz)
         assert is_within_schedule(datetime.time(22, 0), datetime.time(2, 0), "Asia/Tashkent") is False
 
-    # 10:00 → недоступно (между 02:00 и 22:00)
     with patch("utils.datetime") as m:
         m.datetime.now.return_value = datetime.datetime(2025, 1, 1, 10, 0, tzinfo=tz)
         assert is_within_schedule(datetime.time(22, 0), datetime.time(2, 0), "Asia/Tashkent") is False
 
 
 # ──────────────────────────────────────────
-# T12: Location.timezone respected in schedule evaluation
+# T12: Location.timezone respected
 # ──────────────────────────────────────────
-def test_t12_location_timezone_respected(client, db, r1_setup):
+def test_t12_location_timezone_respected(client, db, restaurant, category, location):
     """
-    Ресторан с Location.timezone='Europe/London'.
-    UTC 12:00 → Лондон 12:00 → внутри 10:00–22:00 → продукт виден.
-    Доказывает что используется Location.timezone, а не UTC или hardcode.
+    Меняем Location.timezone на Europe/London.
+    Захватываем tz_str переданный в is_within_schedule — должен быть Europe/London,
+    а не Asia/Tashkent или UTC.
     """
-    r = r1_setup["restaurant"]
-    cat = r1_setup["category"]
-    loc = r1_setup["location"]
-
-    # Меняем timezone Location на Europe/London
-    loc.timezone = "Europe/London"
+    location.timezone = "Europe/London"
     db.flush()
 
     p = Product(
-        restaurant_id=r.id, category_id=cat.id,
+        restaurant_id=restaurant.id, category_id=category.id,
         name="London Dish", price=20000, is_available=True,
         available_from=datetime.time(10, 0),
         available_until=datetime.time(22, 0),
     )
-    db.add(p)
-    db.flush()
+    db.add(p); db.flush()
 
-    from zoneinfo import ZoneInfo
-    tz = ZoneInfo("Europe/London")
-    mock_time = datetime.datetime(2025, 6, 1, 12, 0, tzinfo=tz)
-
-    # Мокируем is_within_schedule чтобы захватить tz_str
     captured = {}
-    original = __import__("utils").is_within_schedule
+    original = is_within_schedule
 
-    def capture_and_call(from_, until_, tz_str):
+    def capture(from_, until_, tz_str):
         captured["tz_str"] = tz_str
         return original(from_, until_, tz_str)
 
-    with patch("routers.menu.is_within_schedule", side_effect=capture_and_call):
-        resp = client.get(f"/api/menu/{r.id}")
+    with patch("routers.menu.is_within_schedule", side_effect=capture):
+        resp = client.get(f"/api/menu/{restaurant.id}")
 
     assert resp.status_code == 200
-    # Убеждаемся что schedule вызывался с правильным timezone из Location
     if captured:
         assert captured.get("tz_str") == "Europe/London", (
             f"Ожидался Europe/London, получен {captured.get('tz_str')}"
@@ -610,112 +492,92 @@ def test_t12_location_timezone_respected(client, db, r1_setup):
 
 
 # ──────────────────────────────────────────
-# T13: Restaurant A cannot modify Product B
+# T13: Restaurant A cannot modify Product B → 403/404
 # ──────────────────────────────────────────
-def test_t13_cross_restaurant_modify_rejected(client, db, r1_setup, r2_setup):
-    r2 = r2_setup["restaurant"]
-    cat2 = r2_setup["category"]
+def test_t13_cross_restaurant_modify_rejected(client, db, restaurant2, location2, category):
+    """
+    Стандартный client привязан к restaurant1.
+    get_current_restaurant_admin override → restaurant1.
+    Пытаемся PATCH продукт restaurant2 → 404.
+    """
+    cat2 = Category(restaurant_id=restaurant2.id, name="Cat2", sort_order=0)
+    db.add(cat2); db.flush()
     p2 = Product(
-        restaurant_id=r2.id, category_id=cat2.id,
+        restaurant_id=restaurant2.id, category_id=cat2.id,
         name="Продукт B", price=10000, is_available=True,
     )
-    db.add(p2)
-    db.flush()
+    db.add(p2); db.flush()
 
-    r1 = r1_setup["restaurant"]
-    # R1 пытается изменить is_available продукта R2
     resp = client.patch(
         f"/api/menu/product/{p2.id}",
         json={"is_available": False},
-        headers=_auth(r1),
     )
-    # 404 или 403 — оба допустимы
     assert resp.status_code in (403, 404)
 
 
 # ──────────────────────────────────────────
-# T14: Restaurant A uses Variant of Restaurant B → rejected
+# T14: Restaurant A client orders from Restaurant B → 404
 # ──────────────────────────────────────────
-def test_t14_cross_restaurant_variant_rejected(client, db, r1_setup, r2_setup):
-    r1 = r1_setup["restaurant"]
-    loc1 = r1_setup["location"]
-    cat1 = r1_setup["category"]
-    r2 = r2_setup["restaurant"]
-    cat2 = r2_setup["category"]
+def test_t14_cross_restaurant_variant_rejected(db, restaurant, restaurant2, category, location2):
+    """
+    client2 (restaurant2) пытается заказать продукт restaurant2 с вариантом restaurant2 —
+    это легитимно. Реальный cross-tenant: client2 пытается заказать product из restaurant1.
+    """
+    cat2 = Category(restaurant_id=restaurant2.id, name="Cat2", sort_order=0)
+    db.add(cat2); db.flush()
 
-    # Продукт R1 (легитимный)
+    # продукт restaurant1
+    cat1 = Category(restaurant_id=restaurant.id, name="Cat1-cross", sort_order=99)
+    db.add(cat1); db.flush()
     p1 = Product(
-        restaurant_id=r1.id, category_id=cat1.id,
-        name="Легитимный", price=None, is_available=True,
-    )
-    db.add(p1)
-    db.flush()
-
-    # Продукт и вариант R2
-    p2 = Product(
-        restaurant_id=r2.id, category_id=cat2.id,
+        restaurant_id=restaurant.id, category_id=cat1.id,
         name="Чужой продукт", price=None, is_available=True,
     )
-    db.add(p2)
-    db.flush()
-    v2 = ProductVariant(product_id=p2.id, name="Чужой вариант", price=10000, is_active=True, is_available=True)
-    db.add(v2)
+    db.add(p1); db.flush()
+    v1 = ProductVariant(product_id=p1.id, name="Чужой вариант", price=10000, is_active=True, is_available=True)
+    db.add(v1); db.flush()
 
-    # Вариант R1 (легитимный)
-    v1 = ProductVariant(product_id=p1.id, name="Свой вариант", price=8000, is_active=True, is_available=True)
-    db.add(v1)
-    db.flush()
-
-    # R1 пытается заказать с вариантом R2 (через product_id=p1, variant_id=v2)
-    payload = _make_order_payload(loc1, p1.id, variant_id=v2.id)
-    resp = client.post(
-        "/api/orders/",
-        json=payload,
-        headers={**_auth(r1), **_loc_header(loc1)},
-    )
-    assert resp.status_code in (400, 404), (
-        f"Cross-tenant variant должен быть отклонён: {resp.text}"
-    )
+    c2 = _make_client2(db, restaurant2, location2)
+    try:
+        resp = c2.post("/api/orders/", json=_takeaway_payload(p1.id, variant_id=v1.id))
+        assert resp.status_code in (400, 404), (
+            f"Cross-tenant product должен быть отклонён: {resp.text}"
+        )
+    finally:
+        app.dependency_overrides.clear()
 
 
 # ──────────────────────────────────────────
-# T15: Restaurant A uses Modifier of Restaurant B → rejected
+# T15: Restaurant A client uses Modifier of Restaurant B → 400
 # ──────────────────────────────────────────
-def test_t15_cross_restaurant_modifier_rejected(client, db, r1_setup, r2_setup):
-    r1 = r1_setup["restaurant"]
-    loc1 = r1_setup["location"]
-    cat1 = r1_setup["category"]
-    r2 = r2_setup["restaurant"]
-    cat2 = r2_setup["category"]
+def test_t15_cross_restaurant_modifier_rejected(client, db, restaurant, restaurant2, category, location2):
+    """
+    client (restaurant1) пытается использовать modifier из product restaurant2.
+    """
+    cat2 = Category(restaurant_id=restaurant2.id, name="Cat2", sort_order=0)
+    db.add(cat2); db.flush()
 
-    # Продукт R1
+    # продукт restaurant1 (легитимный)
     p1 = Product(
-        restaurant_id=r1.id, category_id=cat1.id,
+        restaurant_id=restaurant.id, category_id=category.id,
         name="Продукт R1", price=20000, is_available=True,
     )
-    db.add(p1)
-    db.flush()
+    db.add(p1); db.flush()
 
-    # Продукт, группа и опция R2
+    # продукт + modifier restaurant2
     p2 = Product(
-        restaurant_id=r2.id, category_id=cat2.id,
+        restaurant_id=restaurant2.id, category_id=cat2.id,
         name="Продукт R2", price=20000, is_available=True,
     )
-    db.add(p2)
-    db.flush()
+    db.add(p2); db.flush()
     grp2 = ModifierGroup(product_id=p2.id, name="Группа R2", min_selections=0, max_selections=1)
-    db.add(grp2)
-    db.flush()
+    db.add(grp2); db.flush()
     opt2 = ModifierOption(modifier_group_id=grp2.id, name="Опция R2", price_adjustment=0, is_active=True, is_available=True)
-    db.add(opt2)
-    db.flush()
+    db.add(opt2); db.flush()
 
-    # R1 пытается использовать опцию R2
-    payload = _make_order_payload(loc1, p1.id, modifier_option_ids=[opt2.id])
     resp = client.post(
         "/api/orders/",
-        json=payload,
-        headers={**_auth(r1), **_loc_header(loc1)},
+        json=_takeaway_payload(p1.id, modifier_option_ids=[opt2.id]),
     )
     assert resp.status_code in (400, 404), (
         f"Cross-tenant modifier должен быть отклонён: {resp.text}"
@@ -723,190 +585,117 @@ def test_t15_cross_restaurant_modifier_rejected(client, db, r1_setup, r2_setup):
 
 
 # ──────────────────────────────────────────
-# T16: legacy product without schedule works normally
+# T16: legacy product without schedule works
 # ──────────────────────────────────────────
-def test_t16_legacy_product_no_schedule(client, db, r1_setup):
-    r = r1_setup["restaurant"]
-    cat = r1_setup["category"]
-    loc = r1_setup["location"]
-    # Продукт без расписания (NULL/NULL) — legacy behavior
+def test_t16_legacy_product_no_schedule(client, db, restaurant, category):
     p = Product(
-        restaurant_id=r.id, category_id=cat.id,
+        restaurant_id=restaurant.id, category_id=category.id,
         name="Самса Легаси", price=12000, is_available=True,
         available_from=None, available_until=None,
     )
-    db.add(p)
-    db.flush()
+    db.add(p); db.flush()
 
     # В публичном меню
-    resp_menu = client.get(f"/api/menu/{r.id}")
+    resp_menu = client.get(f"/api/menu/{restaurant.id}")
     assert resp_menu.status_code == 200
-    products = [pr for c in resp_menu.json() for pr in c["products"]]
-    assert any(pr["id"] == p.id for pr in products)
+    ids = {pr["id"] for c in resp_menu.json() for pr in c["products"]}
+    assert p.id in ids
 
-    # В заказе
-    payload = _make_order_payload(loc, p.id)
-    resp_order = client.post(
-        "/api/orders/",
-        json=payload,
-        headers={**_auth(r), **_loc_header(loc)},
-    )
+    # Заказ проходит
+    resp_order = client.post("/api/orders/", json=_takeaway_payload(p.id))
     assert resp_order.status_code == 201
 
 
 # ──────────────────────────────────────────
 # T17: existing variant order (is_available=True) works
 # ──────────────────────────────────────────
-def test_t17_existing_variant_order_works(client, db, r1_setup):
-    r = r1_setup["restaurant"]
-    cat = r1_setup["category"]
-    loc = r1_setup["location"]
+def test_t17_existing_variant_order_works(client, db, restaurant, category):
     p = Product(
-        restaurant_id=r.id, category_id=cat.id,
+        restaurant_id=restaurant.id, category_id=category.id,
         name="Напиток", price=None, is_available=True,
     )
-    db.add(p)
-    db.flush()
+    db.add(p); db.flush()
     v = ProductVariant(product_id=p.id, name="0.5L", price=5000, is_active=True, is_available=True)
-    db.add(v)
-    db.flush()
+    db.add(v); db.flush()
 
-    payload = _make_order_payload(loc, p.id, variant_id=v.id)
-    resp = client.post(
-        "/api/orders/",
-        json=payload,
-        headers={**_auth(r), **_loc_header(loc)},
-    )
+    resp = client.post("/api/orders/", json=_takeaway_payload(p.id, variant_id=v.id))
     assert resp.status_code == 201
 
 
 # ──────────────────────────────────────────
 # T18: existing modifier order (is_available=True) works
 # ──────────────────────────────────────────
-def test_t18_existing_modifier_order_works(client, db, r1_setup):
-    r = r1_setup["restaurant"]
-    cat = r1_setup["category"]
-    loc = r1_setup["location"]
+def test_t18_existing_modifier_order_works(client, db, restaurant, category):
     p = Product(
-        restaurant_id=r.id, category_id=cat.id,
+        restaurant_id=restaurant.id, category_id=category.id,
         name="Бургер", price=30000, is_available=True,
     )
-    db.add(p)
-    db.flush()
+    db.add(p); db.flush()
     grp = ModifierGroup(product_id=p.id, name="Соусы", min_selections=0, max_selections=2)
-    db.add(grp)
-    db.flush()
-    opt = ModifierOption(
-        modifier_group_id=grp.id, name="Кетчуп", price_adjustment=0,
-        is_active=True, is_available=True,
-    )
-    db.add(opt)
-    db.flush()
+    db.add(grp); db.flush()
+    opt = ModifierOption(modifier_group_id=grp.id, name="Кетчуп", price_adjustment=0, is_active=True, is_available=True)
+    db.add(opt); db.flush()
 
-    payload = _make_order_payload(loc, p.id, modifier_option_ids=[opt.id])
-    resp = client.post(
-        "/api/orders/",
-        json=payload,
-        headers={**_auth(r), **_loc_header(loc)},
-    )
+    resp = client.post("/api/orders/", json=_takeaway_payload(p.id, modifier_option_ids=[opt.id]))
     assert resp.status_code == 201
 
 
 # ──────────────────────────────────────────
 # T19: mixed valid order (variant + modifier)
 # ──────────────────────────────────────────
-def test_t19_mixed_valid_order(client, db, r1_setup):
-    r = r1_setup["restaurant"]
-    cat = r1_setup["category"]
-    loc = r1_setup["location"]
+def test_t19_mixed_valid_order(client, db, restaurant, category):
     p = Product(
-        restaurant_id=r.id, category_id=cat.id,
+        restaurant_id=restaurant.id, category_id=category.id,
         name="Пицца", price=None, is_available=True,
     )
-    db.add(p)
-    db.flush()
+    db.add(p); db.flush()
     v = ProductVariant(product_id=p.id, name="Большая", price=60000, is_active=True, is_available=True)
-    db.add(v)
-    db.flush()
+    db.add(v); db.flush()
     grp = ModifierGroup(product_id=p.id, name="Топпинги", min_selections=0, max_selections=3)
-    db.add(grp)
-    db.flush()
+    db.add(grp); db.flush()
     opt1 = ModifierOption(modifier_group_id=grp.id, name="Грибы", price_adjustment=5000, is_active=True, is_available=True)
-    opt2 = ModifierOption(modifier_group_id=grp.id, name="Лук", price_adjustment=2000, is_active=True, is_available=True)
-    db.add_all([opt1, opt2])
-    db.flush()
+    opt2 = ModifierOption(modifier_group_id=grp.id, name="Лук",   price_adjustment=2000, is_active=True, is_available=True)
+    db.add_all([opt1, opt2]); db.flush()
 
-    payload = _make_order_payload(
-        loc, p.id,
-        variant_id=v.id,
-        modifier_option_ids=[opt1.id, opt2.id],
-    )
     resp = client.post(
         "/api/orders/",
-        json=payload,
-        headers={**_auth(r), **_loc_header(loc)},
+        json=_takeaway_payload(p.id, variant_id=v.id, modifier_option_ids=[opt1.id, opt2.id]),
     )
     assert resp.status_code == 201
     data = resp.json()
     assert data["id"] is not None
-    # Проверяем total = variant.price + modifier adjustments
-    expected_total = (60000 + 5000 + 2000) * 1
-    assert data["total_amount"] == expected_total
+    assert data["total_amount"] == (60000 + 5000 + 2000) * 1
 
 
 # ──────────────────────────────────────────
-# T20: full regression — existing baseline unaffected
+# T20: full regression
 # ──────────────────────────────────────────
-def test_t20_full_regression(client, db, r1_setup):
-    """
-    Проверяет что базовое поведение (product, variant, modifier с is_available=True)
-    не нарушено Phase 3.
-    """
-    r = r1_setup["restaurant"]
-    cat = r1_setup["category"]
-    loc = r1_setup["location"]
-
-    # 1. Public menu возвращает доступные продукты
-    p_legacy = Product(
-        restaurant_id=r.id, category_id=cat.id,
+def test_t20_full_regression(client, db, restaurant, category):
+    p = Product(
+        restaurant_id=restaurant.id, category_id=category.id,
         name="Регрессия Лагман", price=25000, is_available=True,
     )
-    db.add(p_legacy)
-    db.flush()
+    db.add(p); db.flush()
 
-    menu_resp = client.get(f"/api/menu/{r.id}")
+    # Public menu
+    menu_resp = client.get(f"/api/menu/{restaurant.id}")
     assert menu_resp.status_code == 200
-    found = any(
-        pr["id"] == p_legacy.id
-        for c in menu_resp.json()
-        for pr in c["products"]
-    )
-    assert found, "Legacy продукт должен быть в меню"
+    ids = {pr["id"] for c in menu_resp.json() for pr in c["products"]}
+    assert p.id in ids, "Legacy продукт должен быть в меню"
 
-    # 2. Заказ legacy продукта → 201
-    order_resp = client.post(
-        "/api/orders/",
-        json=_make_order_payload(loc, p_legacy.id),
-        headers={**_auth(r), **_loc_header(loc)},
-    )
+    # Order
+    order_resp = client.post("/api/orders/", json=_takeaway_payload(p.id))
     assert order_resp.status_code == 201
 
-    # 3. Admin menu endpoint
-    admin_resp = client.get(
-        f"/api/menu/{r.id}/all",
-        headers=_auth(r),
-    )
+    # Admin menu
+    admin_resp = client.get(f"/api/menu/{restaurant.id}/all")
     assert admin_resp.status_code == 200
 
 
 # ──────────────────────────────────────────
-# T21: available_from == available_until → always available (boundary)
+# T21: from == until → always available
 # ──────────────────────────────────────────
 def test_t21_from_equals_until_always_available(db):
-    """
-    Контракт: available_from == available_until означает 24 часа доступности.
-    Проверяем несколько точек времени.
-    """
     from zoneinfo import ZoneInfo
     tz = ZoneInfo("Asia/Tashkent")
     t = datetime.time(11, 0)
@@ -915,7 +704,7 @@ def test_t21_from_equals_until_always_available(db):
         with patch("utils.datetime") as m:
             m.datetime.now.return_value = datetime.datetime(2025, 1, 1, hour, 0, tzinfo=tz)
             result = is_within_schedule(t, t, "Asia/Tashkent")
-        assert result is True, f"from==until должно быть True в {hour}:00, получено False"
+        assert result is True, f"from==until должно быть True в {hour}:00"
 
 
 # ──────────────────────────────────────────
@@ -938,15 +727,19 @@ def test_t26_overnight_just_before_end():
 
 
 # ──────────────────────────────────────────
-# T27: no active Location → scheduled product treated as unavailable (fail closed)
+# T27: no active Location → scheduled fail closed
 # ──────────────────────────────────────────
 def test_t27_no_location_scheduled_product_fail_closed(client, db, restaurant, category):
     """
-    Ресторан без активной Location.
-    Продукт с расписанием → fail closed → не показывается.
+    Деактивируем все Location ресторана.
+    Продукт с расписанием → fail closed (не показывается).
     Продукт без расписания → показывается нормально.
     """
-    # restaurant из fixture — нет Location (не создаём)
+    # Деактивируем существующую Location
+    from models import Location as Loc
+    db.query(Loc).filter(Loc.restaurant_id == restaurant.id).update({"is_active": False})
+    db.flush()
+
     p_sched = Product(
         restaurant_id=restaurant.id, category_id=category.id,
         name="С расписанием", price=10000, is_available=True,
@@ -957,13 +750,11 @@ def test_t27_no_location_scheduled_product_fail_closed(client, db, restaurant, c
         restaurant_id=restaurant.id, category_id=category.id,
         name="Без расписания", price=10000, is_available=True,
     )
-    db.add_all([p_sched, p_nosched])
-    db.flush()
+    db.add_all([p_sched, p_nosched]); db.flush()
 
     resp = client.get(f"/api/menu/{restaurant.id}")
     assert resp.status_code == 200
-    products = [pr for c in resp.json() for pr in c["products"]]
+    p_ids = {pr["id"] for c in resp.json() for pr in c["products"]}
 
-    p_ids = {pr["id"] for pr in products}
-    assert p_sched.id not in p_ids, "Scheduled продукт без Location → fail closed (не показывается)"
-    assert p_nosched.id in p_ids, "Продукт без расписания должен показываться даже без Location"
+    assert p_sched.id  not in p_ids, "Scheduled без Location → fail closed"
+    assert p_nosched.id in  p_ids,   "Unscheduled должен показываться"
