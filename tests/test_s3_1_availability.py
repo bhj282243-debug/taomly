@@ -664,7 +664,9 @@ def test_t19_mixed_valid_order(client, db, restaurant, category):
     assert resp.status_code == 201
     data = resp.json()
     assert data["id"] is not None
-    assert data["total_amount"] == (60000 + 5000 + 2000) * 1
+    # S2-8 contract: OrderItem.price НЕ включает modifier price_adjustment — deferred to Phase 7.
+    # total_amount = variant.price * quantity (модификаторы в total не входят до Phase 7).
+    assert data["total_amount"] == 60000 * 1
 
 
 # ──────────────────────────────────────────
