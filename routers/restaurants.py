@@ -50,15 +50,15 @@ routers/restaurants.py — Taomly Platform
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
-from typing import Optional
+from typing import Literal, Optional
 
 from auth import get_current_restaurant_admin
 from database import get_db
-from models import Category, Location, ModifierGroup, ModifierOption, Product, ProductVariant, Restaurant, RestaurantTable
+from models import Category, Location, ModifierGroup, ModifierOption, Product, ProductVariant, Restaurant, RestaurantTable, MENU_LANGUAGES
 from schemas import (
     CategoryPublicResponse,
     LocationCreate,
@@ -290,18 +290,14 @@ def update_restaurant_settings(
 # GET /{slug} — публичная информация о ресторане
 # ──────────────────────────────────────────
 @router.get("/{slug}", response_model=RestaurantPublicResponse)
-def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
+def get_restaurant_by_slug(
+    slug: str,
+    lang: Optional[Literal["uz", "ru", "en"]] = Query(None),
+    db: Session = Depends(get_db),
+):
     """
     Возвращает публичную информацию о ресторане по slug.
-
-    Используется фронтендом при загрузке Mini App:
-      1. Получает branding (цвета, лого, welcome_text)
-      2. Получает restaurant.id для заголовка X-Restaurant-Id
-      3. Получает меню (только доступные продукты) с badge-полями
-      4. Получает настройки доставки и рабочие часы
-
-    Авторизация не требуется — публичный эндпоинт.
-    telegram_bot_token_encrypted НЕ включается в ответ — защита токена.
+    Phase 4: ?lang=uz/ru/en для локализации меню. Дефолт: Location.language → "uz".
     """
     restaurant = db.query(Restaurant).filter(
         Restaurant.slug == slug.lower().strip(),
@@ -329,7 +325,6 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
     _settings_source = _loc if _loc is not None else restaurant
 
     # Phase 3: timezone для schedule evaluation.
-    # Если Location не найдена → tz_str=None → fail closed для scheduled products.
     if _loc is not None:
         tz_str = _loc.timezone
     else:
@@ -338,6 +333,23 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
             restaurant.id,
         )
         tz_str = None
+
+    # Phase 4: language resolution. Timezone не участвует.
+    _resolved_lang = lang if lang else (
+        (_loc.language if _loc and _loc.language in MENU_LANGUAGES else None) or "uz"
+    )
+
+    def _loc_name(translations, base_name: str) -> str:
+        for t in translations:
+            if t.language == _resolved_lang:
+                return t.name
+        return base_name
+
+    def _loc_desc(translations, base_desc):
+        for t in translations:
+            if t.language == _resolved_lang:
+                return t.description
+        return base_desc
 
     categories = (
         db.query(Category)
@@ -395,13 +407,13 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
         "categories": [
             {
                 "id": cat.id,
-                "name": cat.name,
+                "name": _loc_name(cat.translations, cat.name),
                 "sort_order": cat.sort_order,
                 "products": [
                     {
                         "id": p.id,
-                        "name": p.name,
-                        "description": p.description,
+                        "name": _loc_name(p.translations, p.name),
+                        "description": _loc_desc(p.translations, p.description),
                         # S2-5: price nullable для variant-продуктов.
                         "price": p.price,
                         "photo_url": p.photo_url,
@@ -419,7 +431,7 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
                         "variants": [
                             {
                                 "id": v.id,
-                                "name": v.name,
+                                "name": _loc_name(v.translations, v.name),
                                 "price": v.price,
                                 "sort_order": v.sort_order,
                                 "is_available": v.is_available,
@@ -431,14 +443,14 @@ def get_restaurant_by_slug(slug: str, db: Session = Depends(get_db)):
                         "modifier_groups": [
                             {
                                 "id": g.id,
-                                "name": g.name,
+                                "name": _loc_name(g.translations, g.name),
                                 "min_selections": g.min_selections,
                                 "max_selections": g.max_selections,
                                 "sort_order": g.sort_order,
                                 "options": [
                                     {
                                         "id": o.id,
-                                        "name": o.name,
+                                        "name": _loc_name(o.translations, o.name),
                                         "price_adjustment": o.price_adjustment,
                                         "sort_order": o.sort_order,
                                         "is_available": o.is_available,
