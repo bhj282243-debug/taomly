@@ -23,24 +23,40 @@ routers/menu.py — Taomly Platform
 import io
 import logging
 import uuid
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
 from sqlalchemy.orm import Session, joinedload
 
 from auth import get_current_restaurant_admin
 from config import settings
 from limiter import limiter
 from database import get_db
-from models import Category, Location, ModifierGroup, ModifierOption, Product, ProductVariant, Restaurant, Subscription, SubscriptionPlan, UsageEvent
+from models import (
+    Category, CategoryTranslation,
+    Location,
+    ModifierGroup, ModifierGroupTranslation,
+    ModifierOption, ModifierOptionTranslation,
+    Product, ProductTranslation,
+    ProductVariant, VariantTranslation,
+    Restaurant, Subscription, SubscriptionPlan, UsageEvent,
+    MENU_LANGUAGES,
+)
 from sqlalchemy import func
 from schemas import (
     CategoryPublicResponse,
     CategoryResponse,
+    CategoryResponseWithTranslations,
+    CategoryTranslationResponse,
+    CategoryTranslationUpsert,
+    NameTranslationResponse,
+    NameTranslationUpsert,
     ProductCreate,
     ProductResponse,
+    ProductTranslationResponse,
+    ProductTranslationUpsert,
     ProductUpdate,
     CategoryCreate,
     CategoryUpdate,
@@ -301,26 +317,88 @@ async def upload_photo(
 # ──────────────────────────────────────────
 # GET /{restaurant_id} — публичное меню (клиент Mini App)
 # ──────────────────────────────────────────
+# ──────────────────────────────────────────
+# PHASE 4: LANGUAGE HELPERS
+# ──────────────────────────────────────────
+
+def _resolve_lang(
+    query_lang: Optional[str],
+    active_location: Optional[Location],
+) -> str:
+    """
+    Детерминированное разрешение языка для публичного меню.
+
+    Приоритет:
+      1. Явный ?lang= из query param (уже валидирован FastAPI как Literal)
+      2. Location.language первой активной Location
+      3. "uz" — абсолютный fallback
+
+    Timezone-переменная в языковую логику не входит.
+    """
+    if query_lang:
+        return query_lang
+    if active_location and active_location.language in MENU_LANGUAGES:
+        return active_location.language
+    return "uz"
+
+
+def _localized_name(translations: list, lang: str, base_name: str) -> str:
+    """Возвращает локализованное name или base_name как fallback."""
+    for t in translations:
+        if t.language == lang:
+            return t.name
+    return base_name
+
+
+def _localized_desc(translations: list, lang: str, base_desc) -> Optional[str]:
+    """Возвращает локализованное description или base_desc как fallback."""
+    for t in translations:
+        if t.language == lang:
+            return t.description
+    return base_desc
+
+
+def _apply_lang_to_menu(categories: list, lang: str) -> None:
+    """
+    Применяет локализацию in-place к списку категорий меню.
+    Используется в обоих публичных эндпоинтах.
+    Translations уже загружены через lazy="selectin".
+    """
+    for c in categories:
+        c.name = _localized_name(c.translations, lang, c.name)
+        for p in (c.products or []):
+            p.description = _localized_desc(p.translations, lang, p.description)
+            p.name = _localized_name(p.translations, lang, p.name)
+            for v in (p.variants or []):
+                v.name = _localized_name(v.translations, lang, v.name)
+            for g in (p.modifier_groups or []):
+                g.name = _localized_name(g.translations, lang, g.name)
+                for o in (g.options or []):
+                    o.name = _localized_name(o.translations, lang, o.name)
+
+
+# ──────────────────────────────────────────
+# GET /{restaurant_id} — публичное меню (клиент)
 @router.get("/{restaurant_id}", response_model=List[CategoryPublicResponse])
-def get_menu(restaurant_id: int, db: Session = Depends(get_db)):
+def get_menu(
+    restaurant_id: int,
+    lang: Optional[Literal["uz", "ru", "en"]] = Query(None),
+    db: Session = Depends(get_db),
+):
     """
     Возвращает публичное меню ресторана — только доступные продукты.
     Авторизация не требуется (публичный эндпоинт для клиентов).
     Пустые категории (без доступных продуктов) не возвращаются.
 
     Phase 3: schedule enforcement.
-    - Продукты с is_available=False исключаются полностью.
-    - Продукты с расписанием вне окна исключаются полностью (fail closed).
-    - Варианты с is_active=False скрыты; is_available=False → visible+disabled.
-    - Опции модификаторов: is_active=False скрыты; is_available=False → visible+disabled.
+    Phase 4: ?lang=uz/ru/en — локализация. Дефолт: Location.language → "uz".
     - Timezone: Location.timezone первой активной Location ресторана.
     - Если Location не найдена: продукты без расписания отображаются,
       продукты с расписанием — fail closed (не отображаются).
     """
     _get_active_restaurant(restaurant_id, db)
 
-    # Phase 3: получаем timezone из первой активной Location ресторана.
-    # Это единственный runtime source of truth для schedule evaluation.
+    # Phase 3 + Phase 4: Location нужна для timezone (Phase 3) и language (Phase 4).
     active_location = (
         db.query(Location)
         .filter(
@@ -336,9 +414,12 @@ def get_menu(restaurant_id: int, db: Session = Depends(get_db)):
             "No active Location found for restaurant_id=%s — scheduled products treated as unavailable",
             restaurant_id,
         )
-        tz_str = None  # сигнал: нет Location → fail closed для scheduled products
+        tz_str = None
     else:
         tz_str = active_location.timezone
+
+    # Phase 4: resolve language. Timezone не участвует.
+    resolved_lang = _resolve_lang(lang, active_location)
 
     categories = (
         db.query(Category)
@@ -355,32 +436,23 @@ def get_menu(restaurant_id: int, db: Session = Depends(get_db)):
         .order_by(Category.sort_order)
         .all()
     )
+    # Phase 4: translations загружены автоматически через lazy="selectin" в models.
 
     for c in categories:
         available_products = []
         for p in (c.products or []):
-            # Фильтр 1: is_available
             if not p.is_available:
                 continue
-            # Фильтр 2: schedule
             if p.available_from is not None or p.available_until is not None:
-                # Продукт имеет расписание
                 if tz_str is None:
-                    # Нет Location → fail closed
                     continue
                 if not is_within_schedule(p.available_from, p.available_until, tz_str):
                     continue
             available_products.append(p)
 
-        # Phase 3: variant filtering.
-        # is_active=False → скрыт полностью.
-        # is_active=True, is_available=False → остаётся в response (Sold out).
         for p in available_products:
             active_variants = [v for v in (p.variants or []) if v.is_active]
             p.variants = sorted(active_variants, key=lambda v: (v.sort_order, v.id))
-
-            # Phase 3: modifier option filtering.
-            # is_active=False → скрыт. is_available=False → остаётся (disabled).
             active_groups = [g for g in (p.modifier_groups or []) if g.is_active]
             for g in active_groups:
                 g.options = [o for o in (g.options or []) if o.is_active]
@@ -388,13 +460,18 @@ def get_menu(restaurant_id: int, db: Session = Depends(get_db)):
 
         c.products = sorted(available_products, key=lambda p: p.sort_order)
 
-    return [c for c in categories if c.products]
+    result = [c for c in categories if c.products]
+
+    # Phase 4: применяем локализацию после фильтрации.
+    _apply_lang_to_menu(result, resolved_lang)
+
+    return result
 
 
 # ──────────────────────────────────────────
 # GET /{restaurant_id}/all — полное меню (админка)
 # ──────────────────────────────────────────
-@router.get("/{restaurant_id}/all", response_model=List[CategoryResponse])
+@router.get("/{restaurant_id}/all", response_model=List[CategoryResponseWithTranslations])
 def get_menu_all(
     restaurant_id: int,
     restaurant: Restaurant = Depends(get_current_restaurant_admin),
@@ -402,9 +479,9 @@ def get_menu_all(
 ):
     """
     Возвращает полное меню ресторана включая недоступные продукты.
+    Phase 4: включает поле translations для каждой сущности.
 
     Tenant-изоляция: restaurant_id из URL проверяется против токена JWT.
-    Ресторан А не может просматривать меню ресторана Б.
     """
     if restaurant.id != restaurant_id:
         raise HTTPException(
@@ -423,6 +500,7 @@ def get_menu_all(
         .order_by(Category.sort_order)
         .all()
     )
+    # Phase 4: translations загружены через lazy="selectin".
 
     for c in categories:
         c.products = sorted(c.products or [], key=lambda p: p.sort_order)
@@ -1414,3 +1492,292 @@ def delete_modifier_option(
         "ModifierOption удалена: option_id=%s restaurant_id=%s",
         option_id, restaurant.id,
     )
+
+
+# ══════════════════════════════════════════
+# PHASE 4 — TRANSLATION ENDPOINTS
+# ══════════════════════════════════════════
+#
+# 10 endpoints: PUT + GET × 5 entity types
+# Все требуют Restaurant Admin JWT.
+# PUT = upsert (idempotent, 200 в обоих случаях).
+# Невалидный lang → 422 (FastAPI Literal validation).
+# Чужая сущность → 404.
+# ══════════════════════════════════════════
+
+
+def _get_category_owned(category_id: int, restaurant: Restaurant, db: Session) -> Category:
+    """Загружает Category, проверяет принадлежность ресторану. 404 если чужой."""
+    cat = db.query(Category).filter(Category.id == category_id).first()
+    if not cat or cat.restaurant_id != restaurant.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Категория не найдена")
+    return cat
+
+
+def _get_product_owned(product_id: int, restaurant: Restaurant, db: Session) -> Product:
+    """Загружает Product, проверяет принадлежность ресторану. 404 если чужой."""
+    prod = db.query(Product).filter(Product.id == product_id).first()
+    if not prod or prod.restaurant_id != restaurant.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Продукт не найден")
+    return prod
+
+
+def _get_variant_owned(variant_id: int, restaurant: Restaurant, db: Session) -> ProductVariant:
+    """Загружает Variant через product → restaurant. 404 если чужой."""
+    variant = (
+        db.query(ProductVariant)
+        .join(Product, ProductVariant.product_id == Product.id)
+        .filter(ProductVariant.id == variant_id, Product.restaurant_id == restaurant.id)
+        .first()
+    )
+    if not variant:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Вариант не найден")
+    return variant
+
+
+def _get_modifier_group_owned(group_id: int, restaurant: Restaurant, db: Session) -> ModifierGroup:
+    """Загружает ModifierGroup через product → restaurant. 404 если чужой."""
+    group = (
+        db.query(ModifierGroup)
+        .join(Product, ModifierGroup.product_id == Product.id)
+        .filter(ModifierGroup.id == group_id, Product.restaurant_id == restaurant.id)
+        .first()
+    )
+    if not group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Группа модификаторов не найдена")
+    return group
+
+
+def _get_modifier_option_owned(option_id: int, restaurant: Restaurant, db: Session) -> ModifierOption:
+    """Загружает ModifierOption через group → product → restaurant. 404 если чужой."""
+    option = (
+        db.query(ModifierOption)
+        .join(ModifierGroup, ModifierOption.modifier_group_id == ModifierGroup.id)
+        .join(Product, ModifierGroup.product_id == Product.id)
+        .filter(ModifierOption.id == option_id, Product.restaurant_id == restaurant.id)
+        .first()
+    )
+    if not option:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Опция модификатора не найдена")
+    return option
+
+
+def _upsert_translation(db: Session, model_class, filter_kwargs: dict, update_kwargs: dict):
+    """
+    Generic upsert для translation записи.
+    Ищет по filter_kwargs, обновляет или создаёт.
+    Возвращает объект после commit.
+    """
+    obj = db.query(model_class).filter_by(**filter_kwargs).first()
+    if obj:
+        for k, v in update_kwargs.items():
+            setattr(obj, k, v)
+    else:
+        obj = model_class(**filter_kwargs, **update_kwargs)
+        db.add(obj)
+    db.commit()
+    db.refresh(obj)
+    return obj
+
+
+# ──────────────────────────────────────────
+# CATEGORY TRANSLATIONS
+# ──────────────────────────────────────────
+
+@router.put(
+    "/category/{category_id}/translations/{lang}",
+    response_model=CategoryTranslationResponse,
+)
+def upsert_category_translation(
+    category_id: int,
+    lang: Literal["uz", "ru", "en"],
+    data: CategoryTranslationUpsert,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Upsert перевода категории. Idempotent.
+    Tenant-изоляция: проверяется принадлежность category ресторану из JWT.
+    """
+    _get_category_owned(category_id, restaurant, db)
+    return _upsert_translation(
+        db, CategoryTranslation,
+        {"category_id": category_id, "language": lang},
+        {"name": data.name},
+    )
+
+
+@router.get(
+    "/category/{category_id}/translations",
+    response_model=List[CategoryTranslationResponse],
+)
+def list_category_translations(
+    category_id: int,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """Список существующих переводов категории."""
+    _get_category_owned(category_id, restaurant, db)
+    return db.query(CategoryTranslation).filter(
+        CategoryTranslation.category_id == category_id
+    ).all()
+
+
+# ──────────────────────────────────────────
+# PRODUCT TRANSLATIONS
+# ──────────────────────────────────────────
+
+@router.put(
+    "/product/{product_id}/translations/{lang}",
+    response_model=ProductTranslationResponse,
+)
+def upsert_product_translation(
+    product_id: int,
+    lang: Literal["uz", "ru", "en"],
+    data: ProductTranslationUpsert,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """Upsert перевода продукта (name + description). Idempotent."""
+    _get_product_owned(product_id, restaurant, db)
+    return _upsert_translation(
+        db, ProductTranslation,
+        {"product_id": product_id, "language": lang},
+        {"name": data.name, "description": data.description},
+    )
+
+
+@router.get(
+    "/product/{product_id}/translations",
+    response_model=List[ProductTranslationResponse],
+)
+def list_product_translations(
+    product_id: int,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """Список существующих переводов продукта."""
+    _get_product_owned(product_id, restaurant, db)
+    return db.query(ProductTranslation).filter(
+        ProductTranslation.product_id == product_id
+    ).all()
+
+
+# ──────────────────────────────────────────
+# VARIANT TRANSLATIONS
+# ──────────────────────────────────────────
+
+@router.put(
+    "/variant/{variant_id}/translations/{lang}",
+    response_model=NameTranslationResponse,
+)
+def upsert_variant_translation(
+    variant_id: int,
+    lang: Literal["uz", "ru", "en"],
+    data: NameTranslationUpsert,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """Upsert перевода варианта продукта. Idempotent."""
+    _get_variant_owned(variant_id, restaurant, db)
+    return _upsert_translation(
+        db, VariantTranslation,
+        {"variant_id": variant_id, "language": lang},
+        {"name": data.name},
+    )
+
+
+@router.get(
+    "/variant/{variant_id}/translations",
+    response_model=List[NameTranslationResponse],
+)
+def list_variant_translations(
+    variant_id: int,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """Список существующих переводов варианта."""
+    _get_variant_owned(variant_id, restaurant, db)
+    return db.query(VariantTranslation).filter(
+        VariantTranslation.variant_id == variant_id
+    ).all()
+
+
+# ──────────────────────────────────────────
+# MODIFIER GROUP TRANSLATIONS
+# ──────────────────────────────────────────
+
+@router.put(
+    "/modifier-group/{group_id}/translations/{lang}",
+    response_model=NameTranslationResponse,
+)
+def upsert_modifier_group_translation(
+    group_id: int,
+    lang: Literal["uz", "ru", "en"],
+    data: NameTranslationUpsert,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """Upsert перевода группы модификаторов. Idempotent."""
+    _get_modifier_group_owned(group_id, restaurant, db)
+    return _upsert_translation(
+        db, ModifierGroupTranslation,
+        {"modifier_group_id": group_id, "language": lang},
+        {"name": data.name},
+    )
+
+
+@router.get(
+    "/modifier-group/{group_id}/translations",
+    response_model=List[NameTranslationResponse],
+)
+def list_modifier_group_translations(
+    group_id: int,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """Список существующих переводов группы модификаторов."""
+    _get_modifier_group_owned(group_id, restaurant, db)
+    return db.query(ModifierGroupTranslation).filter(
+        ModifierGroupTranslation.modifier_group_id == group_id
+    ).all()
+
+
+# ──────────────────────────────────────────
+# MODIFIER OPTION TRANSLATIONS
+# ──────────────────────────────────────────
+
+@router.put(
+    "/modifier-option/{option_id}/translations/{lang}",
+    response_model=NameTranslationResponse,
+)
+def upsert_modifier_option_translation(
+    option_id: int,
+    lang: Literal["uz", "ru", "en"],
+    data: NameTranslationUpsert,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """Upsert перевода опции модификатора. Idempotent."""
+    _get_modifier_option_owned(option_id, restaurant, db)
+    return _upsert_translation(
+        db, ModifierOptionTranslation,
+        {"modifier_option_id": option_id, "language": lang},
+        {"name": data.name},
+    )
+
+
+@router.get(
+    "/modifier-option/{option_id}/translations",
+    response_model=List[NameTranslationResponse],
+)
+def list_modifier_option_translations(
+    option_id: int,
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """Список существующих переводов опции модификатора."""
+    _get_modifier_option_owned(option_id, restaurant, db)
+    return db.query(ModifierOptionTranslation).filter(
+        ModifierOptionTranslation.modifier_option_id == option_id
+    ).all()
