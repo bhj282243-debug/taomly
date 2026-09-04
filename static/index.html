@@ -1316,6 +1316,91 @@ svg{display:block;}
 .vp-add-btn .icon{width:14px;height:14px;stroke:#FAF8F3;stroke-width:2.2;position:relative;z-index:1;}
 
 /* ═══════════════════════════════════════════════════════════════════
+   PHASE 5 — MODIFIER GROUPS inside modal
+   ═══════════════════════════════════════════════════════════════════ */
+.mg-section{margin-bottom:28px;}
+.mg-header{
+  display:flex;align-items:baseline;justify-content:space-between;
+  margin-bottom:12px;
+}
+.mg-name{
+  font-family:'Cormorant Garamond',serif;
+  font-size:20px;font-weight:400;color:var(--ink);line-height:1.2;
+}
+.mg-req{
+  font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--g);background:var(--gt);border:1px solid var(--gtl);
+  padding:2px 8px;border-radius:100px;flex-shrink:0;margin-left:10px;
+}
+.mg-opt{
+  font-size:9px;font-weight:500;letter-spacing:1.2px;text-transform:uppercase;
+  color:var(--ink4);flex-shrink:0;margin-left:10px;
+}
+.mg-options{display:flex;flex-direction:column;gap:8px;}
+.mo-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;border-radius:16px;
+  border:1px solid rgba(24,20,15,0.07);
+  background:var(--bg3);
+  gap:14px;
+}
+.mo-item.mo-unavailable{
+  opacity:0.4;
+  cursor:default;
+}
+.mo-name{
+  flex:1;font-size:14px;font-weight:400;color:var(--ink2);line-height:1.3;
+}
+.mo-price{
+  font-family:'Cormorant Garamond',serif;
+  font-size:16px;font-weight:400;color:var(--g);white-space:nowrap;flex-shrink:0;
+}
+.mo-unavail-badge{
+  font-size:9px;color:var(--ink4);
+  background:rgba(24,20,15,0.05);
+  padding:2px 6px;border-radius:4px;margin-left:6px;
+  white-space:nowrap;letter-spacing:.5px;
+}
+/* Divider between modifier groups */
+.mg-divider{
+  height:1px;background:var(--bg5);margin:0 0 24px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PHASE 5 — PRODUCT CARD sold-out / unavailable state
+   ═══════════════════════════════════════════════════════════════════ */
+.pcard.p5-soldout{
+  opacity:0.55;
+  cursor:default;
+  pointer-events:none;
+}
+.p5-soldout-overlay{
+  font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--ink4);
+  background:rgba(244,241,234,0.88);
+  padding:3px 9px;border-radius:100px;
+  border:1px solid rgba(24,20,15,0.10);
+  backdrop-filter:blur(3px);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PHASE 5 — BOOLEAN BADGE COLORS
+   ═══════════════════════════════════════════════════════════════════ */
+.p5-badge-spicy{color:#c0392b;background:rgba(192,57,43,0.08);border-color:rgba(192,57,43,0.20);}
+.p5-badge-new{color:#1a7f4b;background:rgba(26,127,75,0.08);border-color:rgba(26,127,75,0.20);}
+.p5-badge-bestseller{color:var(--g);background:var(--gt);border-color:var(--gtl);}
+.p5-badge-chef{color:var(--g);background:var(--gt);border-color:var(--gtl);}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PHASE 5 — EMPTY CATEGORY STATE
+   ═══════════════════════════════════════════════════════════════════ */
+.cat-empty{
+  text-align:center;padding:32px 20px;
+  color:var(--ink4);font-size:13px;font-weight:300;line-height:1.7;
+  letter-spacing:.3px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    SUCCESS SCREEN
    ═══════════════════════════════════════════════════════════════════ */
 #successScreen.active{
@@ -1878,21 +1963,43 @@ function renderCategories(){
 let _ai=0;
 function renderMenu(){
   const c=document.getElementById('menuContent');c.innerHTML='';_ai=0;
-  (restaurant.categories||[]).forEach(cat=>{
-    if(!cat.products||!cat.products.length)return;
+  const allCats=restaurant.categories||[];
+  if(!allCats.length){
+    c.innerHTML=`<div class="cat-empty">${esc(t('menu.empty_menu')||'Menyu hozircha bo\'sh')}</div>`;
+    return;
+  }
+  allCats.forEach(cat=>{
     const sec=document.createElement('div');sec.className='cat-sec';sec.id='cat-'+cat.id;
-    sec.innerHTML=`<div class="cat-head"><div class="cat-title">${esc(cat.name)}<span class="cat-cnt">${t('menu.product_count',{n:cat.products.length})}</span></div></div><div class="prod-grid" id="grid-${cat.id}"></div>`;
+    const products=cat.products||[];
+    const prodCountHtml=products.length?`<span class="cat-cnt">${t('menu.product_count',{n:products.length})}</span>`:'';
+    sec.innerHTML=`<div class="cat-head"><div class="cat-title">${esc(cat.name)}${prodCountHtml}</div></div><div class="prod-grid" id="grid-${cat.id}"></div>`;
     c.appendChild(sec);
     const grid=sec.querySelector('#grid-'+cat.id);
-    cat.products.forEach(p=>grid.appendChild(makeCard(p)));
+    if(!products.length){
+      // Phase 5: empty category state
+      grid.innerHTML=`<div class="cat-empty" style="padding:20px">${esc(t('menu.empty_category')||'Bu kategoriyada mahsulot yo\'q')}</div>`;
+    }else{
+      products.forEach(p=>grid.appendChild(makeCard(p)));
+    }
   });
 }
 
-// xBadge — обратная совместимость: парсит хэштеги #bestseller|#chef|#new|#spicy
-// из поля description. Используется в makeCard() и renderCart().
-// Backend хранит булевы поля is_bestseller/is_new/is_spicy/is_chef_choice,
-// но фронтенд пока читает бейджи из description через этот синтаксис.
-// KNOWN_LIMITATION: при переходе на булевы поля API — заменить xBadge на прямое чтение флагов.
+// Phase 5: getBadge — читает boolean поля is_bestseller/is_new/is_spicy/is_chef_choice
+// напрямую из продукта. Приоритет: spicy > new > bestseller > chef.
+// Описание очищается от legacy #hashtag синтаксиса для обратной совместимости.
+function getBadge(p){
+  if(p.is_spicy)return{badge:'🌶 Spicy',cls:'p5-badge-spicy'};
+  if(p.is_new)return{badge:'New',cls:'p5-badge-new'};
+  if(p.is_bestseller)return{badge:'Bestseller',cls:'p5-badge-bestseller'};
+  if(p.is_chef_choice)return{badge:"Chef's Choice",cls:'p5-badge-chef'};
+  return{badge:null,cls:''};
+}
+// cleanDesc — убирает legacy #hashtag из description для безопасного отображения
+function cleanDesc(d){
+  if(!d)return'';
+  return d.replace(/#(bestseller|chef|new|spicy)\b/gi,'').trim();
+}
+// xBadge — оставляем для совместимости с renderCart() (корзина — не Phase 5 scope)
 const BM={bestseller:'Bestseller',chef:"Chef's Choice",new:'New Arrival',spicy:'🌶 Spicy'};
 function xBadge(d){
   if(!d)return{badge:null,text:''};
@@ -1930,16 +2037,22 @@ function makeCard(p){
   div.id='card-'+p.id;
   div.style.animationDelay=(_ai++%10)*0.05+'s';
   const qty=cardQty(p); // null для variant products
-  const{badge,text:dt}=xBadge(p.description);
-  const bh=badge?`<div class="pphoto-badge">${badge}</div>`:'';
+  // Phase 5: boolean badge fields (is_bestseller, is_new, is_spicy, is_chef_choice)
+  const{badge,cls:badgeCls}=getBadge(p);
+  const dt=cleanDesc(p.description);
+  const bh=badge?`<div class="pphoto-badge ${badgeCls}">${badge}</div>`:'';
   const priceHtml=safePrice(p);
+  // Phase 5: sold-out — is_available=false on a non-variant product
+  const variants=Array.isArray(p.variants)?p.variants:[];
+  const isSoldOut=!p.is_available&&variants.length===0;
 
   if(p.photo_url){
-    div.className='pcard has-photo';div.onclick=()=>openProductModal(p.id);
+    div.className='pcard has-photo'+(isSoldOut?' p5-soldout':'');
+    if(!isSoldOut)div.onclick=()=>openProductModal(p.id);
     div.innerHTML=`
       <div class="pphoto-wrap">
         <img src="${esc(p.photo_url)}" alt="${esc(p.name)}" loading="lazy" decoding="async">
-        ${bh}
+        ${isSoldOut?`<div style="position:absolute;top:14px;right:14px"><span class="p5-soldout-overlay">${t('menu.sold_out')||'Tugagan'}</span></div>`:bh}
       </div>
       <div class="pphoto-content">
         <div class="pphoto-text">
@@ -1947,10 +2060,11 @@ function makeCard(p){
           ${dt?`<div class="pdesc-photo">${esc(dt)}</div>`:''}
           ${priceHtml?`<div class="pprice-photo">${priceHtml}</div>`:''}
         </div>
-        <div class="photo-add" id="ctrl-${p.id}" onclick="event.stopPropagation()">${ctrlHtml(p,qty)}</div>
+        <div class="photo-add" id="ctrl-${p.id}" onclick="event.stopPropagation()">${isSoldOut?'':ctrlHtml(p,qty)}</div>
       </div>`;
   }else{
-    div.className='pcard no-photo';div.onclick=()=>openProductModal(p.id);
+    div.className='pcard no-photo'+(isSoldOut?' p5-soldout':'');
+    if(!isSoldOut)div.onclick=()=>openProductModal(p.id);
     div.innerHTML=`
       <div class="pphoto-wrap">
         <div class="pphoto-ph">
@@ -1959,14 +2073,16 @@ function makeCard(p){
             <div class="ph-label">${t('menu.fine_dining')}</div>
           </div>
         </div>
-        <div class="pphoto-overlay"></div>${bh}
+        <div class="pphoto-overlay"></div>${isSoldOut?'':bh}
         <div class="pphoto-content">
           <div class="pphoto-text">
+            ${badge&&!isSoldOut?`<div class="pphoto-badge ${badgeCls}" style="position:static;margin-bottom:6px">${badge}</div>`:''}
+            ${isSoldOut?`<span class="p5-soldout-overlay" style="display:inline-flex;margin-bottom:6px">${t('menu.sold_out')||'Tugagan'}</span>`:''}
             <div class="pname">${esc(p.name)}</div>
             ${dt?`<div class="pdesc-photo">${esc(dt)}</div>`:''}
             ${priceHtml?`<div class="pprice-photo">${priceHtml}</div>`:''}
           </div>
-          <div class="photo-add" id="ctrl-${p.id}" onclick="event.stopPropagation()">${ctrlHtml(p,qty)}</div>
+          <div class="photo-add" id="ctrl-${p.id}" onclick="event.stopPropagation()">${isSoldOut?'':ctrlHtml(p,qty)}</div>
         </div>
       </div>`;
   }
@@ -2037,7 +2153,9 @@ function openProductModal(id){
   productModalCurrentId=id;
   _vpSelectedVariantId=null;
   const variants=Array.isArray(p.variants)?p.variants:[];
-  const{badge,text:dt}=xBadge(p.description);
+  // Phase 5: use boolean badge fields
+  const{badge,cls:badgeCls}=getBadge(p);
+  const dt=cleanDesc(p.description);
 
   // Фото
   const ph=document.getElementById('productModalPhoto');
@@ -2049,9 +2167,12 @@ function openProductModal(id){
     ph.innerHTML=`<div class="modal-ph"><div class="modal-ph-crest"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a4 4 0 0 1 0 8M6 4v16M6 4c0 2.5 2.5 2.5 2.5 5S6 11.5 6 14"/></svg></div></div>`;
   }
 
-  document.getElementById('productModalBadge').innerHTML=badge?`<span>${badge}</span>`:'';
+  document.getElementById('productModalBadge').innerHTML=badge?`<span class="${badgeCls}">${badge}</span>`:'';
   document.getElementById('productModalName').textContent=p.name;
   document.getElementById('productModalDesc').textContent=dt||'';
+
+  // Phase 5: render modifier groups BEFORE variant picker / add button
+  _renderModifierGroups(p);
 
   if(variants.length>0){
     // Variant product — показываем picker
@@ -2064,6 +2185,51 @@ function openProductModal(id){
   }
 
   document.getElementById('productModalOverlay').classList.add('active');
+}
+
+// _renderModifierGroups — Phase 5: рендерит секцию modifier groups в modal-body
+// Вставляется между .modal-desc и .modal-footer. Удаляет предыдущую секцию при каждом вызове.
+function _renderModifierGroups(p){
+  // Удаляем предыдущую секцию если есть
+  const existing=document.getElementById('p5ModifierSection');
+  if(existing)existing.remove();
+
+  const groups=Array.isArray(p.modifier_groups)?p.modifier_groups:[];
+  if(!groups.length)return;
+
+  const currency=_getCurrency();
+  let html='<div id="p5ModifierSection" style="margin-bottom:8px">';
+  groups.forEach((g,gi)=>{
+    const isRequired=g.min_selections>0;
+    const reqLabel=isRequired
+      ?`<span class="mg-req">${t('modifier.required')||'Majburiy'}</span>`
+      :`<span class="mg-opt">${t('modifier.optional')||'Ixtiyoriy'}</span>`;
+
+    html+=`<div class="mg-section">`;
+    html+=`<div class="mg-header"><span class="mg-name">${esc(g.name)}</span>${reqLabel}</div>`;
+    html+=`<div class="mg-options">`;
+
+    const options=Array.isArray(g.options)?g.options:[];
+    options.forEach(o=>{
+      const unavail=o.is_available===false;
+      const pricePart=o.price_adjustment>0
+        ?`<span class="mo-price">+${fmt(o.price_adjustment)}</span>`
+        :(o.price_adjustment<0?`<span class="mo-price">${fmt(o.price_adjustment)}</span>`:'');
+      const unavailBadge=unavail?`<span class="mo-unavail-badge">${t('menu.sold_out')||'Tugagan'}</span>`:'';
+      html+=`<div class="mo-item${unavail?' mo-unavailable':''}">
+        <span class="mo-name">${esc(o.name)}${unavailBadge}</span>
+        ${pricePart}
+      </div>`;
+    });
+
+    html+=`</div></div>`;
+    if(gi<groups.length-1)html+=`<div class="mg-divider"></div>`;
+  });
+  html+='</div>';
+
+  // Вставляем перед .modal-footer
+  const footer=document.querySelector('.modal-footer');
+  if(footer)footer.insertAdjacentHTML('beforebegin',html);
 }
 
 // _renderVariantPicker — рендерит picker вариантов внутри modal footer
@@ -2158,6 +2324,9 @@ function closeProductModal(){
   if(footer){footer.style.flexDirection='';footer.style.alignItems='';footer.style.gap='';}
   const priceBlock=document.getElementById('modalPriceBlock');
   if(priceBlock)priceBlock.style.display='';
+  // Phase 5: удалить секцию modifier groups
+  const modSec=document.getElementById('p5ModifierSection');
+  if(modSec)modSec.remove();
 }
 
 function cartItems(){return Object.values(cart);}
