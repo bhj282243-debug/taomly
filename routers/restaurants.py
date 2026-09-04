@@ -58,7 +58,8 @@ from typing import Literal, Optional
 
 from auth import get_current_restaurant_admin
 from database import get_db
-from models import Category, Location, ModifierGroup, ModifierOption, Product, ProductVariant, Restaurant, RestaurantTable, MENU_LANGUAGES
+from localization import localized_name, localized_desc, resolve_menu_lang
+from models import Category, Location, ModifierGroup, ModifierOption, Product, ProductVariant, Restaurant, RestaurantTable
 from schemas import (
     CategoryPublicResponse,
     LocationCreate,
@@ -334,22 +335,8 @@ def get_restaurant_by_slug(
         )
         tz_str = None
 
-    # Phase 4: language resolution. Timezone не участвует.
-    _resolved_lang = lang if lang else (
-        (_loc.language if _loc and _loc.language in MENU_LANGUAGES else None) or "uz"
-    )
-
-    def _loc_name(translations, base_name: str) -> str:
-        for t in translations:
-            if t.language == _resolved_lang:
-                return t.name
-        return base_name
-
-    def _loc_desc(translations, base_desc):
-        for t in translations:
-            if t.language == _resolved_lang:
-                return t.description
-        return base_desc
+    # Phase 4: language resolution via shared localization module (R-2).
+    _resolved_lang = resolve_menu_lang(lang, _loc)
 
     categories = (
         db.query(Category)
@@ -407,13 +394,13 @@ def get_restaurant_by_slug(
         "categories": [
             {
                 "id": cat.id,
-                "name": _loc_name(cat.translations, cat.name),
+                "name": localized_name(cat.translations, _resolved_lang, cat.name),
                 "sort_order": cat.sort_order,
                 "products": [
                     {
                         "id": p.id,
-                        "name": _loc_name(p.translations, p.name),
-                        "description": _loc_desc(p.translations, p.description),
+                        "name": localized_name(p.translations, _resolved_lang, p.name),
+                        "description": localized_desc(p.translations, _resolved_lang, p.description),
                         # S2-5: price nullable для variant-продуктов.
                         "price": p.price,
                         "photo_url": p.photo_url,
@@ -431,7 +418,7 @@ def get_restaurant_by_slug(
                         "variants": [
                             {
                                 "id": v.id,
-                                "name": _loc_name(v.translations, v.name),
+                                "name": localized_name(v.translations, _resolved_lang, v.name),
                                 "price": v.price,
                                 "sort_order": v.sort_order,
                                 "is_available": v.is_available,
@@ -443,14 +430,14 @@ def get_restaurant_by_slug(
                         "modifier_groups": [
                             {
                                 "id": g.id,
-                                "name": _loc_name(g.translations, g.name),
+                                "name": localized_name(g.translations, _resolved_lang, g.name),
                                 "min_selections": g.min_selections,
                                 "max_selections": g.max_selections,
                                 "sort_order": g.sort_order,
                                 "options": [
                                     {
                                         "id": o.id,
-                                        "name": _loc_name(o.translations, o.name),
+                                        "name": localized_name(o.translations, _resolved_lang, o.name),
                                         "price_adjustment": o.price_adjustment,
                                         "sort_order": o.sort_order,
                                         "is_available": o.is_available,
