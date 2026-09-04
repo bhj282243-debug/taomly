@@ -71,7 +71,7 @@ import models
 import telebot
 from config import settings
 from database import SessionLocal, engine
-from routers import agency, analytics, billing, menu, menu_public, menu_admin, orders, reservations, restaurants, waiter_calls, ai, superadmin
+from routers import agency, analytics, billing, menu_public, menu_admin, orders, reservations, restaurants, waiter_calls, ai, superadmin
 
 # ──────────────────────────────────────────
 # LOGGING
@@ -489,7 +489,6 @@ app.add_middleware(ApiVersioningMiddleware)
 # ──────────────────────────────────────────
 # ROUTERS
 # ──────────────────────────────────────────
-app.include_router(menu.router,         prefix="/api/menu",         tags=["menu"])
 app.include_router(menu_public.router,  prefix="/api/menu",         tags=["menu"])
 app.include_router(menu_admin.router,   prefix="/api/menu",         tags=["menu"])
 app.include_router(orders.router,       prefix="/api/orders",       tags=["orders"])
