@@ -238,7 +238,7 @@ class TestUploadPhotoRateLimit:
 
     def test_t11_10_upload_photo_has_rate_limit_decorator(self):
         """Функция upload_photo имеет slowapi rate limit decorator."""
-        from routers.menu import upload_photo
+        from routers.menu_admin import upload_photo
 
         # slowapi хранит лимиты в атрибуте _rate_limiting_limits
         # или в __dict__/_limits, зависит от версии.
@@ -246,16 +246,16 @@ class TestUploadPhotoRateLimit:
         import inspect
         source = inspect.getsource(upload_photo)
         # После применения декоратора исходный код содержит @limiter.limit
-        # Проверяем наличие limiter в модуле routers.menu
-        import routers.menu as menu_module
+        # Проверяем наличие limiter в модуле routers.menu_admin
+        import routers.menu_admin as menu_module
         assert hasattr(menu_module, "limiter"), (
-            "limiter не импортирован в routers/menu.py"
+            "limiter не импортирован в routers/menu_admin.py"
         )
 
     def test_t11_11_upload_photo_signature_has_request(self):
         """Функция upload_photo принимает Request (обязательно для slowapi)."""
         import inspect
-        from routers.menu import upload_photo
+        from routers.menu_admin import upload_photo
 
         sig = inspect.signature(upload_photo)
         assert "request" in sig.parameters, (
