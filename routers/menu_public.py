@@ -7,14 +7,15 @@ Endpoints:
   GET /{restaurant_id}      — публичное меню для клиентов (без авторизации)
   GET /{restaurant_id}/all  — полное меню для admin (JWT required)
 
-Helpers:
+Helpers (локальный):
   _get_active_restaurant     — загрузка активного ресторана (только для публичного GET)
-  _resolve_lang              — Phase 4: разрешение языка меню
-  _localized_name            — Phase 4: локализованное название
-  _localized_desc            — Phase 4: локализованное описание
-  _apply_lang_to_menu        — Phase 4: применение локализации к списку категорий
 
-Извлечено из routers/menu.py (R-1 модуляризация).
+Shared localization helpers (из localization.py):
+  resolve_menu_lang          — Phase 4: разрешение языка меню
+  apply_lang_to_menu         — Phase 4: применение локализации к списку категорий
+
+R-1: извлечено из routers/menu.py.
+R-2: локализационные helpers перенесены в localization.py.
 """
 
 import logging
@@ -25,13 +26,13 @@ from sqlalchemy.orm import Session, joinedload
 
 from auth import get_current_restaurant_admin
 from database import get_db
+from localization import apply_lang_to_menu, resolve_menu_lang
 from models import (
     Category,
     Location,
     ModifierGroup,
     Product,
     Restaurant,
-    MENU_LANGUAGES,
 )
 from schemas import (
     CategoryPublicResponse,
@@ -42,7 +43,6 @@ from utils import is_within_schedule
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
 
 # ──────────────────────────────────────────
 # ХЕЛПЕР — получить активный ресторан или 404
@@ -66,63 +66,6 @@ def _get_active_restaurant(restaurant_id: int, db: Session) -> Restaurant:
 
 # ──────────────────────────────────────────
 # PHASE 4: LANGUAGE HELPERS
-# ──────────────────────────────────────────
-
-def _resolve_lang(
-    query_lang: Optional[str],
-    active_location: Optional[Location],
-) -> str:
-    """
-    Детерминированное разрешение языка для публичного меню.
-
-    Приоритет:
-      1. Явный ?lang= из query param (уже валидирован FastAPI как Literal)
-      2. Location.language первой активной Location
-      3. "uz" — абсолютный fallback
-
-    Timezone-переменная в языковую логику не входит.
-    """
-    if query_lang:
-        return query_lang
-    if active_location and active_location.language in MENU_LANGUAGES:
-        return active_location.language
-    return "uz"
-
-
-def _localized_name(translations: list, lang: str, base_name: str) -> str:
-    """Возвращает локализованное name или base_name как fallback."""
-    for t in translations:
-        if t.language == lang:
-            return t.name
-    return base_name
-
-
-def _localized_desc(translations: list, lang: str, base_desc) -> Optional[str]:
-    """Возвращает локализованное description или base_desc как fallback."""
-    for t in translations:
-        if t.language == lang:
-            return t.description
-    return base_desc
-
-
-def _apply_lang_to_menu(categories: list, lang: str) -> None:
-    """
-    Применяет локализацию in-place к списку категорий меню.
-    Используется в обоих публичных эндпоинтах.
-    Translations уже загружены через lazy="selectin".
-    """
-    for c in categories:
-        c.name = _localized_name(c.translations, lang, c.name)
-        for p in (c.products or []):
-            p.description = _localized_desc(p.translations, lang, p.description)
-            p.name = _localized_name(p.translations, lang, p.name)
-            for v in (p.variants or []):
-                v.name = _localized_name(v.translations, lang, v.name)
-            for g in (p.modifier_groups or []):
-                g.name = _localized_name(g.translations, lang, g.name)
-                for o in (g.options or []):
-                    o.name = _localized_name(o.translations, lang, o.name)
-
 
 # ──────────────────────────────────────────
 # GET /{restaurant_id} — публичное меню (клиент)
@@ -167,7 +110,7 @@ def get_menu(
         tz_str = active_location.timezone
 
     # Phase 4: resolve language. Timezone не участвует.
-    resolved_lang = _resolve_lang(lang, active_location)
+    resolved_lang = resolve_menu_lang(lang, active_location)
 
     categories = (
         db.query(Category)
@@ -211,7 +154,7 @@ def get_menu(
     result = [c for c in categories if c.products]
 
     # Phase 4: применяем локализацию после фильтрации.
-    _apply_lang_to_menu(result, resolved_lang)
+    apply_lang_to_menu(result, resolved_lang)
 
     return result
 
