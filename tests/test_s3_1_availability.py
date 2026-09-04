@@ -404,7 +404,7 @@ def test_t9_schedule_inside_window(client, db, restaurant, category):
     )
     db.add(p); db.flush()
 
-    with patch("routers.menu.is_within_schedule", return_value=True):
+    with patch("routers.menu_public.is_within_schedule", return_value=True):
         resp = client.get(f"/api/menu/{restaurant.id}")
 
     assert resp.status_code == 200
@@ -422,7 +422,7 @@ def test_t10_schedule_outside_window(client, db, restaurant, category):
     )
     db.add(p); db.flush()
 
-    with patch("routers.menu.is_within_schedule", return_value=False):
+    with patch("routers.menu_public.is_within_schedule", return_value=False):
         resp = client.get(f"/api/menu/{restaurant.id}")
 
     assert resp.status_code == 200
@@ -481,7 +481,7 @@ def test_t12_location_timezone_respected(client, db, restaurant, category, locat
         captured["tz_str"] = tz_str
         return original(from_, until_, tz_str)
 
-    with patch("routers.menu.is_within_schedule", side_effect=capture):
+    with patch("routers.menu_public.is_within_schedule", side_effect=capture):
         resp = client.get(f"/api/menu/{restaurant.id}")
 
     assert resp.status_code == 200
