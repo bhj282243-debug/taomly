@@ -21,6 +21,7 @@
 <script src="/static/js/api.js"></script>
 <script src="/static/js/menu.js"></script>
 <script src="/static/js/modal.js"></script>
+<script src="/static/js/cart.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -228,12 +229,9 @@
 </div>
 
 <script>
-// ── CART KEY — единый безопасный ключ для корзины ─────────────────────────────
-// Legacy product: "123"
-// Variant product: "123__456"
-function getCartKey(productId,variantId){
-  return variantId!=null?String(productId)+'__'+String(variantId):String(productId);
-}
+// getCartKey, addLegacyItem, addVariantItem, changeQty,
+// cartItems, cartTotal, cartCount, updateBar, openCart, closeCart,
+// renderCart, cartChangeQty, selectType, _updateDeliveryRow → cart.js (R-3.4A)
 
 function parseParams(){
   const u=new URLSearchParams(window.location.search);
@@ -261,146 +259,6 @@ function parseParams(){
 // _renderVariantPicker, _vpSelect, _vpConfirm,
 // _renderModifierGroups → modal.js (R-3.3)
 
-function cartItems(){return Object.values(cart);}
-function cartTotal(){return cartItems().reduce((s,i)=>s+i.price*i.qty,0);}
-function cartCount(){return cartItems().reduce((s,i)=>s+i.qty,0);}
-
-function updateBar(){
-  const n=cartCount();
-  document.getElementById('cartCountBadge').textContent=n;
-  document.getElementById('cartTotalBar').textContent=fmt(cartTotal());
-  const bar=document.getElementById('cartBar');
-  bar.classList.toggle('visible',n>0);
-  const cap=bar.querySelector('.cart-cap');
-  if(cap&&n>0){cap.classList.remove('pulse');void cap.offsetWidth;cap.classList.add('pulse');}
-}
-
-function openCart(){renderCart();document.getElementById('cartScreen').classList.add('active');}
-function closeCart(){document.getElementById('cartScreen').classList.remove('active');}
-
-function selectType(t){
-  orderType=t;
-  document.getElementById('typeDelivery').classList.toggle('active',t==='delivery');
-  document.getElementById('typeTakeaway').classList.toggle('active',t==='takeaway');
-  document.getElementById('clientAddress').style.display=t==='delivery'?'block':'none';
-  // Обновляем строку доставки в итоговой сумме
-  _updateDeliveryRow();
-}
-
-function _updateDeliveryRow(){
-  const fee=restaurant?.delivery_fee||0;
-  const min=restaurant?.min_order_amount||0;
-  const feeRow=document.getElementById('deliveryFeeRow');
-  const minRow=document.getElementById('minOrderRow');
-  const total=cartTotal();
-
-  // Стоимость доставки — только для delivery
-  if(feeRow){
-    if(orderType==='delivery'&&fee>0){
-      document.getElementById('deliveryFeeVal').textContent=fmt(fee);
-      feeRow.style.display='flex';
-    }else{
-      feeRow.style.display='none';
-    }
-  }
-
-  // Минимальная сумма — предупреждение
-  if(minRow){
-    if(min>0&&total<min){
-      document.getElementById('minOrderText').textContent=
-        t('validation.minimum_order_hint',{amount:fmt(min),remaining:fmt(min-total)});
-      minRow.style.display='flex';
-    }else{
-      minRow.style.display='none';
-    }
-  }
-
-  // Итого = товары + доставка (если delivery)
-  const grandTotal=total+(orderType==='delivery'?fee:0);
-  const el=document.getElementById('summaryTotal');
-  if(el)el.textContent=fmt(grandTotal);
-}
-
-function renderCart(){
-  const list=document.getElementById('cartItemsList');list.innerHTML='';
-  // Итерируем по записям корзины — ключ = cartKey
-  Object.entries(cart).forEach(([cartKey,item])=>{
-    const div=document.createElement('div');div.className='cart-item';
-
-    // Фото блюда
-    if(item.photo){
-      const phWrap=document.createElement('div');phWrap.className='ci-photo';
-      const img=document.createElement('img');
-      img.src=item.photo;img.alt=item.name;img.loading='lazy';
-      phWrap.appendChild(img);div.appendChild(phWrap);
-    }else{
-      const phWrap=document.createElement('div');phWrap.className='ci-ph';
-      phWrap.innerHTML='<svg class="icon" viewBox="0 0 24 24"><path d="M18 8a4 4 0 0 1 0 8M6 4v16M6 4c0 2.5 2.5 2.5 2.5 5S6 11.5 6 14"/></svg>';
-      div.appendChild(phWrap);
-    }
-
-    // Информация: name, [variant_name], qty × price
-    const info=document.createElement('div');info.className='ci-info';
-    const nameEl=document.createElement('div');nameEl.className='ci-name';
-    nameEl.textContent=item.name;
-    info.appendChild(nameEl);
-    // Название варианта (если есть)
-    if(item.variant_name){
-      const vnEl=document.createElement('div');
-      vnEl.style.cssText='font-size:11.5px;color:var(--ink4);margin-top:1px;font-style:italic;';
-      vnEl.textContent=item.variant_name;
-      info.appendChild(vnEl);
-    }
-    const priceEl=document.createElement('div');priceEl.className='ci-price';
-    priceEl.textContent=item.qty+' × '+fmt(item.price);
-    info.appendChild(priceEl);
-    div.appendChild(info);
-
-    // Кнопки qty — используем cartKey (экранируем одиночные кавычки)
-    const safeKey=cartKey.replace(/'/g,"\\'");
-    const qty=document.createElement('div');qty.className='qty-unit';
-    qty.innerHTML='<button class="qty-ring" onclick="cartChangeQty(\''+safeKey+'\',-1)"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button><span class="qty-digit">'+item.qty+'</span><button class="qty-ring" onclick="cartChangeQty(\''+safeKey+'\',1)"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>';
-    div.appendChild(qty);
-
-    list.appendChild(div);
-  });
-  document.getElementById('summaryCount').textContent=t('cart.item_count',{n:cartCount()});
-  document.getElementById('summarySubtotal').textContent=fmt(cartTotal());
-  document.getElementById('summaryTotal').textContent=fmt(cartTotal());
-  _updateDeliveryRow();
-  if(orderType==='dine_in'){
-    document.getElementById('orderTypeSection').style.display='none';
-    document.getElementById('clientAddress').style.display='none';
-    document.getElementById('clientName').style.display='none';
-    document.getElementById('clientPhone').style.display='none';
-    document.getElementById('tableBanner').style.display='flex';
-    document.getElementById('tableBannerTitle').textContent=t('cart.table_label',{n:tableNumber});
-  }else{
-    document.getElementById('orderTypeSection').style.display='block';
-    document.getElementById('tableBanner').style.display='none';
-    document.getElementById('clientName').style.display='block';
-    document.getElementById('clientPhone').style.display='block';
-    document.getElementById('clientAddress').style.display=orderType==='delivery'?'block':'none';
-  }
-}
-
-// cartChangeQty — принимает cartKey (строка), вызывается из renderCart
-function cartChangeQty(cartKey,delta){
-  if(!cart[cartKey])return;
-  cart[cartKey].qty+=delta;
-  if(cart[cartKey].qty<=0){
-    const item=cart[cartKey];
-    delete cart[cartKey];
-    // Обновить ctrl карточки продукта
-    if(item)refreshCtrl(item.id);
-  }else{
-    const item=cart[cartKey];
-    if(item)refreshCtrl(item.id);
-  }
-  updateBar();
-  if(cartCount()===0){closeCart();return;}
-  renderCart();
-}
 
 async function submitOrder(){
   const btn=document.getElementById('checkoutBtn');
