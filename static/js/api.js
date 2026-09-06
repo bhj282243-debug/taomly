@@ -1,7 +1,11 @@
 // ── API.JS — API communication layer (R-3.2) ─────────────────────────────────
-// Все fetch-вызовы тесно связаны с domain-функциями (loadMenu, resolveTableId,
-// submitOrder, _pollOrderStatus) и остаются в index.html до следующих R-3 этапов.
-// Этот файл зарезервирован для будущего R-3.x — не добавлять сюда логику сейчас.
+// Все fetch-вызовы находятся в соответствующих domain-модулях:
+//   menu.js    → GET /api/restaurants/{slug}, GET /api/restaurants/{slug}/table/{n}
+//   orders.js  → POST /api/orders/, GET /api/orders/my/{id}
+//   i18n.js    → GET /i18n/{lang}.json
+//
+// Этот файл зарезервирован для будущего выделения API-слоя.
+// Не добавлять логику сюда без отдельного архитектурного решения.
 //
 // API endpoints (зафиксированы, не менять):
 //   GET  /api/restaurants/{slug}
