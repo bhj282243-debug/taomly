@@ -2,8 +2,8 @@
 // Зависит от: state.js, utils.js, i18n.js, theme.js, api.js
 // Содержит: loadMenu, showHero, enterMenu, renderMenu, renderCategories,
 //           renderPopular, makeCard, ctrlHtml, cardQty, getBadge, cleanDesc(*),
-//           xBadge, findProduct, refreshCtrl, resolveTableId
-// (*) cleanDesc уже в utils.js — здесь НЕ дублируется.
+//           findProduct, refreshCtrl, resolveTableId
+// (*) cleanDesc определена в utils.js — здесь НЕ дублируется.
 
 // ── HERO ──────────────────────────────────────────────────────────────────────
 
@@ -137,14 +137,6 @@ function getBadge(p){
   return{badge:null,cls:''};
 }
 
-// xBadge — оставляем для совместимости с renderCart() (корзина — не Phase 5 scope)
-const BM={bestseller:'Bestseller',chef:"Chef's Choice",new:'New Arrival',spicy:'🌶 Spicy'};
-function xBadge(d){
-  if(!d)return{badge:null,text:''};
-  const m=d.match(/#(bestseller|chef|new|spicy)\b/i);
-  if(!m)return{badge:null,text:d};
-  return{badge:BM[m[1].toLowerCase()],text:d.replace(m[0],'').trim()};
-}
 
 // ── CARD QUANTITY ─────────────────────────────────────────────────────────────
 
