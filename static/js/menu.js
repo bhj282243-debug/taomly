@@ -48,6 +48,9 @@ async function loadMenu(){
     if(restaurant.address){document.getElementById('restaurantAddressText').textContent=restaurant.address;document.getElementById('restaurantAddress').style.display='flex';}
     if(restaurant.welcome_text){document.getElementById('welcomeText').textContent=restaurant.welcome_text;document.getElementById('welcomeLine').style.display='block';}
     if(tableNumber){document.getElementById('tableBadgeText').textContent=t('cart.table_label',{n:tableNumber});document.getElementById('tableBadge').style.display='inline-flex';await resolveTableId();}
+    // Phase 6: set location context for Cart API, then hydrate cart from server.
+    _cartLocationId=restaurant.location_id||null;
+    if(_cartLocationId)syncCartFromServer();
     renderPopular();renderCategories();renderMenu();
     setTimeout(()=>{
       document.getElementById('splash').classList.add('out');
