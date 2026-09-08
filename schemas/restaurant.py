@@ -129,6 +129,9 @@ class RestaurantPublicResponse(BaseModel):
     id:                     int
     name:                   str
     slug:                   str
+    # Phase 6: primary active location id — used by frontend for X-Location-Id header.
+    # None if restaurant has no active locations (graceful degradation).
+    location_id:            Optional[int] = None
     description:            Optional[str] = None
     phone:                  Optional[str] = None
     address:                Optional[str] = None
