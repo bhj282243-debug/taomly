@@ -72,6 +72,7 @@ import telebot
 from config import settings
 from database import SessionLocal, engine
 from routers import agency, analytics, billing, menu_public, menu_admin, orders, reservations, restaurants, waiter_calls, ai, superadmin
+from modules.cart.router import router as cart_router
 
 # ──────────────────────────────────────────
 # LOGGING
@@ -399,6 +400,7 @@ app.add_middleware(
         "X-Telegram-Init-Data",
         "X-Restaurant-Id",
         "X-Location-Id",
+        "X-Cart-Session",
     ],
 )
 
@@ -491,6 +493,7 @@ app.add_middleware(ApiVersioningMiddleware)
 # ──────────────────────────────────────────
 app.include_router(menu_public.router,  prefix="/api/menu",         tags=["menu"])
 app.include_router(menu_admin.router,   prefix="/api/menu",         tags=["menu"])
+app.include_router(cart_router,         prefix="/api/cart",         tags=["cart"])
 app.include_router(orders.router,       prefix="/api/orders",       tags=["orders"])
 app.include_router(reservations.router, prefix="/api/reservations", tags=["reservations"])
 app.include_router(waiter_calls.router, prefix="/api/waiter-calls", tags=["waiter-calls"])
