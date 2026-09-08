@@ -47,8 +47,9 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S", "DTZ"]  # security and datetime checks off in tests
-"alembic/*" = ["E", "F"]  # alembic generated code
+"tests/*" = ["S", "DTZ"]              # security and datetime checks off in tests
+"modules/*/tests/*" = ["S", "DTZ"]   # same for module-local test directories
+"alembic/*" = ["E", "F"]             # alembic generated code
 
 [tool.ruff.lint.isort]
 known-first-party = ["config", "database", "models", "schemas", "auth", "handlers", "telegram_service"]
@@ -73,7 +74,7 @@ exclude = '''
 # PYTEST
 # ──────────────────────────────────────────
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "modules"]
 asyncio_mode = "auto"
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
@@ -98,6 +99,7 @@ markers = [
 source = ["."]
 omit = [
     "tests/*",
+    "modules/*/tests/*",
     "alembic/*",
     ".venv/*",
     "static/*",
