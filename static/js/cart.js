@@ -14,25 +14,142 @@ function getCartKey(productId,variantId){
   return variantId!=null?String(productId)+'__'+String(variantId):String(productId);
 }
 
+// ── SERVER CART SYNC (Phase 6) ────────────────────────────────────────────────
+// Server Cart is authoritative. Local cart = optimistic UI cache.
+// add/remove: blocking (await server response).
+// quantity update: optimistic + rollback on failure.
+// Page load: hydrates local cart from server.
+
+// _serverCartItemIds: map from cartKey → server CartItem id (for PATCH/DELETE)
+let _serverCartItemIds={};
+
+function _buildLocalFromServer(serverCart){
+  // Rebuild local cart={} from CartResponse
+  const newCart={};
+  const newIds={};
+  (serverCart.items||[]).forEach(item=>{
+    const key=getCartKey(item.product_id,item.variant_id||null);
+    newCart[key]={
+      id:item.product_id,
+      variant_id:item.variant_id||null,
+      name:item.product_name||'',
+      variant_name:item.variant_name||null,
+      price:item.unit_price,
+      qty:item.quantity,
+      photo:null, // photos come from local product data
+      _server_item_id:item.id,
+    };
+    newIds[key]=item.id;
+    // Restore photo from local product data if available
+    const localProd=findProduct?findProduct(item.product_id):null;
+    if(localProd)newCart[key].photo=localProd.photo_url||null;
+  });
+  return{cart:newCart,ids:newIds};
+}
+
+async function syncCartFromServer(){
+  // Called on page load to hydrate local cart from server state.
+  if(!restaurant||!_cartLocationId)return;
+  try{
+    const headers=_cartHeaders();
+    // GET /api/cart doesn't require X-Location-Id strictly, but send it anyway
+    const r=await fetch(`${API_BASE}/api/cart`,{method:'GET',headers});
+    if(!r.ok)return;
+    const serverCart=await r.json();
+    if(serverCart.cart_id===0){
+      // No server cart exists — local state is already empty
+      cart={};_serverCartItemIds={};
+    }else{
+      const{cart:newCart,ids:newIds}=_buildLocalFromServer(serverCart);
+      cart=newCart;_serverCartItemIds=newIds;
+    }
+    updateBar();
+  }catch(e){
+    // Network failure — keep existing local state
+  }
+}
+
+async function _syncAddToServer(productId,variantId,modifierOptionIds,notes,qty){
+  // Blocking: returns server CartItem id or null on failure
+  if(!restaurant||!_cartLocationId)return null;
+  try{
+    const body={product_id:productId,quantity:qty||1};
+    if(variantId!=null)body.variant_id=variantId;
+    if(modifierOptionIds&&modifierOptionIds.length)body.modifier_option_ids=modifierOptionIds;
+    if(notes)body.notes=notes;
+    const r=await fetch(`${API_BASE}/api/cart/items`,{
+      method:'POST',
+      headers:_cartHeaders(),
+      body:JSON.stringify(body),
+    });
+    if(!r.ok){
+      const e=await r.json().catch(()=>({}));
+      const msg=typeof e.detail==='string'?e.detail:'Could not add item';
+      if(typeof showToast==='function')showToast(msg);
+      return null;
+    }
+    const serverCart=await r.json();
+    const{cart:newCart,ids:newIds}=_buildLocalFromServer(serverCart);
+    cart=newCart;_serverCartItemIds=newIds;
+    return serverCart;
+  }catch(e){
+    if(typeof showToast==='function')showToast('Network error. Please try again.');
+    return null;
+  }
+}
+
+async function _syncRemoveFromServer(cartKey){
+  const itemId=_serverCartItemIds[cartKey];
+  if(!itemId||!restaurant||!_cartLocationId)return;
+  try{
+    const r=await fetch(`${API_BASE}/api/cart/items/${itemId}`,{
+      method:'DELETE',
+      headers:_cartHeaders(),
+    });
+    if(r.ok){
+      const serverCart=await r.json();
+      const{cart:newCart,ids:newIds}=_buildLocalFromServer(serverCart);
+      cart=newCart;_serverCartItemIds=newIds;
+    }
+  }catch(e){/* network error — local already updated */}
+}
+
+async function _syncUpdateQtyOnServer(cartKey,newQty){
+  const itemId=_serverCartItemIds[cartKey];
+  if(!itemId||!restaurant||!_cartLocationId)return;
+  try{
+    const r=await fetch(`${API_BASE}/api/cart/items/${itemId}`,{
+      method:'PATCH',
+      headers:_cartHeaders(),
+      body:JSON.stringify({quantity:newQty}),
+    });
+    if(!r.ok){
+      // Rollback handled by caller
+      return false;
+    }
+    return true;
+  }catch(e){return false;}
+}
+
 // ── ADD TO CART ───────────────────────────────────────────────────────────────
 
 // addLegacyItem — добавить legacy product (без вариантов) в корзину
-function addLegacyItem(id){
+// Phase 6: blocking server sync — awaits CartAPI response.
+async function addLegacyItem(id,modifierOptionIds,notes){
   const p=findProduct(id);if(!p)return;
-  const key=getCartKey(id,null);
-  if(cart[key]){cart[key].qty+=1;}
-  else{cart[key]={id,variant_id:null,name:p.name,variant_name:null,price:p.price,qty:1,photo:p.photo_url||null};}
+  const result=await _syncAddToServer(id,null,modifierOptionIds||[],notes||null,1);
+  if(!result)return; // server rejected — local not updated
   refreshCtrl(id);updateBar();
   const card=document.getElementById('card-'+id);
   if(card){card.classList.remove('just-added');void card.offsetWidth;card.classList.add('just-added');}
 }
 
 // addVariantItem — добавить вариант продукта в корзину
-function addVariantItem(productId,variant){
+// Phase 6: blocking server sync.
+async function addVariantItem(productId,variant,modifierOptionIds,notes){
   const p=findProduct(productId);if(!p||!variant)return;
-  const key=getCartKey(productId,variant.id);
-  if(cart[key]){cart[key].qty+=1;}
-  else{cart[key]={id:productId,variant_id:variant.id,name:p.name,variant_name:variant.name,price:variant.price,qty:1,photo:p.photo_url||null};}
+  const result=await _syncAddToServer(productId,variant.id,modifierOptionIds||[],notes||null,1);
+  if(!result)return;
   refreshCtrl(productId);updateBar();
   const card=document.getElementById('card-'+productId);
   if(card){card.classList.remove('just-added');void card.offsetWidth;card.classList.add('just-added');}
