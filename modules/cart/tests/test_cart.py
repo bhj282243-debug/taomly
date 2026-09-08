@@ -943,71 +943,108 @@ class TestConcurrentAdd:
         assert len(items) == 1
         assert items[0]["quantity"] == 3
 
-    def test_concurrent_identical_adds_no_duplicate(self, db, restaurant, location, tg_user, product):
+    @pytest.mark.postgres
+    def test_concurrent_identical_adds_no_duplicate(self, restaurant, location, product):
         """
-        Two concurrent POST /api/cart/items for the same product must not
-        produce two CartItem rows. INSERT ON CONFLICT DO UPDATE is atomic.
+        Two concurrent service.add_item() calls for the same (session_id, product)
+        must not produce two CartItem rows.
+
+        INSERT ... ON CONFLICT DO UPDATE is atomic at the PostgreSQL level.
+        Each worker uses its own independent SQLAlchemy session (no shared state).
+        FastAPI / app.dependency_overrides are NOT used — this tests the Cart Engine
+        directly at the service layer against a real PostgreSQL instance.
+
+        Marked @pytest.mark.postgres: skipped on SQLite (no functional unique index
+        support for ON CONFLICT with COALESCE expression).
+
+        Assertions:
+          - both workers succeed (no exception)
+          - exactly one CartItem row in DB after both complete
+          - quantity == 2 (sum of both adds)
+          - unit_price is the original snapshot (not overwritten)
         """
-        results = []
+        from database import SessionLocal
+        from modules.cart import service as cart_service
+
+        CONCURRENT_SESSION = "cccccccc-cccc-cccc-cccc-cccccccccccc"
+
+        # Capture product price before workers run (snapshot reference)
+        original_price = product.price
+        restaurant_id = restaurant.id
+        product_id = product.id
+        location_id = location.id
+
         errors = []
 
-        def do_add(session_id):
-            def override_db():
-                # Each thread gets its own DB session for true concurrency
-                from database import SessionLocal
-                s = SessionLocal()
-                try:
-                    yield s
-                finally:
-                    s.close()
-
-            def override_tg():
-                return tg_user
-
-            app.dependency_overrides[get_db] = override_db
-            app.dependency_overrides[get_telegram_user] = override_tg
-
+        def worker():
+            """
+            Each worker opens its own independent PostgreSQL session,
+            creates/gets the cart, and adds the same product once.
+            Sessions are fully independent — no shared connection or transaction.
+            """
+            s = SessionLocal()
             try:
-                with TestClient(app) as c:
-                    r = c.post(
-                        "/api/cart/items",
-                        headers={
-                            "X-Restaurant-Id": str(restaurant.id),
-                            "X-Location-Id":   str(location.id),
-                            "X-Cart-Session":  session_id,
-                        },
-                        json={"product_id": product.id},
-                    )
-                    results.append(r.status_code)
+                # Re-load location in this session (cannot share ORM objects across sessions)
+                from models import Location as LocationModel
+                loc = s.query(LocationModel).filter(LocationModel.id == location_id).first()
+
+                cart = cart_service.get_or_create_cart(
+                    db=s,
+                    restaurant_id=restaurant_id,
+                    session_id=CONCURRENT_SESSION,
+                    telegram_id=None,
+                    currency=loc.currency,
+                )
+                cart_service.add_item(
+                    db=s,
+                    cart=cart,
+                    product_id=product_id,
+                    variant_id=None,
+                    modifier_option_ids=[],
+                    notes=None,
+                    quantity=1,
+                    location=loc,
+                )
             except Exception as e:
                 errors.append(str(e))
             finally:
-                app.dependency_overrides.clear()
+                s.close()
 
-        # Note: true DB-level concurrency test; threads share the same session_id
-        # so both write to the same (session_id, restaurant_id) cart.
-        t1 = threading.Thread(target=do_add, args=(SESSION_A,))
-        t2 = threading.Thread(target=do_add, args=(SESSION_A,))
+        t1 = threading.Thread(target=worker)
+        t2 = threading.Thread(target=worker)
         t1.start()
         t2.start()
         t1.join()
         t2.join()
 
-        assert not errors, f"Thread errors: {errors}"
-        assert all(s == 200 for s in results)
+        assert not errors, f"Worker errors: {errors}"
 
-        # After both threads complete, check DB directly
-        from database import SessionLocal
+        # Verify DB state with a fresh independent session
         with SessionLocal() as check_db:
-            items = (
-                check_db.query(CartItem)
-                .join(Cart)
-                .filter(Cart.session_id == SESSION_A)
+            carts = (
+                check_db.query(Cart)
+                .filter(
+                    Cart.session_id == CONCURRENT_SESSION,
+                    Cart.restaurant_id == restaurant_id,
+                )
                 .all()
             )
-            # Must be exactly one CartItem with quantity 2
-            assert len(items) == 1, f"Expected 1 CartItem, got {len(items)}"
-            assert items[0].quantity == 2
+            assert len(carts) == 1, f"Expected 1 Cart, got {len(carts)}"
+
+            items = (
+                check_db.query(CartItem)
+                .filter(CartItem.cart_id == carts[0].id)
+                .all()
+            )
+            # ON CONFLICT DO UPDATE must prevent duplicates
+            assert len(items) == 1, f"Expected 1 CartItem (no duplicates), got {len(items)}"
+            # quantity must equal sum of both successful adds
+            assert items[0].quantity == 2, f"Expected quantity=2, got {items[0].quantity}"
+            # unit_price must be original snapshot — not overwritten by second add
+            assert items[0].unit_price == original_price, (
+                f"unit_price snapshot changed: expected {original_price}, "
+                f"got {items[0].unit_price}"
+            )
 
 
 # ═══════════════════════════════════════════════════════════════════
