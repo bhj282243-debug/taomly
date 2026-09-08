@@ -390,6 +390,8 @@ def get_restaurant_by_slug(
         "currency": (getattr(_settings_source, "currency", None) or "UZS"),
         # Язык клиентского UI: uz, ru, en
         "language": (getattr(_settings_source, "language", None) or "uz"),
+        # Phase 6: location_id для X-Location-Id header (Cart API).
+        "location_id": (_loc.id if _loc is not None else None),
         # telegram_bot_token_encrypted намеренно не включён
         "categories": [
             {
