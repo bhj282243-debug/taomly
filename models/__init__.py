@@ -55,6 +55,9 @@ from .operations import RestaurantTable, Reservation, WaiterCall
 # ── Orders (зависит от tenant, menu, operations через string refs) ─────────────
 from .orders import Order, OrderItem, OrderItemModifier
 
+# ── Cart (Phase 6 — зависит от tenant и menu через string refs) ───────────────
+from modules.cart.models import Cart, CartItem, CartItemModifier
+
 # ── Public API ────────────────────────────────────────────────────────────────
 __all__ = [
     # constants
@@ -90,4 +93,8 @@ __all__ = [
     "Order",
     "OrderItem",
     "OrderItemModifier",
+    # cart (Phase 6)
+    "Cart",
+    "CartItem",
+    "CartItemModifier",
 ]
