@@ -944,7 +944,7 @@ class TestConcurrentAdd:
         assert items[0]["quantity"] == 3
 
     @pytest.mark.postgres
-    def test_concurrent_identical_adds_no_duplicate(self, restaurant, location, product):
+    def test_concurrent_identical_adds_no_duplicate(self):
         """
         Two concurrent service.add_item() calls for the same (session_id, product)
         must not produce two CartItem rows.
@@ -957,43 +957,115 @@ class TestConcurrentAdd:
         Marked @pytest.mark.postgres: skipped on SQLite (no functional unique index
         support for ON CONFLICT with COALESCE expression).
 
+        WHY self-contained data (no fixtures):
+        The db fixture wraps each test in a SAVEPOINT transaction. SessionLocal()
+        in worker threads opens NEW real DB connections that cannot see uncommitted
+        SAVEPOINT data — fixture rows are invisible to worker threads. This test
+        therefore creates, commits, and cleans up its own data using real sessions.
+
         Assertions:
           - both workers succeed (no exception)
           - exactly one CartItem row in DB after both complete
           - quantity == 2 (sum of both adds)
           - unit_price is the original snapshot (not overwritten)
         """
+        from auth import hash_password
         from database import SessionLocal
+        from models import Agency, Category, Location, Product, Restaurant
         from modules.cart import service as cart_service
 
-        CONCURRENT_SESSION = "cccccccc-cccc-cccc-cccc-cccccccccccc"
+        CONCURRENT_SESSION = "cccc0001-cccc-cccc-cccc-cccccccccccc"
+        PRODUCT_PRICE = 15000
 
-        # Capture product price before workers run (snapshot reference)
-        original_price = product.price
-        restaurant_id = restaurant.id
-        product_id = product.id
-        location_id = location.id
+        # ── Setup: commit real data visible to all connections ──────────
+        setup_db = SessionLocal()
+        try:
+            agency = Agency(
+                name="Concurrent Test Agency",
+                owner_email="concurrent@test.uz",
+                owner_password_hash=hash_password("pw"),
+            )
+            setup_db.add(agency)
+            setup_db.flush()
+
+            rest = Restaurant(
+                agency_id=agency.id,
+                name="Concurrent Test Restaurant",
+                slug=f"concurrent-test-{CONCURRENT_SESSION[:8]}",
+                admin_password_hash=hash_password("pw"),
+                currency="UZS",
+                telegram_bot_token_encrypted="stub",
+                telegram_dispatcher_id=0,
+            )
+            setup_db.add(rest)
+            setup_db.flush()
+
+            loc = Location(
+                restaurant_id=rest.id,
+                name="Concurrent Test Location",
+                slug=f"concurrent-loc-{CONCURRENT_SESSION[:8]}",
+                is_active=True,
+                timezone="Asia/Tashkent",
+                delivery_fee=0,
+                min_order_amount=0,
+                currency="UZS",
+                language="uz",
+                is_waiter_call_enabled=False,
+            )
+            setup_db.add(loc)
+            setup_db.flush()
+
+            cat = Category(
+                restaurant_id=rest.id,
+                name="Test Category",
+                sort_order=1,
+            )
+            setup_db.add(cat)
+            setup_db.flush()
+
+            prod = Product(
+                restaurant_id=rest.id,
+                category_id=cat.id,
+                name="Concurrent Test Product",
+                price=PRODUCT_PRICE,
+                is_available=True,
+            )
+            setup_db.add(prod)
+            setup_db.flush()
+
+            # REAL COMMIT — makes data visible to worker thread connections
+            setup_db.commit()
+
+            restaurant_id = rest.id
+            location_id = loc.id
+            product_id = prod.id
+        except Exception:
+            setup_db.rollback()
+            setup_db.close()
+            raise
+        else:
+            setup_db.close()
 
         errors = []
 
         def worker():
             """
-            Each worker opens its own independent PostgreSQL session,
-            creates/gets the cart, and adds the same product once.
-            Sessions are fully independent — no shared connection or transaction.
+            Each worker opens its own independent PostgreSQL session.
+            Data is committed above so it's visible to all connections.
             """
             s = SessionLocal()
             try:
-                # Re-load location in this session (cannot share ORM objects across sessions)
                 from models import Location as LocationModel
-                loc = s.query(LocationModel).filter(LocationModel.id == location_id).first()
+                loc_obj = s.query(LocationModel).filter(
+                    LocationModel.id == location_id
+                ).first()
 
                 cart = cart_service.get_or_create_cart(
                     db=s,
                     restaurant_id=restaurant_id,
                     session_id=CONCURRENT_SESSION,
                     telegram_id=None,
-                    currency=loc.currency,
+                    currency="UZS",
                 )
                 cart_service.add_item(
                     db=s,
@@ -1003,48 +1075,74 @@ class TestConcurrentAdd:
                     modifier_option_ids=[],
                     notes=None,
                     quantity=1,
-                    location=loc,
+                    location=loc_obj,
                 )
             except Exception as e:
                 errors.append(str(e))
             finally:
                 s.close()
 
-        t1 = threading.Thread(target=worker)
-        t2 = threading.Thread(target=worker)
-        t1.start()
-        t2.start()
-        t1.join()
-        t2.join()
+        try:
+            t1 = threading.Thread(target=worker)
+            t2 = threading.Thread(target=worker)
+            t1.start()
+            t2.start()
+            t1.join()
+            t2.join()
 
-        assert not errors, f"Worker errors: {errors}"
+            assert not errors, f"Worker errors: {errors}"
 
-        # Verify DB state with a fresh independent session
-        with SessionLocal() as check_db:
-            carts = (
-                check_db.query(Cart)
-                .filter(
+            # Verify DB state with a fresh independent session
+            with SessionLocal() as check_db:
+                carts = (
+                    check_db.query(Cart)
+                    .filter(
+                        Cart.session_id == CONCURRENT_SESSION,
+                        Cart.restaurant_id == restaurant_id,
+                    )
+                    .all()
+                )
+                assert len(carts) == 1, f"Expected 1 Cart, got {len(carts)}"
+
+                items = (
+                    check_db.query(CartItem)
+                    .filter(CartItem.cart_id == carts[0].id)
+                    .all()
+                )
+                assert len(items) == 1, f"Expected 1 CartItem (no duplicates), got {len(items)}"
+                assert items[0].quantity == 2, f"Expected quantity=2, got {items[0].quantity}"
+                assert items[0].unit_price == PRODUCT_PRICE, (
+                    f"unit_price snapshot changed: expected {PRODUCT_PRICE}, "
+                    f"got {items[0].unit_price}"
+                )
+        finally:
+            # ── Teardown: remove committed test data ────────────────────
+            cleanup_db = SessionLocal()
+            try:
+                cleanup_db.query(Cart).filter(
                     Cart.session_id == CONCURRENT_SESSION,
                     Cart.restaurant_id == restaurant_id,
+                ).delete(synchronize_session=False)
+                cleanup_db.query(Product).filter(Product.id == product_id).delete(
+                    synchronize_session=False
                 )
-                .all()
-            )
-            assert len(carts) == 1, f"Expected 1 Cart, got {len(carts)}"
-
-            items = (
-                check_db.query(CartItem)
-                .filter(CartItem.cart_id == carts[0].id)
-                .all()
-            )
-            # ON CONFLICT DO UPDATE must prevent duplicates
-            assert len(items) == 1, f"Expected 1 CartItem (no duplicates), got {len(items)}"
-            # quantity must equal sum of both successful adds
-            assert items[0].quantity == 2, f"Expected quantity=2, got {items[0].quantity}"
-            # unit_price must be original snapshot — not overwritten by second add
-            assert items[0].unit_price == original_price, (
-                f"unit_price snapshot changed: expected {original_price}, "
-                f"got {items[0].unit_price}"
-            )
+                cleanup_db.query(Category).filter(Category.restaurant_id == restaurant_id).delete(
+                    synchronize_session=False
+                )
+                cleanup_db.query(Location).filter(Location.id == location_id).delete(
+                    synchronize_session=False
+                )
+                cleanup_db.query(Restaurant).filter(Restaurant.id == restaurant_id).delete(
+                    synchronize_session=False
+                )
+                cleanup_db.query(Agency).filter(Agency.id == agency.id).delete(
+                    synchronize_session=False
+                )
+                cleanup_db.commit()
+            except Exception:
+                cleanup_db.rollback()
+            finally:
+                cleanup_db.close()
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -1071,8 +1169,7 @@ class TestConcurrentQuantityUpdate:
 class TestRegression:
     def test_existing_menu_endpoint_still_works(self, cart_client, product):
         """GET /api/menu/{restaurant_id} not broken by Phase 6."""
-        from tests.conftest import restaurant as _restaurant_fixture
-        # We use cart_client which has restaurant in context
+        # cart_client has restaurant context via dependency overrides
         r = cart_client.get(f"/api/menu/{product.restaurant_id}")
         # May return 200 or redirect depending on menu setup — just not 5xx
         assert r.status_code != 500
