@@ -22,6 +22,7 @@ from typing import List, Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy import text as sa_text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from models import Location, ModifierGroup, Product, ProductVariant
@@ -265,7 +266,36 @@ def get_or_create_cart(
         status="active",
     )
     db.add(cart)
-    db.flush()  # get id without committing
+    try:
+        db.flush()  # get id without committing
+    except IntegrityError:
+        # Two concurrent workers both saw no cart and both tried to INSERT.
+        # The UNIQUE constraint on (session_id, restaurant_id) rejected the second.
+        # Roll back the failed flush and re-fetch the cart created by the first worker.
+        db.rollback()
+        cart = (
+            db.query(Cart)
+            .filter(
+                Cart.session_id == session_id,
+                Cart.restaurant_id == restaurant_id,
+                Cart.status == "active",
+            )
+            .first()
+        )
+        if cart is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create or retrieve cart after concurrent conflict.",
+            )
+        if cart.currency != currency:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Cart currency ({cart.currency}) does not match "
+                    f"location currency ({currency}). "
+                    "Clear the cart or use a location with matching currency."
+                ),
+            )
     return cart
 
 
