@@ -62,7 +62,9 @@ class Order(Base):
     total_amount = Column(Integer, nullable=False)
     # Phase 7: immutable currency snapshot — set once at checkout from Cart.currency.
     # Never updated after Order creation.
-    currency     = Column(String(10), nullable=False)
+    # server_default="UZS": legacy tests create Order() without currency=.
+    # New checkout_cart() always passes explicit currency=cart.currency (overrides default).
+    currency     = Column(String(10), nullable=False, server_default="UZS", default="UZS")
     status       = Column(String(20), default="new", nullable=False)
     created_at   = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
     updated_at   = Column(
