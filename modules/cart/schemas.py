@@ -1,30 +1,16 @@
 """
 modules/cart/schemas.py — Taomly Platform
 Phase 6: Cart Engine Pydantic schemas.
-
-Client-supplied prices are never accepted.
-restaurant_id is never accepted from request body.
+Phase 7: Added CheckoutRequest.
 """
 
-from typing import List, Optional
+from typing import List, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
-# ──────────────────────────────────────────
-# REQUEST SCHEMAS
-# ──────────────────────────────────────────
+# ── REQUEST SCHEMAS ────────────────────────────────────────────────
 
 class AddItemRequest(BaseModel):
-    """
-    POST /api/cart/items
-
-    product_id and variant_id identify the menu item.
-    modifier_option_ids: validated server-side; duplicate IDs → HTTP 400.
-    notes: optional per-item customer note.
-    quantity: defaults to 1.
-
-    Prices are NEVER accepted from client — computed server-side from DB.
-    """
     product_id:          int           = Field(..., gt=0)
     variant_id:          Optional[int] = Field(None, gt=0)
     modifier_option_ids: List[int]     = Field(default_factory=list)
@@ -33,13 +19,26 @@ class AddItemRequest(BaseModel):
 
 
 class UpdateQuantityRequest(BaseModel):
-    """PATCH /api/cart/items/{item_id}"""
     quantity: int = Field(..., ge=1, le=99)
 
 
-# ──────────────────────────────────────────
-# RESPONSE SCHEMAS
-# ──────────────────────────────────────────
+class CheckoutRequest(BaseModel):
+    """
+    POST /api/cart/checkout
+
+    Значения, которые НИКОГДА не принимаются от клиента (вычисляются server-side):
+      total_amount, currency, unit_price, restaurant_id
+    """
+    order_type:      Literal["delivery", "takeaway", "dine_in"]
+    client_name:     Optional[str] = Field(None, max_length=100)
+    client_phone:    Optional[str] = Field(None, max_length=50)
+    address:         Optional[str] = Field(None, max_length=300)
+    table_id:        Optional[int] = Field(None, gt=0)
+    comment:         Optional[str] = Field(None, max_length=500)
+    idempotency_key: Optional[str] = Field(None, max_length=64)
+
+
+# ── RESPONSE SCHEMAS ───────────────────────────────────────────────
 
 class CartItemModifierResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
