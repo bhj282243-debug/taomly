@@ -135,7 +135,10 @@ class TestBasicCheckout:
         assert data["order_type"] == "takeaway"
         assert len(data["items"]) == 1
 
-    def test_empty_cart_returns_422(self, checkout_client):
+    def test_empty_cart_returns_422(self, checkout_client, product):
+        # Add an item then clear it — creates a real cart record with 0 items
+        checkout_client.post("/api/cart/items", json={"product_id": product.id, "quantity": 1})
+        checkout_client.delete("/api/cart")  # clear all items, cart record remains
         r = checkout_client.post("/api/cart/checkout", json=CHECKOUT_TAKEAWAY)
         assert r.status_code == 422, r.text
 
