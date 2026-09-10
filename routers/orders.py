@@ -555,6 +555,8 @@ def create_order(
         table_id=data.table_id,
         comment=data.comment,
         total_amount=total,
+        # Phase 7: currency NOT NULL column — take from Location (authoritative source).
+        currency=location.currency or "UZS",
         status="accepted",
     )
     db.add(order)
