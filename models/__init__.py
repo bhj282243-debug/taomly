@@ -3,11 +3,14 @@ models/__init__.py — Taomly Platform
 Package entry point: регистрирует все ORM-классы в едином Base.metadata
 и обеспечивает полную обратную совместимость со всеми существующими импортами.
 
+Phase 8: добавлены Payment, PaymentAttempt, RestaurantPaymentConfig.
+
 Совместимость:
   from models import Agency            # ✓
   from models import Restaurant        # ✓
   from models import Product           # ✓
   from models import Order             # ✓
+  from models import Payment           # ✓ (Phase 8)
   from models import MENU_LANGUAGES    # ✓
   import models                        # ✓ — используется в api.py и alembic/env.py
                                        #     для регистрации всех классов в Base.metadata
@@ -58,6 +61,9 @@ from .orders import Order, OrderItem, OrderItemModifier
 # ── Cart (Phase 6 — зависит от tenant и menu через string refs) ───────────────
 from modules.cart.models import Cart, CartItem, CartItemModifier
 
+# ── Payments (Phase 8 — зависит от tenant и orders) ───────────────────────────
+from .payments import Payment, PaymentAttempt, RestaurantPaymentConfig
+
 # ── Public API ────────────────────────────────────────────────────────────────
 __all__ = [
     # constants
@@ -97,4 +103,8 @@ __all__ = [
     "Cart",
     "CartItem",
     "CartItemModifier",
+    # payments (Phase 8)
+    "Payment",
+    "PaymentAttempt",
+    "RestaurantPaymentConfig",
 ]
