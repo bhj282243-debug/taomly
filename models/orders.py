@@ -70,6 +70,9 @@ class Order(Base):
     updated_at   = Column(
         TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False,
     )
+    # Phase 8: projection fact — written by Payment Service when Payment → PAID.
+    # NOT a second source of truth. Payment.status remains authoritative.
+    paid_at      = Column(TIMESTAMP(timezone=True), nullable=True)
 
     restaurant = relationship("Restaurant", back_populates="orders", lazy="select")
     location   = relationship("Location", lazy="select")
