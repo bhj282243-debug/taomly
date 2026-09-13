@@ -31,7 +31,7 @@ from sqlalchemy.orm import Session
 from api import app
 from auth import encrypt_token, get_telegram_user
 from database import get_db
-from models import Order, Restaurant, Location
+from models import Agency, Order, Restaurant, Location
 from models.payments import Payment, PaymentAttempt, RestaurantPaymentConfig
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1013,29 +1013,170 @@ class TestSandboxProvider:
 
 @pytest.mark.postgres
 class TestConcurrency:
+    """
+    Concurrency tests that verify PostgreSQL-level constraints.
 
-    def test_concurrent_payment_creation_same_order(
-        self, accepted_order, payme_config,
-    ):
+    These tests intentionally bypass the conftest db fixture (which uses
+    SAVEPOINT/rollback isolation) because they need multiple independent
+    SessionLocal() connections to test real concurrent DB behaviour.
+
+    Each test creates its own data with a real commit() and cleans up
+    in a finally block. This is the only correct approach for concurrency
+    tests that spawn threads with separate DB sessions.
+    """
+
+    def _create_test_data(self):
+        """
+        Create Agency → Restaurant → Location → Order in the real DB
+        (committed, visible to other connections) and return their IDs.
+        Caller is responsible for cleanup via _cleanup_test_data().
+        """
+        from database import SessionLocal
+        from auth import hash_password, encrypt_token
+        from cryptography.fernet import Fernet
+        import os
+
+        fernet_key = os.environ["FERNET_KEY"]
+        fernet = Fernet(fernet_key.encode())
+        encrypted_token = fernet.encrypt(b"1234567890:AAFakeConcurrencyToken").decode()
+
+        db = SessionLocal()
+        try:
+            # Agency
+            agency = Agency(
+                name="Concurrency Test Agency",
+                owner_email="concurrency@test.uz",
+                owner_password_hash=hash_password("testpass"),
+            )
+            db.add(agency)
+            db.flush()
+
+            # Restaurant
+            restaurant = Restaurant(
+                agency_id=agency.id,
+                name="Concurrency Restaurant",
+                slug=f"concurrency-{agency.id}",
+                admin_password_hash=hash_password("testpass"),
+                primary_color="#000000",
+                secondary_color="#FFFFFF",
+                accent_color="#FF0000",
+                telegram_bot_token_encrypted=encrypted_token,
+                telegram_dispatcher_id=99999,
+                currency="UZS",
+            )
+            db.add(restaurant)
+            db.flush()
+
+            # Location
+            location = Location(
+                restaurant_id=restaurant.id,
+                name="Test Location",
+                address="Test Address",
+                currency="UZS",
+            )
+            db.add(location)
+            db.flush()
+
+            # Order in accepted status
+            order = Order(
+                restaurant_id=restaurant.id,
+                location_id=location.id,
+                client_name="Concurrency Test Customer",
+                client_phone="+998901234567",
+                order_type="takeaway",
+                total_amount=_ORDER_AMOUNT_TIYINS,
+                currency="UZS",
+                status="accepted",
+            )
+            db.add(order)
+            db.flush()
+
+            db.commit()
+            return {
+                "agency_id": agency.id,
+                "restaurant_id": restaurant.id,
+                "location_id": location.id,
+                "order_id": order.id,
+            }
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
+
+    def _create_payme_config(self, restaurant_id):
+        """Create RestaurantPaymentConfig with real commit."""
+        from database import SessionLocal
+        from auth import encrypt_token
+
+        db = SessionLocal()
+        try:
+            cfg = RestaurantPaymentConfig(
+                restaurant_id=restaurant_id,
+                provider="payme",
+                merchant_id=_PAYME_MERCHANT_ID,
+                service_id=None,
+                encrypted_secret=encrypt_token(_PAYME_MERCHANT_KEY),
+                is_active=True,
+            )
+            db.add(cfg)
+            db.commit()
+            return cfg.id
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
+
+    def _cleanup_test_data(self, ids):
+        """Remove all test data created by _create_test_data()."""
+        from database import SessionLocal
+        from models.payments import Payment as Pmt, RestaurantPaymentConfig as RPC
+        from models.orders import Order as Ord
+
+        db = SessionLocal()
+        try:
+            if ids.get("order_id"):
+                db.query(Pmt).filter(Pmt.order_id == ids["order_id"]).delete()
+            if ids.get("restaurant_id"):
+                db.query(RPC).filter(RPC.restaurant_id == ids["restaurant_id"]).delete()
+            if ids.get("order_id"):
+                db.query(Ord).filter(Ord.id == ids["order_id"]).delete()
+            if ids.get("location_id"):
+                from models.tenant import Location as Loc
+                db.query(Loc).filter(Loc.id == ids["location_id"]).delete()
+            if ids.get("restaurant_id"):
+                from models.tenant import Restaurant as Rest
+                db.query(Rest).filter(Rest.id == ids["restaurant_id"]).delete()
+            if ids.get("agency_id"):
+                from models.tenant import Agency as Ag
+                db.query(Ag).filter(Ag.id == ids["agency_id"]).delete()
+            db.commit()
+        except Exception:
+            db.rollback()
+        finally:
+            db.close()
+
+    def test_concurrent_payment_creation_same_order(self):
         """
         Two concurrent Payment creations for same Order.
         Only one should succeed; the second should get 409.
         Protected by: uq_payments_order_active partial unique index.
 
-        Uses accepted_order fixture — PostgreSQL FK requires a real
-        order_id in the orders table. Hardcoded IDs are not safe here.
+        Creates real committed data visible to all sessions, then spawns
+        two threads each opening an independent SessionLocal connection.
         """
         from database import SessionLocal
         from modules.payments.service import create_payment
         from fastapi import HTTPException
 
+        ids = self._create_test_data()
+        self._create_payme_config(ids["restaurant_id"])
+        order_id = ids["order_id"]
+        restaurant_id = ids["restaurant_id"]
+
         results = []
         errors = []
-
-        # Capture IDs before spawning threads — fixture objects are bound
-        # to the test's db session and must not be accessed from other sessions.
-        order_id = accepted_order.id
-        restaurant_id = accepted_order.restaurant_id
 
         def create_attempt():
             db = SessionLocal()
@@ -1062,35 +1203,34 @@ class TestConcurrency:
         t1.join()
         t2.join()
 
-        # Exactly one success, one conflict (409 HTTP or DB IntegrityError).
-        # Both outcomes indicate the DB constraint is working correctly.
-        total = len(results) + len(errors)
-        assert total == 2, f"Expected 2 total outcomes: results={results} errors={errors}"
-        assert len(results) == 1, f"Expected exactly 1 success, got: {results}"
-        assert len(errors) == 1, f"Expected exactly 1 conflict, got: {errors}"
+        try:
+            # Exactly one success, one conflict (409 HTTP or DB IntegrityError).
+            total = len(results) + len(errors)
+            assert total == 2, f"Expected 2 total outcomes: results={results} errors={errors}"
+            assert len(results) == 1, f"Expected exactly 1 success, got: {results}"
+            assert len(errors) == 1, f"Expected exactly 1 conflict, got: {errors}"
+        finally:
+            self._cleanup_test_data(ids)
 
-    def test_concurrent_payme_perform_transaction(
-        self, payme_config, accepted_order,
-    ):
+    def test_concurrent_payme_perform_transaction(self):
         """
         Two simultaneous Payme PerformTransaction callbacks.
         Only one should transition to PAID; second should be idempotent.
 
-        Uses accepted_order fixture — PostgreSQL FK requires a real order_id.
-        Captures restaurant_id before threads start to avoid cross-session
-        access to fixture objects.
+        Creates real committed Payment in PROCESSING state, then fires
+        two concurrent PerformTransaction calls from separate DB sessions.
         """
         from database import SessionLocal
         from modules.payments.service import _payme_perform_transaction
         from modules.payments.providers import get_provider
         from modules.payments.providers.base import ParsedCallback, CALLBACK_METHOD_PERFORM
 
-        # Capture IDs from fixture before spawning threads.
-        order_id = accepted_order.id
-        restaurant_id = accepted_order.restaurant_id
+        ids = self._create_test_data()
+        self._create_payme_config(ids["restaurant_id"])
+        order_id = ids["order_id"]
+        restaurant_id = ids["restaurant_id"]
 
-        # Create the Payment in PROCESSING state using a dedicated session.
-        # Must use order_id from the real accepted_order (satisfies FK constraint).
+        # Create Payment in PROCESSING state with a real commit.
         db_setup = SessionLocal()
         try:
             payment = Payment(
@@ -1105,6 +1245,10 @@ class TestConcurrency:
             db_setup.add(payment)
             db_setup.commit()
             payment_id = payment.id
+        except Exception:
+            db_setup.rollback()
+            self._cleanup_test_data(ids)
+            raise
         finally:
             db_setup.close()
 
@@ -1135,20 +1279,23 @@ class TestConcurrency:
         t1.join()
         t2.join()
 
-        # Both threads must return state:2 (PAID):
-        # one performs the actual transition, the other hits the idempotent path.
-        assert len(results) == 2, f"Expected 2 results, got {len(results)}"
-        states = [r.get("result", {}).get("state") for r in results]
-        assert all(s == 2 for s in states), f"Expected both state=2 (PAID), got: {states}"
-
-        # Verify exactly one PAID in DB — no double transition.
-        db_check = SessionLocal()
         try:
-            p = db_check.query(Payment).filter(Payment.id == payment_id).first()
-            assert p is not None, "Payment not found after concurrent perform"
-            assert p.status == "paid", f"Expected paid, got: {p.status}"
+            # Both threads must return state:2 (PAID):
+            # one performs the actual transition, the other hits idempotent path.
+            assert len(results) == 2, f"Expected 2 results, got {len(results)}"
+            states = [r.get("result", {}).get("state") for r in results]
+            assert all(s == 2 for s in states), f"Expected both state=2, got: {states}"
+
+            # Verify exactly one PAID in DB — no double transition.
+            db_check = SessionLocal()
+            try:
+                p = db_check.query(Payment).filter(Payment.id == payment_id).first()
+                assert p is not None, "Payment not found after concurrent perform"
+                assert p.status == "paid", f"Expected paid, got: {p.status}"
+            finally:
+                db_check.close()
         finally:
-            db_check.close()
+            self._cleanup_test_data(ids)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
