@@ -289,10 +289,18 @@ class TestPaymentCreation:
         assert data["amount"] == _ORDER_AMOUNT_TIYINS
         assert data["currency"] == "UZS"
         assert data["provider"] == "payme"
-        assert "checkout.paycom.uz" in data["checkout_url"]
-        assert str(data["payment_id"]) in base64.b64decode(
+        # URL contains "paycom.uz" in both sandbox and production:
+        #   sandbox:    https://checkout.test.paycom.uz/<b64>
+        #   production: https://checkout.paycom.uz/<b64>
+        # Check the invariant (paycom.uz), not the env-specific hostname.
+        assert "paycom.uz" in data["checkout_url"]
+        # Encoded payload must contain merchant_id, payment reference, and amount.
+        decoded = base64.b64decode(
             data["checkout_url"].split("/")[-1]
         ).decode()
+        assert f"ac.order_id={data['payment_id']}" in decoded, f"payment_id missing in: {decoded}"
+        assert f"a={_ORDER_AMOUNT_TIYINS}" in decoded, f"amount missing in: {decoded}"
+        assert f"m={_PAYME_MERCHANT_ID}" in decoded, f"merchant_id missing in: {decoded}"
 
     def test_valid_payment_click(
         self, payment_client, accepted_order, click_config
@@ -1013,22 +1021,30 @@ class TestConcurrency:
         Two concurrent Payment creations for same Order.
         Only one should succeed; the second should get 409.
         Protected by: uq_payments_order_active partial unique index.
+
+        Uses accepted_order fixture — PostgreSQL FK requires a real
+        order_id in the orders table. Hardcoded IDs are not safe here.
         """
         from database import SessionLocal
         from modules.payments.service import create_payment
-        from sqlalchemy.exc import IntegrityError as SaIntegrityError
+        from fastapi import HTTPException
 
         results = []
         errors = []
+
+        # Capture IDs before spawning threads — fixture objects are bound
+        # to the test's db session and must not be accessed from other sessions.
+        order_id = accepted_order.id
+        restaurant_id = accepted_order.restaurant_id
 
         def create_attempt():
             db = SessionLocal()
             try:
                 payment, _ = create_payment(
                     db=db,
-                    order_id=accepted_order.id,
+                    order_id=order_id,
                     provider="payme",
-                    restaurant_id=accepted_order.restaurant_id,
+                    restaurant_id=restaurant_id,
                     idempotency_key=None,
                 )
                 results.append(payment.id)
@@ -1039,8 +1055,6 @@ class TestConcurrency:
             finally:
                 db.close()
 
-        from fastapi import HTTPException
-
         t1 = threading.Thread(target=create_attempt)
         t2 = threading.Thread(target=create_attempt)
         t1.start()
@@ -1048,9 +1062,12 @@ class TestConcurrency:
         t1.join()
         t2.join()
 
-        # Exactly one success, one conflict
-        assert len(results) == 1
-        assert len(errors) == 1
+        # Exactly one success, one conflict (409 HTTP or DB IntegrityError).
+        # Both outcomes indicate the DB constraint is working correctly.
+        total = len(results) + len(errors)
+        assert total == 2, f"Expected 2 total outcomes: results={results} errors={errors}"
+        assert len(results) == 1, f"Expected exactly 1 success, got: {results}"
+        assert len(errors) == 1, f"Expected exactly 1 conflict, got: {errors}"
 
     def test_concurrent_payme_perform_transaction(
         self, payme_config, accepted_order,
@@ -1058,27 +1075,38 @@ class TestConcurrency:
         """
         Two simultaneous Payme PerformTransaction callbacks.
         Only one should transition to PAID; second should be idempotent.
+
+        Uses accepted_order fixture — PostgreSQL FK requires a real order_id.
+        Captures restaurant_id before threads start to avoid cross-session
+        access to fixture objects.
         """
         from database import SessionLocal
         from modules.payments.service import _payme_perform_transaction
         from modules.payments.providers import get_provider
         from modules.payments.providers.base import ParsedCallback, CALLBACK_METHOD_PERFORM
 
-        # Create payment in processing state
+        # Capture IDs from fixture before spawning threads.
+        order_id = accepted_order.id
+        restaurant_id = accepted_order.restaurant_id
+
+        # Create the Payment in PROCESSING state using a dedicated session.
+        # Must use order_id from the real accepted_order (satisfies FK constraint).
         db_setup = SessionLocal()
-        payment = Payment(
-            order_id=accepted_order.id,
-            restaurant_id=accepted_order.restaurant_id,
-            status="processing",
-            amount=_ORDER_AMOUNT_TIYINS,
-            currency="UZS",
-            provider="payme",
-            provider_transaction_id="concurrent_tx_001",
-        )
-        db_setup.add(payment)
-        db_setup.commit()
-        payment_id = payment.id
-        db_setup.close()
+        try:
+            payment = Payment(
+                order_id=order_id,
+                restaurant_id=restaurant_id,
+                status="processing",
+                amount=_ORDER_AMOUNT_TIYINS,
+                currency="UZS",
+                provider="payme",
+                provider_transaction_id="concurrent_tx_001",
+            )
+            db_setup.add(payment)
+            db_setup.commit()
+            payment_id = payment.id
+        finally:
+            db_setup.close()
 
         results = []
         adapter = get_provider("payme")
@@ -1094,7 +1122,7 @@ class TestConcurrency:
             db = SessionLocal()
             try:
                 result = _payme_perform_transaction(
-                    db, adapter, callback, accepted_order.restaurant_id
+                    db, adapter, callback, restaurant_id
                 )
                 results.append(result)
             finally:
@@ -1107,15 +1135,20 @@ class TestConcurrency:
         t1.join()
         t2.join()
 
-        # Both return state:2 — one transitioned, one idempotent
+        # Both threads must return state:2 (PAID):
+        # one performs the actual transition, the other hits the idempotent path.
+        assert len(results) == 2, f"Expected 2 results, got {len(results)}"
         states = [r.get("result", {}).get("state") for r in results]
-        assert all(s == 2 for s in states), f"Unexpected states: {states}"
+        assert all(s == 2 for s in states), f"Expected both state=2 (PAID), got: {states}"
 
-        # Payment is PAID exactly once
+        # Verify exactly one PAID in DB — no double transition.
         db_check = SessionLocal()
-        p = db_check.query(Payment).filter(Payment.id == payment_id).first()
-        assert p.status == "paid"
-        db_check.close()
+        try:
+            p = db_check.query(Payment).filter(Payment.id == payment_id).first()
+            assert p is not None, "Payment not found after concurrent perform"
+            assert p.status == "paid", f"Expected paid, got: {p.status}"
+        finally:
+            db_check.close()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
