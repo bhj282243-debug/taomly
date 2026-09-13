@@ -1042,37 +1042,45 @@ class TestConcurrency:
 
         db = SessionLocal()
         try:
+            # Use millisecond timestamp for uniqueness across concurrent test runs
+            import time as _t
+            _ts = int(_t.time() * 1000)
+
             # Agency
             agency = Agency(
-                name="Concurrency Test Agency",
-                owner_email="concurrency@test.uz",
+                name=f"Concurrency Agency {_ts}",
+                owner_email=f"concurrency_{_ts}@test.uz",
                 owner_password_hash=hash_password("testpass"),
             )
             db.add(agency)
             db.flush()
 
-            # Restaurant
+            # Restaurant — slug must be globally unique
             restaurant = Restaurant(
                 agency_id=agency.id,
-                name="Concurrency Restaurant",
-                slug=f"concurrency-{agency.id}",
+                name=f"Concurrency Restaurant {_ts}",
+                slug=f"concurrency-{_ts}",
                 admin_password_hash=hash_password("testpass"),
                 primary_color="#000000",
                 secondary_color="#FFFFFF",
                 accent_color="#FF0000",
                 telegram_bot_token_encrypted=encrypted_token,
-                telegram_dispatcher_id=99999,
+                telegram_dispatcher_id=_ts % 100000000,
                 currency="UZS",
             )
             db.add(restaurant)
             db.flush()
 
-            # Location
+            # Location — slug is NOT NULL UNIQUE, required by DB constraint
+            import time as _time
+            _loc_slug = f"concurrency-loc-{int(_time.time() * 1000)}"
             location = Location(
                 restaurant_id=restaurant.id,
                 name="Test Location",
+                slug=_loc_slug,
                 address="Test Address",
                 currency="UZS",
+                is_active=True,
             )
             db.add(location)
             db.flush()
