@@ -73,6 +73,9 @@ class Order(Base):
     # Phase 8: projection fact — written by Payment Service when Payment → PAID.
     # NOT a second source of truth. Payment.status remains authoritative.
     paid_at      = Column(TIMESTAMP(timezone=True), nullable=True)
+    # Phase 9: optional reason supplied by restaurant admin when cancelling.
+    # Stored only on transition to 'cancelled'. NOT a payment/refund reason.
+    cancellation_reason = Column(Text, nullable=True)
 
     restaurant = relationship("Restaurant", back_populates="orders", lazy="select")
     location   = relationship("Location", lazy="select")
