@@ -1,6 +1,8 @@
 """
 schemas/orders.py — Taomly Platform
 Phase 7: Added currency field to OrderResponse.
+Phase 9: Added paid_at and cancellation_reason to OrderResponse.
+         Added cancellation_reason to OrderStatusUpdate.
 """
 
 from datetime import datetime
@@ -101,6 +103,11 @@ class OrderResponse(BaseModel):
     address: Optional[str] = None
     table_id: Optional[int] = None
     comment: Optional[str] = None
+    # Phase 9: payment projection fact (written only by Payment Service).
+    # None = not paid yet.
+    paid_at: Optional[datetime] = None
+    # Phase 9: reason supplied by admin when cancelling. None if not provided.
+    cancellation_reason: Optional[str] = None
     items: List[OrderItemResponse] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
@@ -113,3 +120,9 @@ class OrderStatusUpdate(BaseModel):
         "new", "accepted", "preparing", "ready_for_delivery",
         "delivering", "completed", "cancelled",
     ]
+    # Phase 9: optional reason for cancellation.
+    # Ignored (not stored) when status != 'cancelled'.
+    cancellation_reason: Optional[str] = Field(
+        default=None,
+        max_length=500,
+    )
