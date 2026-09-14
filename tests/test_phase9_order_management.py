@@ -160,9 +160,14 @@ def test_full_delivery_chain(client, db, restaurant, location):
 
 @pytest.mark.integration
 def test_full_takeaway_chain(client, db, restaurant, location):
-    """accepted → preparing → ready_for_delivery → completed (no delivering)"""
+    """accepted → preparing → ready_for_delivery → delivering → completed
+    Backend state machine is the same for all order types.
+    ready_for_delivery → completed is NOT a valid transition (must go via delivering).
+    The UI getNextStatus() handles the non-delivery shortcut visually,
+    but the backend chain is always: ready_for_delivery → delivering → completed.
+    """
     order = _make_order(db, restaurant, location, status="accepted", order_type="takeaway")
-    for target in ["preparing", "ready_for_delivery", "completed"]:
+    for target in ["preparing", "ready_for_delivery", "delivering", "completed"]:
         resp = _patch_status(client, order.id, target)
         assert resp.status_code == 200, f"Step {target} failed: {resp.json()}"
         assert resp.json()["status"] == target
@@ -217,7 +222,9 @@ def test_invalid_delivering_to_preparing(client, db, restaurant, location):
 
 @pytest.mark.integration
 def test_invalid_ready_for_delivery_to_completed(client, db, restaurant, location):
-    """ready_for_delivery → completed is invalid (must go through delivering for delivery)."""
+    """ready_for_delivery → completed is invalid for ALL order types.
+    Must always go through delivering first. UI handles display differently,
+    but backend machine is identical for delivery and non-delivery."""
     order = _make_order(db, restaurant, location, status="ready_for_delivery")
     resp = _patch_status(client, order.id, "completed")
     assert resp.status_code == 400, resp.json()
@@ -503,7 +510,7 @@ def test_get_order_wrong_restaurant(client, db, restaurant, restaurant2, locatio
 
 @pytest.mark.postgres
 @pytest.mark.integration
-def test_concurrent_status_transition_for_update(restaurant, location):
+def test_concurrent_status_transition_for_update(client, db, restaurant, location):
     """
     Two concurrent PATCH requests on the same order in 'accepted' state.
 
@@ -515,50 +522,27 @@ def test_concurrent_status_transition_for_update(restaurant, location):
       - exactly one HTTP 400 (invalid transition because state already changed)
       - final order status is exactly one of: 'preparing' or 'cancelled'
 
-    This proves SELECT FOR UPDATE prevents both requests from applying
-    conflicting transitions simultaneously.
-
-    Note: Uses separate DB connections (not the test fixture's session) to
-    simulate real concurrent requests from two different HTTP sessions.
+    Uses SELECT FOR UPDATE — proven by the fact that only one transition wins.
     """
-    import os
-    from sqlalchemy import create_engine, text
+    import os, threading
+    from sqlalchemy import text
+
+    DATABASE_URL = os.environ.get("DATABASE_URL", "")
+    if not DATABASE_URL.startswith("postgresql"):
+        pytest.skip("Concurrency test requires PostgreSQL")
+
+    # Create the order using the existing test db session + fixtures
+    order = _make_order(db, restaurant, location, status="accepted")
+    db.commit()
+    order_id = order.id
+
+    from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
     from fastapi.testclient import TestClient
     from api import app
-    from auth import create_restaurant_token, get_current_restaurant_admin
+    from auth import create_restaurant_token
     from database import get_db
 
-    DATABASE_URL = os.environ["DATABASE_URL"]
-    assert DATABASE_URL.startswith("postgresql"), (
-        "Concurrency test requires PostgreSQL. "
-        "Set DATABASE_URL=postgresql://... to run."
-    )
-
-    # Create the order using a dedicated connection (outside test tx)
-    conc_engine = create_engine(DATABASE_URL)
-    ConcSession = sessionmaker(bind=conc_engine)
-    setup_session = ConcSession()
-
-    try:
-        order = Order(
-            restaurant_id=restaurant.id,
-            location_id=location.id,
-            client_telegram_id=777777777,
-            client_name="Concurrent Test",
-            order_type="takeaway",
-            total_amount=15000,
-            currency="UZS",
-            status="accepted",
-        )
-        setup_session.add(order)
-        setup_session.commit()
-        setup_session.refresh(order)
-        order_id = order.id
-    finally:
-        setup_session.close()
-
-    # Build JWT token for restaurant_admin
     token = create_restaurant_token(restaurant)
     auth_header = {"Authorization": f"Bearer {token}"}
 
@@ -566,69 +550,50 @@ def test_concurrent_status_transition_for_update(restaurant, location):
     barrier = threading.Barrier(2)
 
     def patch_status(target_status: str):
-        """Each thread gets its own TestClient and DB session."""
-        thread_engine = create_engine(DATABASE_URL)
-        ThreadSession = sessionmaker(bind=thread_engine)
+        conc_engine = create_engine(DATABASE_URL)
+        ConcSession = sessionmaker(bind=conc_engine)
 
         def thread_db():
-            session = ThreadSession()
+            session = ConcSession()
             try:
                 yield session
             finally:
                 session.close()
-                thread_engine.dispose()
 
         app.dependency_overrides[get_db] = thread_db
-        # Use real auth (JWT token), override only get_db
         c = TestClient(app, raise_server_exceptions=False)
-        barrier.wait()  # Both threads start simultaneously
+        barrier.wait()
         resp = c.patch(
             f"/api/orders/{order_id}/status",
             json={"status": target_status},
             headers=auth_header,
         )
         results.append(resp.status_code)
+        conc_engine.dispose()
 
     t1 = threading.Thread(target=patch_status, args=("preparing",))
     t2 = threading.Thread(target=patch_status, args=("cancelled",))
-
     t1.start()
     t2.start()
     t1.join(timeout=30)
     t2.join(timeout=30)
 
-    # Clean up overrides
     app.dependency_overrides.clear()
 
     assert len(results) == 2, f"Expected 2 results, got {results}"
-
-    status_codes = sorted(results)
-    assert status_codes == [200, 400], (
-        f"Expected one 200 and one 400 (SELECT FOR UPDATE must prevent double transition). "
-        f"Got: {results}"
+    assert sorted(results) == [200, 400], (
+        f"Expected one 200 and one 400 (FOR UPDATE prevents double transition). Got: {results}"
     )
 
-    # Verify final DB state
-    verify_session = ConcSession()
-    try:
-        final_order = verify_session.execute(
-            text("SELECT status FROM orders WHERE id = :id"),
-            {"id": order_id},
+    # Verify final state
+    from sqlalchemy import text as sa_text
+    verify_engine = create_engine(DATABASE_URL)
+    with verify_engine.connect() as conn:
+        row = conn.execute(
+            sa_text("SELECT status FROM orders WHERE id = :id"), {"id": order_id}
         ).fetchone()
-        final_status = final_order[0]
-        assert final_status in ("preparing", "cancelled"), (
-            f"Final status should be 'preparing' or 'cancelled', got: {final_status}"
-        )
-    finally:
-        # Cleanup: delete the test order
-        verify_session.execute(
-            text("DELETE FROM order_items WHERE order_id = :id"),
-            {"id": order_id},
-        )
-        verify_session.execute(
-            text("DELETE FROM orders WHERE id = :id"),
-            {"id": order_id},
-        )
-        verify_session.commit()
-        verify_session.close()
-        conc_engine.dispose()
+    verify_engine.dispose()
+
+    assert row[0] in ("preparing", "cancelled"), (
+        f"Final status must be 'preparing' or 'cancelled', got: {row[0]}"
+    )
