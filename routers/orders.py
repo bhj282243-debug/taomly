@@ -856,7 +856,13 @@ def update_order_status(
          без join. Захватываем row-level lock на запись заказа.
       2. db.refresh(order) после lock — подгружает items отдельным SELECT
          (lazy="select" на relationship, см. models.py:402).
-    Бизнес-логика не изменена.
+
+    Phase 9 additions:
+      3. Paid-order cancellation guard: if order.paid_at IS NOT NULL and target
+         status is 'cancelled' → HTTP 409. Executed after lock, before transition
+         validation. Phase 9 never writes Payment.status or Order.paid_at.
+      4. cancellation_reason: saved to order when status == 'cancelled'.
+         Ignored for all other status transitions.
     """
     # Шаг 1: блокируем строку без JOIN. Tenant isolation: restaurant_id filter.
     order = (
@@ -877,6 +883,16 @@ def update_order_status(
     # Шаг 2: подгружаем items после блокировки (отдельный SELECT, без join).
     db.refresh(order)
 
+    # Шаг 3 (Phase 9): защита от отмены оплаченного заказа.
+    # Выполняется после FOR UPDATE lock, до проверки transition — атомарно.
+    # Phase 9 только читает Order.paid_at; Payment.status не трогается.
+    if data.status == "cancelled" and order.paid_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Нельзя отменить заказ — он уже оплачен.",
+        )
+
+    # Шаг 4: проверяем допустимость перехода.
     allowed = VALID_STATUS_TRANSITIONS.get(order.status, [])
     if data.status not in allowed:
         raise HTTPException(
@@ -889,6 +905,12 @@ def update_order_status(
 
     old_status = order.status
     order.status = data.status
+
+    # Шаг 5 (Phase 9): сохраняем причину отмены только при переходе в cancelled.
+    # Для всех остальных статусов cancellation_reason игнорируется.
+    if data.status == "cancelled":
+        reason = (data.cancellation_reason or "").strip() or None
+        order.cancellation_reason = reason
 
     try:
         db.commit()
@@ -931,7 +953,7 @@ def update_order_status(
             handlers.notify_client_cancelled,
             order,
             restaurant,
-            "",
+            order.cancellation_reason or "",
             _order_location,
         )
 
