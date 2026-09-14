@@ -309,6 +309,18 @@ class ApiVersioningMiddleware:
 async def lifespan(app: FastAPI):
     logger.info("Lifespan: запуск приложения. Схема управляется Alembic.")
 
+    # Phase 9: автоматический запуск миграций при старте.
+    # Безопасно: Alembic проверяет alembic_version и пропускает уже применённые.
+    # Нужно для Render Free tier где нет shell доступа.
+    try:
+        from alembic.config import Config as AlembicConfig
+        from alembic import command as alembic_command
+        _alembic_cfg = AlembicConfig("alembic.ini")
+        alembic_command.upgrade(_alembic_cfg, "head")
+        logger.info("Startup: alembic upgrade head — OK")
+    except Exception:
+        logger.exception("Startup: alembic upgrade head — ОШИБКА (приложение продолжает работу)")
+
     # Foundation Task 11.1: очистка истёкших revoked_tokens при старте.
     # Токены живут ACCESS_TOKEN_EXPIRE_HOURS=8 часов; при каждом рестарте
     # (deploy или Render cold-start) накопленные истёкшие записи удаляются.
