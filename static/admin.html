@@ -122,6 +122,16 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 .btn-cancel{background:rgba(247,245,240,0.08);color:var(--iv2);border:1px solid rgba(247,245,240,0.18);}
 .btn-delete{width:100%;padding:11px;background:transparent;color:rgba(239,154,154,0.7);border:1px solid rgba(176,28,28,0.2);border-radius:100px;font-size:12.5px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;letter-spacing:.3px;}
 .btn-delete:active{background:rgba(176,28,28,0.1);color:#EF9A9A;border-color:rgba(176,28,28,0.35);}
+/* Phase 9: payment status badge */
+.pay-badge{font-size:11px;font-weight:600;padding:4px 10px;border-radius:100px;display:inline-flex;align-items:center;gap:4px;margin-bottom:10px;letter-spacing:.3px;}
+.pay-paid{background:rgba(46,125,50,0.12);color:#66BB6A;border:1px solid rgba(46,125,50,0.2);}
+.pay-unpaid{background:rgba(74,72,68,0.2);color:var(--iv3);border:1px solid rgba(74,72,68,0.2);}
+/* Phase 9: item modifier row */
+.item-mod{font-size:11px;color:var(--iv3);padding:1px 0 1px 12px;letter-spacing:.2px;}
+/* Phase 9: cancellation reason */
+.cancel-reason{font-size:12px;color:#EF9A9A;padding:8px 0;border-top:1px solid rgba(247,245,240,0.05);margin-top:8px;letter-spacing:.2px;}
+/* Phase 9: dine_in table info */
+.order-table-info{font-size:11.5px;color:var(--iv2);margin-top:3px;letter-spacing:.2px;display:inline-block;margin-left:8px;}
 
 /* ══ MENU ══ */
 .menu-content{padding:16px;max-width:600px;margin:0 auto;}
@@ -1145,14 +1155,27 @@ function getTypeLabel(type){
   return t(map[type]||'admin.orders.type_dine_in');
 }
 // Цепочка статусов зависит от типа заказа
+// Phase 9: getNextStatus follows the authoritative backend state machine exactly.
+// Backend: new→accepted, accepted→preparing, preparing→ready_for_delivery,
+//          ready_for_delivery→delivering (delivery) or completed (non-delivery),
+//          delivering→completed.
+// UI never skips steps — backend remains authoritative and rejects invalid transitions.
 function getNextStatus(status, orderType){
-  const chain = orderType === 'delivery'
-    ? {accepted:'preparing', preparing:'delivering', delivering:'completed'}
-    : {accepted:'preparing', preparing:'completed'};
-  return chain[status] || null;
+  const chain={
+    accepted:'preparing',
+    preparing:'ready_for_delivery',
+    ready_for_delivery: orderType==='delivery'?'delivering':'completed',
+    delivering:'completed',
+  };
+  return chain[status]||null;
 }
 function getNextLabel(status){
-  const map={accepted:'admin.orders.action_start_preparing',preparing:'admin.orders.action_done',delivering:'admin.orders.action_delivered'};
+  const map={
+    accepted:'admin.orders.action_start_preparing',
+    preparing:'admin.orders.action_done',
+    ready_for_delivery:'admin.orders.action_delivered',
+    delivering:'admin.orders.action_delivered',
+  };
   return map[status]?t(map[status]):null;
 }
 
@@ -1252,29 +1275,62 @@ function renderOrders(){
   filtered.forEach((order,i)=>{const card=makeOrderCard(order);card.style.animationDelay=`${i*40}ms`;content.appendChild(card);});
 }
 
+// Phase 9: states from which admin can cancel (per backend state machine).
+// Backend remains authoritative — it will reject if paid_at IS NOT NULL (409).
+const _CANCELLABLE_STATUSES=['new','accepted','preparing','ready_for_delivery'];
+
 function makeOrderCard(order){
   const div=document.createElement('div');div.className='order-card';
-  const itemsHtml=(order.items||[]).map(i=>`<div class="item-row"><span>${esc(i.name)} × ${i.quantity}</span><span>${fmt(i.price*i.quantity)}</span></div>`).join('');
+
+  // Phase 9: items with modifiers
+  const itemsHtml=(order.items||[]).map(i=>{
+    const modsHtml=(i.selected_modifiers||[]).map(m=>
+      `<div class="item-mod">+ ${esc(m.name)}${m.price_adjustment?` (+${fmt(m.price_adjustment)})`:''}` +
+      `</div>`
+    ).join('');
+    return `<div class="item-row"><span>${esc(i.name)}${i.variant_name?` (${esc(i.variant_name)})`:''} × ${i.quantity}</span>` +
+           `<span>${fmt(i.price*i.quantity)}</span></div>${modsHtml}`;
+  }).join('');
+
   const addressHtml=order.address?`<div class="client-address">${esc(order.address)}</div>`:'';
   const commentHtml=order.comment?`<div class="client-address" style="color:var(--iv3)">${esc(order.comment)}</div>`:'';
+
+  // Phase 9: table display for dine_in
+  const tableHtml=(order.order_type==='dine_in'&&order.table_id)
+    ?`<div class="order-table-info">🪑 ${esc(t('admin.orders.table_label')||'Стол')} #${esc(String(order.table_id))}</div>`
+    :'';
+
+  // Phase 9: payment status from Order.paid_at projection fact
+  const payHtml=order.paid_at
+    ?`<div class="pay-badge pay-paid">✓ Оплачено</div>`
+    :`<div class="pay-badge pay-unpaid">Не оплачено</div>`;
+
+  // Phase 9: cancellation reason display
+  const cancelReasonHtml=(order.status==='cancelled'&&order.cancellation_reason)
+    ?`<div class="cancel-reason">Причина: ${esc(order.cancellation_reason)}</div>`
+    :'';
+
   const nextStatus=getNextStatus(order.status, order.order_type);
-  // Физическое удаление запрещено — заказы это журнал.
-  // Для new: кнопка "Bekor qilish" через существующий PATCH /status.
-  // Для completed/cancelled: никаких деструктивных действий.
-  const cancelBtn=order.status==='new'
+
+  // Phase 9: cancel button available from all backend-cancellable states.
+  // Backend guards paid orders with 409; UI shows the button and handles the error.
+  // Excluded: delivering, completed, cancelled (terminal or no cancel in machine).
+  const cancelBtn=_CANCELLABLE_STATUSES.includes(order.status)
     ?`<button class="btn-delete" onclick="confirmCancelOrder(${order.id})">${esc(t('admin.orders.cancel_btn'))}</button>`
     :'';
+
   const actionBtns=nextStatus?`
     <div class="action-btns">
       <button class="btn btn-accept" onclick="changeStatus(${order.id},'${nextStatus}')">${esc(getNextLabel(order.status))}</button>
     </div>
     ${cancelBtn}`:cancelBtn;
+
   div.innerHTML=`
     <div class="order-header">
       <div><div class="order-id">#${String(order.id).padStart(4,'0')}</div><div class="order-time">${esc(timeAgo(order.created_at))}</div></div>
       <span class="status-badge status-${order.status}">${esc(getStatusLabel(order.status))}</span>
     </div>
-    <div class="order-type">${esc(getTypeLabel(order.order_type))}</div>
+    <div class="order-type">${esc(getTypeLabel(order.order_type))}${tableHtml}</div>
     <div class="client-info">
       <div class="client-name">${esc(order.client_name)||'—'}</div>
       <div class="client-phone">${esc(order.client_phone)||'—'}</div>
@@ -1282,25 +1338,42 @@ function makeOrderCard(order){
     </div>
     <div class="items-list">${itemsHtml}</div>
     <div class="order-total"><span class="order-total-label">${esc(t('admin.orders.total_label'))}</span><span class="order-total-val">${fmt(order.total_amount)}</span></div>
+    ${payHtml}
+    ${cancelReasonHtml}
     ${actionBtns}`;
   return div;
 }
 
-async function changeStatus(orderId,newStatus){
+// Phase 9: changeStatus accepts optional cancellation reason.
+// Handles 409 (paid order cannot be cancelled) with a clear toast message.
+async function changeStatus(orderId,newStatus,cancelReason){
   try{
-    const res=await apiFetch(`${API}/api/orders/${orderId}/status`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify({status:newStatus})});
-    if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Xato');}
+    const body={status:newStatus};
+    if(typeof cancelReason==='string'&&cancelReason.trim())body.cancellation_reason=cancelReason.trim();
+    const res=await apiFetch(`${API}/api/orders/${orderId}/status`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify(body)});
+    if(!res.ok){
+      const err=await res.json().catch(()=>({}));
+      throw new Error(err.detail||'Xato');
+    }
     await loadOrders();
   }catch(e){showToast(t('admin.common.error_prefix',{msg:e.message}),true);}
 }
 
-// Отмена заказа через существующий PATCH /status → 'cancelled'.
+// Phase 9: confirmCancelOrder shows a modal with optional reason input.
+// Backend remains authoritative — 409 is handled in changeStatus.
 // Физическое удаление запрещено: заказы — это журнал ресторана.
 function confirmCancelOrder(orderId){
+  // Use existing showConfirm pattern; reason is not collected in basic confirm.
+  // For reason collection, we use a simple prompt fallback.
+  const reason=window.prompt
+    ?window.prompt('Причина отмены (необязательно):','')
+    :null;
+  // If user pressed Cancel on prompt, reason === null — abort
+  if(reason===null&&window.prompt)return;
   showConfirm(
     t('order.number',{id:String(orderId).padStart(4,'0')}),
     t('admin.orders.cancel_confirm_sub'),
-    ()=>changeStatus(orderId,'cancelled')
+    ()=>changeStatus(orderId,'cancelled',reason||'')
   );
 }
 
