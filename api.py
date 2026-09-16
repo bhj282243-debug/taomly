@@ -570,6 +570,12 @@ def serve_admin():
     return FileResponse("static/admin.html")
 
 
+@app.get("/kds")
+def serve_kds():
+    """Phase 10: Kitchen Display System page."""
+    return FileResponse("static/kds.html")
+
+
 @app.get("/agency-admin")
 def serve_agency_admin():
     return FileResponse("static/agency_admin.html")
