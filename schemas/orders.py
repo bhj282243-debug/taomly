@@ -115,6 +115,72 @@ class OrderResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 10: KDS-specific schemas — kitchen-facing data contract.
+#
+# Intentionally separate from OrderResponse:
+#   - No financial fields (total_amount, currency, item.price,
+#     modifier.price_adjustment) — KDS is not a financial UI.
+#   - Adds table_number (joined from restaurant_tables).
+#   - client_name included for operational use (takeaway pickup identification).
+#   - paid_at included as read-only operational fact (shows payment badge).
+#
+# NEVER import from modules/payments/ here.
+# Order.paid_at is the only payment projection KDS reads.
+# ─────────────────────────────────────────────────────────────────────────────
+
+class KDSModifierResponse(BaseModel):
+    """Modifier for KDS display — name only, no price."""
+    id:   int
+    name: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OrderKDSItemResponse(BaseModel):
+    """OrderItem for KDS display — quantities and names, no prices."""
+    id:           int
+    name:         str
+    variant_name: Optional[str] = None
+    quantity:     int
+    selected_modifiers: List[KDSModifierResponse] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OrderKDSResponse(BaseModel):
+    """
+    KDS (Kitchen Display System) order representation.
+
+    Contains only operational kitchen data.
+    Financial fields (total_amount, currency, item prices, modifier prices)
+    are intentionally excluded — KDS is not a financial interface.
+
+    table_number: joined from RestaurantTable at query time.
+    client_name:  operational for takeaway (customer pickup identification).
+    paid_at:      read-only projection fact from Order.paid_at (written by
+                  Payment Service only). KDS never writes this field.
+    """
+    id:                 int
+    status:             str
+    order_type:         str
+    created_at:         datetime
+    updated_at:         datetime
+    location_id:        int
+    table_id:           Optional[int] = None
+    # Joined from RestaurantTable at KDS query time — not stored on Order.
+    table_number:       Optional[str] = None
+    comment:            Optional[str] = None
+    # Operational: takeaway clients are identified by name for pickup.
+    client_name:        Optional[str] = None
+    # Read-only projection fact (written exclusively by Payment Service).
+    paid_at:            Optional[datetime] = None
+    cancellation_reason: Optional[str] = None
+    items:              List[OrderKDSItemResponse] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class OrderStatusUpdate(BaseModel):
     status: Literal[
         "new", "accepted", "preparing", "ready_for_delivery",
