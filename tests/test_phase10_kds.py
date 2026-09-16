@@ -503,14 +503,45 @@ def test_kds_action_preparing_to_ready_for_delivery(client, db, restaurant, loca
 
 @pytest.mark.integration
 def test_kds_action_ready_to_completed_for_takeaway(client, db, restaurant, location):
-    """Non-delivery order: ready_for_delivery → completed (skip delivering)."""
+    """
+    ready_for_delivery → completed is NOT a valid backend transition
+    for ANY order_type (including takeaway/dine_in).
+
+    Repository verification:
+        status_transitions.py: "ready_for_delivery": ["delivering", "cancelled"]
+        PATCH endpoint: validates strictly against ORDER_STATUS_TRANSITIONS,
+                        no order_type branching at the backend level.
+
+    The correct completion path for takeaway/dine_in is:
+        ready_for_delivery → delivering → completed
+
+    (Admin.html comment on line 1158 incorrectly claims this shortcut exists;
+    it is a pre-existing Phase 9 bug in the frontend, not a backend capability.)
+
+    This test verifies that:
+        1. ready_for_delivery → completed is correctly rejected (400).
+        2. The correct path ready_for_delivery → delivering → completed works.
+    """
     order = _make_order(
         db, restaurant, location, status="ready_for_delivery", order_type="takeaway"
     )
     db.commit()
-    resp = _patch_status(client, order.id, "completed")
-    assert resp.status_code == 200, resp.json()
-    assert resp.json()["status"] == "completed"
+
+    # Step 1: direct shortcut must be rejected — backend has no order_type branching.
+    resp_shortcut = _patch_status(client, order.id, "completed")
+    assert resp_shortcut.status_code == 400, (
+        f"Expected 400 for ready_for_delivery→completed (not in state machine), "
+        f"got {resp_shortcut.status_code}: {resp_shortcut.json()}"
+    )
+
+    # Step 2: correct path — ready_for_delivery → delivering → completed.
+    resp_delivering = _patch_status(client, order.id, "delivering")
+    assert resp_delivering.status_code == 200, resp_delivering.json()
+    assert resp_delivering.json()["status"] == "delivering"
+
+    resp_completed = _patch_status(client, order.id, "completed")
+    assert resp_completed.status_code == 200, resp_completed.json()
+    assert resp_completed.json()["status"] == "completed"
 
 
 @pytest.mark.integration
