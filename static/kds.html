@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Taomly KDS</title>
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────── */
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --bg:#0f0f0f;
+      --surface:#1a1a1a;
+      --surface2:#222;
+      --border:#2a2a2a;
+      --g1:#d4af37;
+      --g2:#c9a227;
+      --text:#f0ead6;
+      --text2:#a09880;
+      --text3:#6b6355;
+      --accepted:#66BB6A;
+      --preparing:#64B5F6;
+      --ready:#CE93D8;
+      --cancelled:#888;
+      --completed:#555;
+      --red:#ef5350;
+      --radius:12px;
+      --shadow:0 2px 12px rgba(0,0,0,.5);
+    }
+    html,body{height:100%;background:var(--bg);color:var(--text);
+      font-family:'Inter',system-ui,-apple-system,sans-serif;font-size:14px;
+      -webkit-font-smoothing:antialiased;}
+
+    /* ── Header ───────────────────────────────────────────────── */
+    .header{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--border);
+      position:sticky;top:0;z-index:100;
+    }
+    .header-left{display:flex;align-items:center;gap:12px;}
+    .header-logo{font-weight:800;font-size:15px;letter-spacing:.5px;color:var(--g1);}
+    .header-location{font-size:12px;color:var(--text2);background:var(--surface2);
+      padding:4px 10px;border-radius:100px;border:1px solid var(--border);}
+    .header-right{display:flex;align-items:center;gap:8px;}
+    .hdr-btn{background:none;border:1px solid var(--border);color:var(--text2);
+      padding:6px 12px;border-radius:100px;cursor:pointer;font-size:12px;
+      font-family:inherit;transition:all .15s;}
+    .hdr-btn:hover{border-color:var(--g2);color:var(--text);}
+    .hdr-btn.muted{opacity:.4;}
+
+    /* ── Location selector overlay ────────────────────────────── */
+    #locationOverlay{
+      position:fixed;inset:0;background:rgba(0,0,0,.85);
+      display:flex;align-items:center;justify-content:center;z-index:200;
+    }
+    .loc-card{
+      background:var(--surface);border:1px solid var(--border);border-radius:16px;
+      padding:28px 24px;width:340px;max-width:95vw;
+    }
+    .loc-title{font-size:17px;font-weight:700;color:var(--g1);margin-bottom:6px;}
+    .loc-sub{font-size:12px;color:var(--text2);margin-bottom:18px;}
+    #locationSelect{
+      width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);
+      background:var(--surface2);color:var(--text);font-family:inherit;font-size:13px;
+      outline:none;margin-bottom:14px;
+    }
+    #locationSelect:focus{border-color:var(--g2);}
+    .loc-btn{
+      width:100%;padding:12px;border-radius:10px;border:none;
+      background:var(--g2);color:#000;font-weight:700;font-size:13px;
+      cursor:pointer;font-family:inherit;transition:background .15s;
+    }
+    .loc-btn:hover{background:var(--g1);}
+    #locError{color:var(--red);font-size:12px;margin-top:8px;display:none;}
+
+    /* ── Main layout ──────────────────────────────────────────── */
+    .main{display:grid;grid-template-columns:1fr 320px;gap:1px;
+      background:var(--border);height:calc(100vh - 45px);}
+    .col{background:var(--bg);overflow-y:auto;padding:14px;}
+    .col-header{
+      display:flex;align-items:center;justify-content:space-between;
+      margin-bottom:12px;
+    }
+    .col-title{font-size:12px;font-weight:700;letter-spacing:.8px;
+      text-transform:uppercase;color:var(--text2);}
+    .col-count{
+      background:var(--g2);color:#000;font-weight:800;
+      padding:2px 8px;border-radius:100px;font-size:11px;
+    }
+
+    /* ── Order card ───────────────────────────────────────────── */
+    .order-card{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--radius);padding:13px 14px;margin-bottom:10px;
+      animation:slideIn .2s ease;
+    }
+    @keyframes slideIn{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+    .card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;}
+    .card-id{font-weight:800;font-size:15px;color:var(--text);}
+    .card-age{font-size:11px;color:var(--text3);margin-top:2px;}
+    .status-badge{
+      font-size:10px;font-weight:700;letter-spacing:.4px;padding:3px 9px;
+      border-radius:100px;text-transform:uppercase;white-space:nowrap;
+    }
+    .status-accepted{background:rgba(102,187,106,.15);color:var(--accepted);border:1px solid rgba(102,187,106,.25);}
+    .status-preparing{background:rgba(100,181,246,.15);color:var(--preparing);border:1px solid rgba(100,181,246,.25);}
+    .status-ready_for_delivery{background:rgba(206,147,216,.15);color:var(--ready);border:1px solid rgba(206,147,216,.25);}
+    .status-completed{background:rgba(80,80,80,.2);color:var(--completed);border:1px solid rgba(80,80,80,.3);}
+    .status-cancelled{background:rgba(100,100,100,.15);color:var(--cancelled);border:1px solid rgba(100,100,100,.25);}
+
+    .card-meta{display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+    .meta-chip{
+      font-size:11px;padding:3px 8px;border-radius:6px;
+      background:var(--surface2);color:var(--text2);border:1px solid var(--border);
+    }
+    .meta-chip.table{background:rgba(212,175,55,.1);color:var(--g2);border-color:rgba(212,175,55,.2);}
+    .meta-chip.paid{background:rgba(102,187,106,.1);color:var(--accepted);border-color:rgba(102,187,106,.25);}
+    .meta-chip.client{background:rgba(100,181,246,.08);color:var(--preparing);}
+
+    .divider{height:1px;background:var(--border);margin:8px 0;}
+
+    .items-list{margin-bottom:10px;}
+    .item-row{padding:3px 0;font-size:13px;}
+    .item-main{display:flex;align-items:baseline;gap:6px;}
+    .item-qty{font-weight:700;color:var(--g2);min-width:20px;}
+    .item-name{color:var(--text);}
+    .item-variant{color:var(--text2);font-size:11px;}
+    .item-mods{padding-left:26px;}
+    .item-mod{font-size:11px;color:var(--text3);padding:1px 0;}
+    .item-mod::before{content:"+ ";color:var(--text3);}
+
+    .card-comment{
+      font-size:11px;color:var(--text2);background:var(--surface2);
+      border-radius:6px;padding:5px 8px;margin-bottom:10px;
+      border-left:2px solid var(--g2);
+    }
+    .card-comment::before{content:"💬 ";}
+
+    .card-actions{display:flex;gap:6px;flex-wrap:wrap;}
+    .btn-action{
+      flex:1;padding:9px 10px;border-radius:8px;border:none;
+      font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;
+      transition:all .15s;min-width:80px;
+    }
+    .btn-next{background:var(--g2);color:#000;}
+    .btn-next:hover{background:var(--g1);}
+    .btn-cancel{
+      background:rgba(239,83,80,.12);color:var(--red);
+      border:1px solid rgba(239,83,80,.25);flex:0;padding:9px 12px;
+    }
+    .btn-cancel:hover{background:rgba(239,83,80,.22);}
+
+    /* ── History card (right column) ──────────────────────────── */
+    .history-card{
+      background:var(--surface2);border:1px solid var(--border);
+      border-radius:var(--radius);padding:10px 12px;margin-bottom:8px;
+      opacity:.75;
+    }
+    .history-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+    .history-id{font-size:13px;font-weight:700;color:var(--text2);}
+    .history-age{font-size:10px;color:var(--text3);}
+    .history-summary{font-size:11px;color:var(--text3);}
+
+    /* ── Empty state ──────────────────────────────────────────── */
+    .empty{
+      text-align:center;padding:60px 20px;color:var(--text3);
+    }
+    .empty-icon{font-size:36px;margin-bottom:12px;}
+    .empty-text{font-size:13px;}
+
+    /* ── Toast ────────────────────────────────────────────────── */
+    #toast{
+      position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:12px;padding:10px 18px;font-size:13px;color:var(--text);
+      box-shadow:var(--shadow);transition:transform .3s ease;z-index:500;
+      white-space:nowrap;pointer-events:none;
+    }
+    #toast.show{transform:translateX(-50%) translateY(0);}
+    #toast.error{border-color:var(--red);color:var(--red);}
+
+    /* ── New order flash ──────────────────────────────────────── */
+    #newFlash{
+      position:fixed;top:0;left:0;right:0;height:3px;
+      background:linear-gradient(90deg,var(--g1),var(--g2),var(--g1));
+      opacity:0;transition:opacity .15s;z-index:300;pointer-events:none;
+    }
+    #newFlash.show{opacity:1;}
+  </style>
+</head>
+<body>
+
+<!-- ── Location selector overlay ────────────────────────────── -->
+<div id="locationOverlay">
+  <div class="loc-card">
+    <div class="loc-title">🍳 Taomly KDS</div>
+    <div class="loc-sub">Kitchen Display System — выберите локацию</div>
+    <select id="locationSelect">
+      <option value="">Загрузка локаций...</option>
+    </select>
+    <button class="loc-btn" onclick="selectLocation()">Открыть кухню →</button>
+    <div id="locError"></div>
+  </div>
+</div>
+
+<!-- ── New order flash ──────────────────────────────────────── -->
+<div id="newFlash"></div>
+
+<!-- ── Header ───────────────────────────────────────────────── -->
+<div class="header" id="header" style="display:none">
+  <div class="header-left">
+    <div class="header-logo">🍳 KDS</div>
+    <div class="header-location" id="headerLocation">—</div>
+  </div>
+  <div class="header-right">
+    <button class="hdr-btn" id="soundBtn" onclick="toggleSound()" title="Звук">🔔</button>
+    <button class="hdr-btn" onclick="doLogout()">Выход</button>
+  </div>
+</div>
+
+<!-- ── Main ──────────────────────────────────────────────────── -->
+<div class="main" id="main" style="display:none">
+  <!-- Active queue (left) -->
+  <div class="col" id="activeCol">
+    <div class="col-header">
+      <div class="col-title">Активные заказы</div>
+      <div class="col-count" id="activeCount">0</div>
+    </div>
+    <div id="activeOrders"><div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Нет активных заказов</div></div></div>
+  </div>
+  <!-- History (right) -->
+  <div class="col" id="historyCol">
+    <div class="col-header">
+      <div class="col-title">Сегодня · Готово / Отменено</div>
+    </div>
+    <div id="historyOrders"><div class="empty"><div class="empty-icon">📋</div><div class="empty-text">История пуста</div></div></div>
+  </div>
+</div>
+
+<!-- ── Toast ────────────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<script>
+// ────────────────────────────────────────────────────────────────────────────
+// CONFIG & STATE
+// ────────────────────────────────────────────────────────────────────────────
+const API = '';  // same-origin
+let AUTH_TOKEN = localStorage.getItem('kds_token') || '';
+let RESTAURANT_ID = parseInt(localStorage.getItem('kds_restaurant_id') || '0', 10);
+let LOCATION_ID = parseInt(localStorage.getItem('kds_location_id') || '0', 10);
+let LOCATION_NAME = localStorage.getItem('kds_location_name') || '';
+
+let _activeOrders = [];
+let _prevActiveCount = 0;
+let _pollTimer = null;
+let _soundEnabled = localStorage.getItem('kds_sound') === 'true';
+const _origTitle = document.title;
+
+// ────────────────────────────────────────────────────────────────────────────
+// INIT
+// ────────────────────────────────────────────────────────────────────────────
+async function init() {
+  if (!AUTH_TOKEN || !RESTAURANT_ID) {
+    // No stored credentials — try to get them from admin.html flow
+    // (user navigated from /admin). Otherwise show login.
+    await promptLogin();
+    return;
+  }
+  await loadLocations();
+}
+
+async function promptLogin() {
+  // KDS reuses restaurant_admin JWT from localStorage (same key as admin.html)
+  const stored = localStorage.getItem('taomly_token');
+  const storedId = parseInt(localStorage.getItem('taomly_restaurant_id') || '0', 10);
+  if (stored && storedId) {
+    AUTH_TOKEN = stored;
+    RESTAURANT_ID = storedId;
+    localStorage.setItem('kds_token', AUTH_TOKEN);
+    localStorage.setItem('kds_restaurant_id', String(RESTAURANT_ID));
+    await loadLocations();
+    return;
+  }
+  // Fallback: ask for JWT token directly
+  const token = window.prompt('Вставьте JWT-токен ресторана (из /admin → скопируйте токен):');
+  if (!token) { document.getElementById('locError').style.display = 'block';
+    document.getElementById('locError').textContent = 'Токен обязателен'; return; }
+  AUTH_TOKEN = token.trim();
+  // Decode restaurant_id from JWT payload (base64)
+  try {
+    const payload = JSON.parse(atob(AUTH_TOKEN.split('.')[1]));
+    RESTAURANT_ID = payload.restaurant_id || 0;
+  } catch(e) {
+    document.getElementById('locError').style.display = 'block';
+    document.getElementById('locError').textContent = 'Неверный токен';
+    return;
+  }
+  localStorage.setItem('kds_token', AUTH_TOKEN);
+  localStorage.setItem('kds_restaurant_id', String(RESTAURANT_ID));
+  await loadLocations();
+}
+
+async function loadLocations() {
+  // If we already have a saved location, go directly.
+  if (LOCATION_ID && LOCATION_NAME) {
+    await openKDS(LOCATION_ID, LOCATION_NAME);
+    return;
+  }
+  // Fetch locations for this restaurant.
+  try {
+    const res = await fetch(`${API}/api/restaurants/${RESTAURANT_ID}/locations`, {
+      headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const locs = await res.json();
+    const sel = document.getElementById('locationSelect');
+    sel.innerHTML = '<option value="">— выберите локацию —</option>';
+    (locs.locations || locs).forEach(l => {
+      const opt = document.createElement('option');
+      opt.value = l.id;
+      opt.textContent = l.name;
+      sel.appendChild(opt);
+    });
+    // Auto-select if only one location
+    if ((locs.locations || locs).length === 1) {
+      sel.value = (locs.locations || locs)[0].id;
+    }
+  } catch(e) {
+    document.getElementById('locError').style.display = 'block';
+    document.getElementById('locError').textContent = `Ошибка загрузки локаций: ${e.message}`;
+  }
+}
+
+function selectLocation() {
+  const sel = document.getElementById('locationSelect');
+  const id = parseInt(sel.value, 10);
+  const name = sel.options[sel.selectedIndex]?.textContent || '';
+  if (!id) {
+    document.getElementById('locError').style.display = 'block';
+    document.getElementById('locError').textContent = 'Выберите локацию';
+    return;
+  }
+  document.getElementById('locError').style.display = 'none';
+  localStorage.setItem('kds_location_id', String(id));
+  localStorage.setItem('kds_location_name', name);
+  LOCATION_ID = id;
+  LOCATION_NAME = name;
+  openKDS(id, name);
+}
+
+function openKDS(locationId, locationName) {
+  document.getElementById('locationOverlay').style.display = 'none';
+  document.getElementById('header').style.display = 'flex';
+  document.getElementById('main').style.display = 'grid';
+  document.getElementById('headerLocation').textContent = locationName;
+  updateSoundBtn();
+  _startPolling();
+  loadOrders();
+}
+
+function doLogout() {
+  localStorage.removeItem('kds_location_id');
+  localStorage.removeItem('kds_location_name');
+  localStorage.removeItem('kds_token');
+  localStorage.removeItem('kds_restaurant_id');
+  location.reload();
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// DATA LOADING
+// ────────────────────────────────────────────────────────────────────────────
+async function loadOrders() {
+  try {
+    // Active queue
+    const activeRes = await fetch(
+      `${API}/api/orders/kds/${RESTAURANT_ID}?location_id=${LOCATION_ID}`,
+      { headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` } }
+    );
+    if (activeRes.status === 401) { doLogout(); return; }
+    if (!activeRes.ok) throw new Error(`HTTP ${activeRes.status}`);
+    const active = await activeRes.json();
+
+    // History (completed + cancelled today)
+    const histRes = await fetch(
+      `${API}/api/orders/kds/${RESTAURANT_ID}?location_id=${LOCATION_ID}&include_history=true`,
+      { headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` } }
+    );
+    const all = histRes.ok ? await histRes.json() : active;
+    const history = all
+      .filter(o => ['completed','cancelled'].includes(o.status))
+      .sort((a,b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, 20);
+
+    // Detect new orders
+    const newCount = active.length;
+    if (_activeOrders.length > 0 && newCount > _prevActiveCount) {
+      _onNewOrders(newCount);
+    }
+    _prevActiveCount = newCount;
+    _activeOrders = active;
+
+    renderActive(active);
+    renderHistory(history);
+    document.getElementById('activeCount').textContent = active.length;
+  } catch(e) {
+    showToast(`Ошибка обновления: ${e.message}`, true);
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// RENDER
+// ────────────────────────────────────────────────────────────────────────────
+function renderActive(orders) {
+  const el = document.getElementById('activeOrders');
+  if (!orders.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Нет активных заказов</div></div>';
+    return;
+  }
+  el.innerHTML = '';
+  orders.forEach(o => el.appendChild(makeActiveCard(o)));
+}
+
+function renderHistory(orders) {
+  const el = document.getElementById('historyOrders');
+  if (!orders.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">История пуста</div></div>';
+    return;
+  }
+  el.innerHTML = '';
+  orders.forEach(o => el.appendChild(makeHistoryCard(o)));
+}
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function timeAgo(iso) {
+  const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (diff < 60) return `${diff} сек`;
+  if (diff < 3600) return `${Math.floor(diff/60)} мин`;
+  return `${Math.floor(diff/3600)} ч ${Math.floor((diff%3600)/60)} мин`;
+}
+
+function typeLabel(t) {
+  return {dine_in:'🍽️ В зале', takeaway:'🥡 Самовывоз', delivery:'🛵 Доставка'}[t] || t;
+}
+
+function statusLabel(s) {
+  return {
+    accepted:'Принят', preparing:'Готовится',
+    ready_for_delivery:'Готов', delivering:'В доставке',
+    completed:'Выполнен', cancelled:'Отменён',
+  }[s] || s;
+}
+
+// Next status in kitchen flow (delivery uses delivering, others skip to completed)
+function nextStatus(status, orderType) {
+  const chain = {
+    accepted: 'preparing',
+    preparing: 'ready_for_delivery',
+    ready_for_delivery: orderType === 'delivery' ? 'delivering' : 'completed',
+  };
+  return chain[status] || null;
+}
+
+function nextLabel(status) {
+  return {
+    accepted: '▶ Начать готовить',
+    preparing: '✓ Готово',
+    ready_for_delivery: '🚀 Выдать / Курьер',
+  }[status] || null;
+}
+
+const _CANCELLABLE = ['accepted','preparing','ready_for_delivery'];
+
+function makeActiveCard(o) {
+  const div = document.createElement('div');
+  div.className = 'order-card';
+
+  // Items HTML
+  const itemsHtml = (o.items || []).map(item => {
+    const modsHtml = (item.selected_modifiers || [])
+      .map(m => `<div class="item-mod">${esc(m.name)}</div>`).join('');
+    const variantHtml = item.variant_name
+      ? ` <span class="item-variant">(${esc(item.variant_name)})</span>` : '';
+    return `<div class="item-row">
+      <div class="item-main">
+        <span class="item-qty">${item.quantity}×</span>
+        <span class="item-name">${esc(item.name)}${variantHtml}</span>
+      </div>
+      ${modsHtml ? `<div class="item-mods">${modsHtml}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  // Meta chips
+  let metaHtml = `<span class="meta-chip">${esc(typeLabel(o.order_type))}</span>`;
+  if (o.order_type === 'dine_in' && o.table_number)
+    metaHtml += `<span class="meta-chip table">🪑 Стол ${esc(o.table_number)}</span>`;
+  if (o.order_type === 'takeaway' && o.client_name)
+    metaHtml += `<span class="meta-chip client">👤 ${esc(o.client_name)}</span>`;
+  if (o.paid_at)
+    metaHtml += `<span class="meta-chip paid">✓ Оплачен</span>`;
+
+  const commentHtml = o.comment
+    ? `<div class="card-comment">${esc(o.comment)}</div>` : '';
+
+  const ns = nextStatus(o.status, o.order_type);
+  const nl = nextLabel(o.status);
+  const actionHtml = nl && ns
+    ? `<button class="btn-action btn-next" onclick="changeStatus(${o.id},'${ns}')">${esc(nl)}</button>`
+    : '';
+  const cancelHtml = _CANCELLABLE.includes(o.status)
+    ? `<button class="btn-action btn-cancel" onclick="cancelOrder(${o.id})">✕ Отмена</button>` : '';
+
+  div.innerHTML = `
+    <div class="card-header">
+      <div>
+        <div class="card-id">#${String(o.id).padStart(4,'0')}</div>
+        <div class="card-age">${esc(timeAgo(o.created_at))} назад</div>
+      </div>
+      <span class="status-badge status-${o.status}">${esc(statusLabel(o.status))}</span>
+    </div>
+    <div class="card-meta">${metaHtml}</div>
+    <div class="divider"></div>
+    <div class="items-list">${itemsHtml}</div>
+    ${commentHtml}
+    ${(actionHtml || cancelHtml) ? `<div class="card-actions">${actionHtml}${cancelHtml}</div>` : ''}
+  `;
+  return div;
+}
+
+function makeHistoryCard(o) {
+  const div = document.createElement('div');
+  div.className = 'history-card';
+  const itemCount = (o.items || []).length;
+  div.innerHTML = `
+    <div class="history-header">
+      <div class="history-id">#${String(o.id).padStart(4,'0')}</div>
+      <span class="status-badge status-${o.status}">${esc(statusLabel(o.status))}</span>
+    </div>
+    <div class="history-age">${esc(timeAgo(o.created_at))} назад · ${esc(typeLabel(o.order_type))}</div>
+    <div class="history-summary">${itemCount} поз.${o.cancellation_reason ? ' · ' + esc(o.cancellation_reason) : ''}</div>
+  `;
+  return div;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// ACTIONS (reuse existing PATCH /api/orders/{id}/status)
+// ────────────────────────────────────────────────────────────────────────────
+async function changeStatus(orderId, newStatus, cancelReason) {
+  const body = { status: newStatus };
+  if (cancelReason) body.cancellation_reason = cancelReason;
+  try {
+    const res = await fetch(`${API}/api/orders/${orderId}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${AUTH_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    await loadOrders();
+  } catch(e) {
+    showToast(`Ошибка: ${e.message}`, true);
+  }
+}
+
+function cancelOrder(orderId) {
+  const reason = window.prompt ? window.prompt('Причина отмены (необязательно):', '') : null;
+  if (reason === null) return; // user cancelled the prompt
+  changeStatus(orderId, 'cancelled', reason || undefined);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// POLLING (10 sec active / 30 sec hidden)
+// ────────────────────────────────────────────────────────────────────────────
+function _startPolling() {
+  if (_pollTimer) clearInterval(_pollTimer);
+  const delay = document.hidden ? 30000 : 10000;
+  _pollTimer = setInterval(() => {
+    if (LOCATION_ID) loadOrders();
+  }, delay);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && LOCATION_ID) {
+    loadOrders();
+    document.title = _origTitle;
+  }
+  _startPolling();
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// NEW ORDER NOTIFICATION
+// ────────────────────────────────────────────────────────────────────────────
+function _onNewOrders(count) {
+  // Flash bar
+  const flash = document.getElementById('newFlash');
+  flash.classList.remove('show');
+  void flash.offsetWidth;
+  flash.classList.add('show');
+  setTimeout(() => flash.classList.remove('show'), 1400);
+
+  // Title blink
+  if (!document.hasFocus()) {
+    let flip = false;
+    const interval = setInterval(() => {
+      document.title = flip ? _origTitle : `🔔 ${count} новых заказов`;
+      flip = !flip;
+    }, 900);
+    setTimeout(() => clearInterval(interval), 8000);
+  }
+
+  showToast(`🔔 ${count > 1 ? count + ' новых заказа' : 'Новый заказ'}!`);
+  playSound();
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// SOUND (Web Audio API — toggleable)
+// ────────────────────────────────────────────────────────────────────────────
+let _audioCtx = null;
+let _audioUnlocked = false;
+
+function _getAudioCtx() {
+  if (!_audioCtx) {
+    try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  }
+  return _audioCtx;
+}
+
+function _unlockAudio() {
+  if (_audioUnlocked) return;
+  const ctx = _getAudioCtx(); if (!ctx) return;
+  if (ctx.state === 'suspended') ctx.resume().then(() => { _audioUnlocked = true; });
+  else _audioUnlocked = true;
+}
+
+document.addEventListener('touchstart', _unlockAudio, { once: true, passive: true });
+document.addEventListener('click', _unlockAudio, { once: true });
+
+function playSound() {
+  if (!_soundEnabled) return;
+  const ctx = _getAudioCtx(); if (!ctx) return;
+  const play = () => {
+    try {
+      [880, 1100, 880].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'sine'; osc.frequency.value = freq;
+        const t = ctx.currentTime + i * 0.20;
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.12, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+        osc.start(t); osc.stop(t + 0.40);
+      });
+    } catch(e) {}
+  };
+  if (ctx.state === 'suspended') ctx.resume().then(play); else play();
+}
+
+function toggleSound() {
+  _soundEnabled = !_soundEnabled;
+  localStorage.setItem('kds_sound', _soundEnabled);
+  updateSoundBtn();
+  if (_soundEnabled) { _unlockAudio(); playSound(); }
+  showToast(_soundEnabled ? '🔔 Звук включён' : '🔕 Звук выключен');
+}
+
+function updateSoundBtn() {
+  const btn = document.getElementById('soundBtn');
+  if (!btn) return;
+  btn.classList.toggle('muted', !_soundEnabled);
+  btn.textContent = _soundEnabled ? '🔔' : '🔕';
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// TOAST
+// ────────────────────────────────────────────────────────────────────────────
+let _toastTimer = null;
+function showToast(msg, isError = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (isError ? ' error' : '');
+  if (_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.className = '', 3500);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// AGES UPDATE (every 30 sec without full reload)
+// ────────────────────────────────────────────────────────────────────────────
+setInterval(() => {
+  document.querySelectorAll('.card-age').forEach(el => {
+    const order = _activeOrders.find(o =>
+      el.closest('.order-card')?.querySelector('.card-id')?.textContent
+        === `#${String(o.id).padStart(4,'0')}`
+    );
+    if (order) el.textContent = `${timeAgo(order.created_at)} назад`;
+  });
+}, 30000);
+
+// ────────────────────────────────────────────────────────────────────────────
+// START
+// ────────────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
