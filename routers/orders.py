@@ -45,7 +45,7 @@ from sqlalchemy.orm import Session, joinedload
 from auth import TelegramUser, get_current_restaurant_admin, get_telegram_user
 from database import get_db
 from models import Location, ModifierGroup, ModifierOption, Order, OrderItem, OrderItemModifier, Product, ProductVariant, Restaurant, RestaurantTable, Subscription, SubscriptionPlan, UsageEvent, User
-from schemas import OrderCreate, OrderResponse, OrderStatusUpdate
+from schemas import OrderCreate, OrderKDSResponse, OrderResponse, OrderStatusUpdate
 import handlers
 from limiter import limiter
 
@@ -640,6 +640,144 @@ def create_order(
         order_with_items.id, restaurant.id, tg_user.id, total,
     )
     return order_with_items
+
+
+# ──────────────────────────────────────────
+# GET /kds/{restaurant_id} — KDS active queue (Phase 10)
+# ──────────────────────────────────────────
+
+# Active kitchen statuses — "delivering" is excluded:
+# after ready_for_delivery → delivering belongs to delivery workflow, not kitchen.
+_KDS_ACTIVE_STATUSES = ["accepted", "preparing", "ready_for_delivery"]
+
+# History shown in KDS right column: completed + cancelled.
+_KDS_HISTORY_STATUSES = ["completed", "cancelled"]
+
+
+@router.get("/kds/{restaurant_id}", response_model=list[OrderKDSResponse])
+def get_kds_orders(
+    restaurant_id: int,
+    location_id: int = Query(..., description="Required: KDS must be scoped to a specific Location"),
+    include_history: bool = Query(False, description="Include today's completed/cancelled orders"),
+    limit: int = Query(200, ge=1, le=500),
+    restaurant: Restaurant = Depends(get_current_restaurant_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Phase 10 — KDS (Kitchen Display System) order list.
+
+    Returns active kitchen orders for a specific Location:
+        accepted, preparing, ready_for_delivery
+
+    "delivering" is intentionally excluded: after ready_for_delivery →
+    delivering belongs to delivery/courier workflow, not the kitchen queue.
+
+    Security:
+        - restaurant_id in URL must match authenticated restaurant (403 if mismatch).
+        - location_id is REQUIRED (400 if missing — enforced by Query(...)).
+        - Location.restaurant_id is validated against authenticated restaurant (404 if foreign).
+        - Order.restaurant_id AND Order.location_id are filtered — no cross-tenant leakage.
+
+    Payment boundary:
+        - Returns Order.paid_at as a read-only operational indicator.
+        - Does NOT import Payment model.
+        - Does NOT touch Payment.status.
+
+    table_number:
+        - Joined from RestaurantTable at query time.
+        - NOT stored on Order — this is a read-time enrichment only.
+    """
+    # Tenant check: URL restaurant_id must match authenticated restaurant.
+    if restaurant.id != restaurant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Нет доступа к KDS этого ресторана",
+        )
+
+    # Validate location belongs to this restaurant.
+    # Same pattern as get_restaurant_orders (S1-5).
+    # Returns 404 (not 403) — intentionally does not reveal whether location exists
+    # in another restaurant.
+    location = db.query(Location).filter(
+        Location.id == location_id,
+        Location.restaurant_id == restaurant.id,
+    ).first()
+    if not location:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Локация не найдена",
+        )
+
+    # Determine which statuses to fetch.
+    if include_history:
+        target_statuses = _KDS_ACTIVE_STATUSES + _KDS_HISTORY_STATUSES
+    else:
+        target_statuses = _KDS_ACTIVE_STATUSES
+
+    # Fetch orders with items and modifiers.
+    # Double tenant filter: restaurant_id + location_id.
+    orders = (
+        db.query(Order)
+        .options(
+            joinedload(Order.items)
+            .joinedload(OrderItem.selected_modifiers)
+        )
+        .filter(
+            Order.restaurant_id == restaurant.id,
+            Order.location_id == location_id,
+            Order.status.in_(target_statuses),
+        )
+        .order_by(Order.created_at.asc())
+        .limit(limit)
+        .all()
+    )
+
+    # Build KDS response: join table_number from RestaurantTable for dine_in orders.
+    # Collect unique table_ids to avoid N+1 queries.
+    table_ids = {o.table_id for o in orders if o.table_id is not None}
+    table_map: dict[int, str] = {}
+    if table_ids:
+        tables = db.query(RestaurantTable).filter(
+            RestaurantTable.id.in_(table_ids),
+            RestaurantTable.restaurant_id == restaurant.id,
+        ).all()
+        table_map = {t.id: t.table_number for t in tables}
+
+    # Build response list manually to inject table_number.
+    result: list[OrderKDSResponse] = []
+    for order in orders:
+        # Build KDS items — no price fields exposed.
+        kds_items = []
+        for item in order.items:
+            kds_mods = [
+                {"id": m.id, "name": m.name}
+                for m in item.selected_modifiers
+            ]
+            kds_items.append({
+                "id": item.id,
+                "name": item.name,
+                "variant_name": item.variant_name,
+                "quantity": item.quantity,
+                "selected_modifiers": kds_mods,
+            })
+
+        result.append(OrderKDSResponse(
+            id=order.id,
+            status=order.status,
+            order_type=order.order_type,
+            created_at=order.created_at,
+            updated_at=order.updated_at,
+            location_id=order.location_id,
+            table_id=order.table_id,
+            table_number=table_map.get(order.table_id) if order.table_id else None,
+            comment=order.comment,
+            client_name=order.client_name,
+            paid_at=order.paid_at,
+            cancellation_reason=order.cancellation_reason,
+            items=kds_items,
+        ))
+
+    return result
 
 
 # ──────────────────────────────────────────
