@@ -78,9 +78,12 @@ from schemas.menu_public import (
 
 # ── Orders ───────────────────────────────────────────────────────────────────
 from schemas.orders import (
+    KDSModifierResponse,
     OrderCreate,
     OrderItemCreate,
     OrderItemResponse,
+    OrderKDSItemResponse,
+    OrderKDSResponse,
     OrderResponse,
     OrderStatusUpdate,
     SelectedModifierResponse,
@@ -160,7 +163,8 @@ __all__ = [
     "ModifierOptionResponseWithTranslations", "ProductResponseWithTranslations",
     "VariantResponseWithTranslations",
     # Orders
-    "OrderCreate", "OrderItemCreate", "OrderItemResponse",
+    "KDSModifierResponse", "OrderCreate", "OrderItemCreate", "OrderItemResponse",
+    "OrderKDSItemResponse", "OrderKDSResponse",
     "OrderResponse", "OrderStatusUpdate", "SelectedModifierResponse",
     # Reservations & Waiter Calls
     "ReservationCreate", "ReservationResponse", "ReservationStatusUpdate",
