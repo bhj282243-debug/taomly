@@ -1154,17 +1154,17 @@ function getTypeLabel(type){
   const map={delivery:'admin.qr.tab_delivery',takeaway:'admin.qr.tab_takeaway',dine_in:'admin.orders.type_dine_in'};
   return t(map[type]||'admin.orders.type_dine_in');
 }
-// Цепочка статусов зависит от типа заказа
-// Phase 9: getNextStatus follows the authoritative backend state machine exactly.
-// Backend: new→accepted, accepted→preparing, preparing→ready_for_delivery,
-//          ready_for_delivery→delivering (delivery) or completed (non-delivery),
-//          delivering→completed.
+// Phase 9/10: getNextStatus follows the authoritative backend state machine exactly.
+// Backend (status_transitions.py):
+//   new→accepted, accepted→preparing, preparing→ready_for_delivery,
+//   ready_for_delivery→delivering, delivering→completed.
+// ready_for_delivery always transitions to delivering regardless of order_type.
 // UI never skips steps — backend remains authoritative and rejects invalid transitions.
-function getNextStatus(status, orderType){
+function getNextStatus(status){
   const chain={
     accepted:'preparing',
     preparing:'ready_for_delivery',
-    ready_for_delivery: orderType==='delivery'?'delivering':'completed',
+    ready_for_delivery:'delivering',
     delivering:'completed',
   };
   return chain[status]||null;
@@ -1310,7 +1310,7 @@ function makeOrderCard(order){
     ?`<div class="cancel-reason">Причина: ${esc(order.cancellation_reason)}</div>`
     :'';
 
-  const nextStatus=getNextStatus(order.status, order.order_type);
+  const nextStatus=getNextStatus(order.status);
 
   // Phase 9: cancel button available from all backend-cancellable states.
   // Backend guards paid orders with 409; UI shows the button and handles the error.
