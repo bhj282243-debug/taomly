@@ -39,7 +39,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query, Request, status
-from sqlalchemy import text
+from sqlalchemy import cast, Date, func, text
 from sqlalchemy.orm import Session, joinedload
 
 from auth import TelegramUser, get_current_restaurant_admin, get_telegram_user
@@ -708,15 +708,20 @@ def get_kds_orders(
             detail="Локация не найдена",
         )
 
-    # Determine which statuses to fetch.
-    if include_history:
-        target_statuses = _KDS_ACTIVE_STATUSES + _KDS_HISTORY_STATUSES
-    else:
-        target_statuses = _KDS_ACTIVE_STATUSES
+    # Determine which statuses to fetch and build the query.
+    #
+    # P1-02 fix: history statuses (completed/cancelled) are restricted to the
+    # current local day, derived from location.timezone (IANA, e.g. "Asia/Tashkent").
+    # created_at is stored as TIMESTAMP WITH TIME ZONE (UTC).
+    # We convert it to the location's local date via AT TIME ZONE before comparing
+    # to CURRENT_DATE AT TIME ZONE — the same pattern used in routers/analytics.py.
+    #
+    # location.timezone is NOT NULL with server_default "Asia/Tashkent" (models/tenant.py),
+    # so the fallback is a safety net only.
+    tz = location.timezone or "Asia/Tashkent"
 
-    # Fetch orders with items and modifiers.
-    # Double tenant filter: restaurant_id + location_id.
-    orders = (
+    # Base query — double tenant filter always applied.
+    base_q = (
         db.query(Order)
         .options(
             joinedload(Order.items)
@@ -725,12 +730,38 @@ def get_kds_orders(
         .filter(
             Order.restaurant_id == restaurant.id,
             Order.location_id == location_id,
-            Order.status.in_(target_statuses),
         )
-        .order_by(Order.created_at.asc())
-        .limit(limit)
-        .all()
     )
+
+    if include_history:
+        # Active statuses: no date restriction.
+        # History statuses: today only in location's local timezone.
+        today_local = func.current_date().op("AT TIME ZONE")(tz)
+        created_local_date = cast(
+            Order.created_at.op("AT TIME ZONE")(tz),
+            Date,
+        )
+        orders = (
+            base_q
+            .filter(
+                Order.status.in_(_KDS_ACTIVE_STATUSES)
+                | (
+                    Order.status.in_(_KDS_HISTORY_STATUSES)
+                    & (created_local_date == cast(today_local, Date))
+                )
+            )
+            .order_by(Order.created_at.asc())
+            .limit(limit)
+            .all()
+        )
+    else:
+        orders = (
+            base_q
+            .filter(Order.status.in_(_KDS_ACTIVE_STATUSES))
+            .order_by(Order.created_at.asc())
+            .limit(limit)
+            .all()
+        )
 
     # Build KDS response: join table_number from RestaurantTable for dine_in orders.
     # Collect unique table_ids to avoid N+1 queries.
