@@ -455,11 +455,11 @@ function statusLabel(s) {
 }
 
 // Next status in kitchen flow (delivery uses delivering, others skip to completed)
-function nextStatus(status, orderType) {
+function nextStatus(status) {
   const chain = {
     accepted: 'preparing',
     preparing: 'ready_for_delivery',
-    ready_for_delivery: orderType === 'delivery' ? 'delivering' : 'completed',
+    ready_for_delivery: 'delivering',
   };
   return chain[status] || null;
 }
@@ -505,7 +505,7 @@ function makeActiveCard(o) {
   const commentHtml = o.comment
     ? `<div class="card-comment">${esc(o.comment)}</div>` : '';
 
-  const ns = nextStatus(o.status, o.order_type);
+  const ns = nextStatus(o.status);
   const nl = nextLabel(o.status);
   const actionHtml = nl && ns
     ? `<button class="btn-action btn-next" onclick="changeStatus(${o.id},'${ns}')">${esc(nl)}</button>`
