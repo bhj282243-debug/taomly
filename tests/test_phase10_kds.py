@@ -698,3 +698,146 @@ def test_kds_reads_paid_at_does_not_expose_payment_fields(client, db, restaurant
     ]
     for field in forbidden_payment_fields:
         assert field not in order_data, f"Payment field '{field}' must not be in KDS response"
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# P1-02 REGRESSION — KDS history restricted to current local day
+# ──────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.integration
+def test_kds_history_includes_todays_completed(client, db, restaurant, location):
+    """
+    Test A — today's completed order must appear in history.
+
+    include_history=true must show completed orders created today
+    (in location.timezone = Asia/Tashkent).
+    """
+    # created_at defaults to now() — today in any timezone.
+    order = _make_order(db, restaurant, location, status="completed")
+    db.commit()
+
+    resp = client.get(
+        _kds_url(restaurant.id),
+        params={"location_id": location.id, "include_history": "true"},
+    )
+    assert resp.status_code == 200, resp.json()
+    ids = [o["id"] for o in resp.json()]
+    assert order.id in ids, "Today's completed order must appear in KDS history"
+
+
+@pytest.mark.integration
+def test_kds_history_excludes_yesterdays_completed(client, db, restaurant, location):
+    """
+    Test B — yesterday's completed order must NOT appear in history.
+
+    P1-02 fix: history is restricted to the current local day via
+    location.timezone (Asia/Tashkent). Orders from previous days must
+    be excluded even when include_history=true.
+    """
+    import os
+    DATABASE_URL = os.environ.get("DATABASE_URL", "")
+    if not DATABASE_URL.startswith("postgresql"):
+        pytest.skip(
+            "P1-02 date filter uses PostgreSQL AT TIME ZONE — "
+            "SQLite does not support this; skip on SQLite CI job."
+        )
+
+    from datetime import timedelta
+    from sqlalchemy import text as sa_text
+
+    # Create order normally (status=completed, created_at=now).
+    order = _make_order(db, restaurant, location, status="completed")
+    db.flush()
+
+    # Backdate created_at to yesterday UTC — guaranteed to be a different local day
+    # in Asia/Tashkent (UTC+5) as long as the test runs before 19:00 UTC,
+    # which covers the full working day. For CI robustness we use 2 days ago.
+    two_days_ago = datetime.now(tz=timezone.utc) - timedelta(days=2)
+    db.execute(
+        sa_text("UPDATE orders SET created_at = :ts WHERE id = :id"),
+        {"ts": two_days_ago, "id": order.id},
+    )
+    db.commit()
+
+    resp = client.get(
+        _kds_url(restaurant.id),
+        params={"location_id": location.id, "include_history": "true"},
+    )
+    assert resp.status_code == 200, resp.json()
+    ids = [o["id"] for o in resp.json()]
+    assert order.id not in ids, (
+        "Completed order from 2 days ago must NOT appear in KDS history "
+        "(history is restricted to today in location.timezone)"
+    )
+
+
+@pytest.mark.integration
+def test_kds_history_excludes_yesterdays_cancelled(client, db, restaurant, location):
+    """
+    Old cancelled orders must also be excluded from KDS history.
+    """
+    import os
+    DATABASE_URL = os.environ.get("DATABASE_URL", "")
+    if not DATABASE_URL.startswith("postgresql"):
+        pytest.skip("P1-02 date filter requires PostgreSQL AT TIME ZONE.")
+
+    from datetime import timedelta
+    from sqlalchemy import text as sa_text
+
+    order = _make_order(db, restaurant, location, status="cancelled")
+    db.flush()
+
+    two_days_ago = datetime.now(tz=timezone.utc) - timedelta(days=2)
+    db.execute(
+        sa_text("UPDATE orders SET created_at = :ts WHERE id = :id"),
+        {"ts": two_days_ago, "id": order.id},
+    )
+    db.commit()
+
+    resp = client.get(
+        _kds_url(restaurant.id),
+        params={"location_id": location.id, "include_history": "true"},
+    )
+    assert resp.status_code == 200, resp.json()
+    ids = [o["id"] for o in resp.json()]
+    assert order.id not in ids, (
+        "Cancelled order from 2 days ago must NOT appear in KDS history"
+    )
+
+
+@pytest.mark.integration
+def test_kds_active_orders_unaffected_by_history_filter(client, db, restaurant, location):
+    """
+    Active statuses (accepted/preparing/ready_for_delivery) are always returned
+    regardless of created_at — the date filter applies only to history statuses.
+    """
+    import os
+    DATABASE_URL = os.environ.get("DATABASE_URL", "")
+    if not DATABASE_URL.startswith("postgresql"):
+        pytest.skip("P1-02 date filter requires PostgreSQL AT TIME ZONE.")
+
+    from datetime import timedelta
+    from sqlalchemy import text as sa_text
+
+    # Create an old accepted order (edge case: stale order still in kitchen)
+    order = _make_order(db, restaurant, location, status="accepted")
+    db.flush()
+
+    two_days_ago = datetime.now(tz=timezone.utc) - timedelta(days=2)
+    db.execute(
+        sa_text("UPDATE orders SET created_at = :ts WHERE id = :id"),
+        {"ts": two_days_ago, "id": order.id},
+    )
+    db.commit()
+
+    # include_history=true — active order must still appear regardless of date
+    resp = client.get(
+        _kds_url(restaurant.id),
+        params={"location_id": location.id, "include_history": "true"},
+    )
+    assert resp.status_code == 200, resp.json()
+    ids = [o["id"] for o in resp.json()]
+    assert order.id in ids, (
+        "Active (accepted) order must appear in KDS even when created on a previous day — "
+        "date filter applies only to history statuses (completed/cancelled)"
+    )
