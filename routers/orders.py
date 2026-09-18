@@ -39,7 +39,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query, Request, status
-from sqlalchemy import cast, Date, func, text
+from sqlalchemy import text
 from sqlalchemy.orm import Session, joinedload
 
 from auth import TelegramUser, get_current_restaurant_admin, get_telegram_user
@@ -712,12 +712,11 @@ def get_kds_orders(
     #
     # P1-02 fix: history statuses (completed/cancelled) are restricted to the
     # current local day, derived from location.timezone (IANA, e.g. "Asia/Tashkent").
-    # created_at is stored as TIMESTAMP WITH TIME ZONE (UTC).
-    # We convert it to the location's local date via AT TIME ZONE before comparing
-    # to CURRENT_DATE AT TIME ZONE — the same pattern used in routers/analytics.py.
+    # created_at is stored as TIMESTAMP WITH TIME ZONE (UTC in PostgreSQL).
+    # We compare (created_at AT TIME ZONE tz)::date to CURRENT_DATE AT TIME ZONE tz
+    # using a parameterised text() fragment — the same approach used in analytics.py.
     #
-    # location.timezone is NOT NULL with server_default "Asia/Tashkent" (models/tenant.py),
-    # so the fallback is a safety net only.
+    # location.timezone is NOT NULL with server_default "Asia/Tashkent" (models/tenant.py).
     tz = location.timezone or "Asia/Tashkent"
 
     # Base query — double tenant filter always applied.
@@ -735,19 +734,21 @@ def get_kds_orders(
 
     if include_history:
         # Active statuses: no date restriction.
-        # History statuses: today only in location's local timezone.
-        today_local = func.current_date().op("AT TIME ZONE")(tz)
-        created_local_date = cast(
-            Order.created_at.op("AT TIME ZONE")(tz),
-            Date,
-        )
+        # History statuses (completed/cancelled): today only in location's timezone.
+        # The text() fragment is parameterised — no SQL injection risk.
+        today_filter = text(
+            "(orders.created_at AT TIME ZONE :tz)::date"
+            " = (CURRENT_TIMESTAMP AT TIME ZONE :tz)::date"
+        ).bindparams(tz=tz)
+        active_statuses_tuple = tuple(_KDS_ACTIVE_STATUSES)
+        history_statuses_tuple = tuple(_KDS_HISTORY_STATUSES)
         orders = (
             base_q
             .filter(
-                Order.status.in_(_KDS_ACTIVE_STATUSES)
+                Order.status.in_(active_statuses_tuple)
                 | (
-                    Order.status.in_(_KDS_HISTORY_STATUSES)
-                    & (created_local_date == cast(today_local, Date))
+                    Order.status.in_(history_statuses_tuple)
+                    & today_filter
                 )
             )
             .order_by(Order.created_at.asc())
