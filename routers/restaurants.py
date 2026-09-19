@@ -351,12 +351,8 @@ def get_restaurant_by_slug(
             .order_by(Location.id)
             .first()
         )
-        # If no active Location exists → 404 (inactive restaurant context)
-        if _loc is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Ресторан не найден",
-            )
+        # If no active Location exists — graceful degradation (backward compat)
+        # location_id will be null in response; table lookup will still 404 correctly
 
     _settings_source = _loc if _loc is not None else restaurant
 
