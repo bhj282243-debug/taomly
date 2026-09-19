@@ -833,3 +833,386 @@ def test_billing_subscription_scoped_to_restaurant(db, restaurant, tg_user):
         # (Free plan — нормально, если подписки нет)
     finally:
         app.dependency_overrides.clear()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PHASE 11 — QR / TABLE COMMERCE SECURITY
+# ══════════════════════════════════════════════════════════════════════════════
+# T-QR-01..09:    QR resolution via location slug
+# T-COMPAT-01..05: backward compatibility (restaurant.slug → dual lookup)
+# T-TABLE-01..06: public table lookup endpoint
+# T-IDOR-01..04:  tenant isolation for table context
+# ══════════════════════════════════════════════════════════════════════════════
+
+from fastapi.testclient import TestClient as _TestClient
+
+
+def _public_client(db):
+    """Unauthenticated TestClient for public endpoints."""
+    from database import get_db
+    app.dependency_overrides[get_db] = lambda: db
+    c = _TestClient(app, raise_server_exceptions=True)
+    return c
+
+
+# ── QR Resolution ─────────────────────────────────────────────────────────
+
+class TestPhase11QrResolution:
+    """T-QR-01..09: QR URL resolves via location slug to correct context."""
+
+    def test_qr01_location_slug_returns_correct_restaurant(
+        self, db, restaurant, location
+    ):
+        """T-QR-01: location_slug → correct restaurant."""
+        c = _public_client(db)
+        r = c.get(f"/api/restaurants/{location.slug}")
+        assert r.status_code == 200, r.text
+        assert r.json()["id"] == restaurant.id
+
+    def test_qr02_location_slug_returns_correct_location_id(
+        self, db, restaurant, location
+    ):
+        """T-QR-02: location_slug → correct location_id in response."""
+        c = _public_client(db)
+        r = c.get(f"/api/restaurants/{location.slug}")
+        assert r.status_code == 200, r.text
+        assert r.json()["location_id"] == location.id
+
+    def test_qr03_table_lookup_by_location_slug_returns_table_id(
+        self, db, restaurant, location, table
+    ):
+        """T-QR-03: location_slug + table_number → correct table_id."""
+        c = _public_client(db)
+        r = c.get(f"/api/restaurants/{location.slug}/table/{table.table_number}")
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert data["table_id"] == table.id
+        assert data["location_id"] == location.id
+        assert data["restaurant_id"] == restaurant.id
+
+    def test_qr04_unknown_slug_returns_404(self, db):
+        """T-QR-04: unknown slug → 404."""
+        c = _public_client(db)
+        r = c.get("/api/restaurants/does-not-exist-p11")
+        assert r.status_code == 404, r.text
+
+    def test_qr05_unknown_table_number_returns_404(
+        self, db, restaurant, location
+    ):
+        """T-QR-05: valid location slug + nonexistent table_number → 404."""
+        c = _public_client(db)
+        r = c.get(f"/api/restaurants/{location.slug}/table/NO-SUCH-TABLE")
+        assert r.status_code == 404, r.text
+
+    def test_qr06_inactive_location_returns_404(
+        self, db, restaurant, location
+    ):
+        """T-QR-06: inactive location slug → 404."""
+        location.is_active = False
+        db.flush()
+        c = _public_client(db)
+        r = c.get(f"/api/restaurants/{location.slug}")
+        assert r.status_code == 404, r.text
+        location.is_active = True
+        db.flush()
+
+    def test_qr07_multi_location_a1_resolves_to_a1_table(
+        self, db, restaurant, location, location_a2
+    ):
+        """T-QR-07: multi-location: location_A1 slug + table "5" → table in A1."""
+        # Create table "5" in both locations
+        t_a1 = RestaurantTable(
+            restaurant_id=restaurant.id,
+            location_id=location.id,
+            table_number="MULTI-5",
+        )
+        t_a2 = RestaurantTable(
+            restaurant_id=restaurant.id,
+            location_id=location_a2.id,
+            table_number="MULTI-5",
+        )
+        db.add_all([t_a1, t_a2])
+        db.flush()
+
+        c = _public_client(db)
+        r = c.get(f"/api/restaurants/{location.slug}/table/MULTI-5")
+        assert r.status_code == 200, r.text
+        assert r.json()["table_id"] == t_a1.id
+        assert r.json()["location_id"] == location.id
+
+    def test_qr08_multi_location_a2_resolves_to_a2_table(
+        self, db, restaurant, location, location_a2
+    ):
+        """T-QR-08: multi-location: location_A2 slug + table "5" → table in A2."""
+        t_a1 = RestaurantTable(
+            restaurant_id=restaurant.id,
+            location_id=location.id,
+            table_number="MULTI-6",
+        )
+        t_a2 = RestaurantTable(
+            restaurant_id=restaurant.id,
+            location_id=location_a2.id,
+            table_number="MULTI-6",
+        )
+        db.add_all([t_a1, t_a2])
+        db.flush()
+
+        c = _public_client(db)
+        r = c.get(f"/api/restaurants/{location_a2.slug}/table/MULTI-6")
+        assert r.status_code == 200, r.text
+        assert r.json()["table_id"] == t_a2.id
+        assert r.json()["location_id"] == location_a2.id
+
+    def test_qr09_backward_compat_restaurant_slug_single_location(
+        self, db, restaurant, location
+    ):
+        """T-QR-09: restaurant.slug == location.slug for single-location → resolves correctly."""
+        # The invariant: location.slug == restaurant.slug set at restaurant creation
+        assert location.slug == restaurant.slug
+        c = _public_client(db)
+        r = c.get(f"/api/restaurants/{restaurant.slug}")
+        assert r.status_code == 200, r.text
+        assert r.json()["id"] == restaurant.id
+
+
+# ── Backward Compatibility ─────────────────────────────────────────────────
+
+class TestPhase11BackwardCompat:
+    """T-COMPAT-01..05: dual-lookup backward compatibility."""
+
+    def test_compat01_location_slug_resolves(self, db, restaurant, location):
+        """T-COMPAT-01: slug = location.slug → 200, correct restaurant."""
+        c = _public_client(db)
+        r = c.get(f"/api/restaurants/{location.slug}")
+        assert r.status_code == 200
+        assert r.json()["id"] == restaurant.id
+
+    def test_compat02_restaurant_slug_single_location(self, db, restaurant, location):
+        """T-COMPAT-02: slug = restaurant.slug, single active location → 200."""
+        # For single-location, restaurant.slug == location.slug (invariant)
+        c = _public_client(db)
+        r = c.get(f"/api/restaurants/{restaurant.slug}")
+        assert r.status_code == 200
+        assert r.json()["id"] == restaurant.id
+        assert r.json()["location_id"] == location.id
+
+    def test_compat03_restaurant_slug_multi_location_returns_200(
+        self, db, restaurant, location, location_a2
+    ):
+        """T-COMPAT-03: slug = restaurant.slug, multiple locations → 200, first location."""
+        # location.slug == restaurant.slug by invariant → Step 1 hits location directly
+        c = _public_client(db)
+        r = c.get(f"/api/restaurants/{restaurant.slug}")
+        assert r.status_code == 200
+        assert r.json()["id"] == restaurant.id
+
+    def test_compat04_unknown_slug_returns_404(self, db):
+        """T-COMPAT-04: unknown slug → 404."""
+        c = _public_client(db)
+        r = c.get("/api/restaurants/totally-unknown-slug-p11")
+        assert r.status_code == 404
+
+    def test_compat05_existing_qr_with_restaurant_slug_still_works(
+        self, db, restaurant, location, table
+    ):
+        """T-COMPAT-05: old QR format with restaurant.slug still resolves table correctly."""
+        # restaurant.slug == location.slug for single-location restaurants
+        c = _public_client(db)
+        r = c.get(f"/api/restaurants/{restaurant.slug}/table/{table.table_number}")
+        assert r.status_code == 200, r.text
+        assert r.json()["table_id"] == table.id
+
+
+# ── Public Table Lookup ────────────────────────────────────────────────────
+
+class TestPhase11TableLookup:
+    """T-TABLE-01..06: GET /api/restaurants/{slug}/table/{table_number}"""
+
+    def test_table01_valid_lookup_returns_all_required_fields(
+        self, db, restaurant, location, table
+    ):
+        """T-TABLE-01: valid lookup → 200 with table_id, location_id, restaurant_id."""
+        c = _public_client(db)
+        r = c.get(f"/api/restaurants/{location.slug}/table/{table.table_number}")
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert data["table_id"] == table.id
+        assert data["table_number"] == table.table_number
+        assert data["location_id"] == location.id
+        assert data["restaurant_id"] == restaurant.id
+        assert "location_name" in data
+        assert "restaurant_name" in data
+
+    def test_table02_unknown_slug_returns_404(self, db):
+        """T-TABLE-02: unknown slug → 404."""
+        c = _public_client(db)
+        r = c.get("/api/restaurants/no-such-slug-p11/table/1")
+        assert r.status_code == 404
+
+    def test_table03_unknown_table_number_returns_404(
+        self, db, restaurant, location
+    ):
+        """T-TABLE-03: valid slug + unknown table_number → 404."""
+        c = _public_client(db)
+        r = c.get(f"/api/restaurants/{location.slug}/table/NO-SUCH-999")
+        assert r.status_code == 404
+
+    def test_table04_inactive_location_returns_404(
+        self, db, restaurant, location, table
+    ):
+        """T-TABLE-04: inactive location → 404."""
+        location.is_active = False
+        db.flush()
+        c = _public_client(db)
+        r = c.get(f"/api/restaurants/{location.slug}/table/{table.table_number}")
+        assert r.status_code == 404
+        location.is_active = True
+        db.flush()
+
+    def test_table05_response_does_not_contain_internal_secrets(
+        self, db, restaurant, location, table
+    ):
+        """T-TABLE-05: response must NOT contain telegram_bot_token or other secrets."""
+        c = _public_client(db)
+        r = c.get(f"/api/restaurants/{location.slug}/table/{table.table_number}")
+        assert r.status_code == 200
+        raw = r.text
+        assert "bot_token" not in raw
+        assert "password" not in raw
+        assert "secret" not in raw
+
+    def test_table06_cross_slug_isolation(
+        self, db, restaurant, location, table, restaurant2, location2
+    ):
+        """T-TABLE-06: restaurant A slug cannot access restaurant B tables."""
+        # Create table with same number in restaurant B
+        t_b = RestaurantTable(
+            restaurant_id=restaurant2.id,
+            location_id=location2.id,
+            table_number=table.table_number,
+        )
+        db.add(t_b)
+        db.flush()
+
+        c = _public_client(db)
+        # restaurant A slug + table_number → should return restaurant A table, not B
+        r = c.get(f"/api/restaurants/{location.slug}/table/{table.table_number}")
+        assert r.status_code == 200
+        assert r.json()["restaurant_id"] == restaurant.id
+        assert r.json()["table_id"] == table.id  # not t_b.id
+
+
+# ── IDOR Isolation ─────────────────────────────────────────────────────────
+
+class TestPhase11IdorIsolation:
+    """T-IDOR-01..04: tenant isolation for table context."""
+
+    def test_idor01_foreign_restaurant_table_in_checkout_denied(
+        self, db, restaurant, location, tg_user,
+        restaurant2, location2, product
+    ):
+        """T-IDOR-01: Restaurant A context + table from Restaurant B → 404 at checkout."""
+        from auth import get_telegram_user
+        from database import get_db
+
+        foreign_table = RestaurantTable(
+            restaurant_id=restaurant2.id,
+            location_id=location2.id,
+            table_number="IDOR-B",
+        )
+        db.add(foreign_table)
+        db.flush()
+
+        def _db():
+            yield db
+
+        app.dependency_overrides[get_db] = _db
+        app.dependency_overrides[get_telegram_user] = lambda: tg_user
+        headers = {
+            "X-Restaurant-Id": str(restaurant.id),
+            "X-Location-Id": str(location.id),
+            "X-Cart-Session": "idor-test-session-01",
+        }
+        with _TestClient(app, raise_server_exceptions=True, headers=headers) as c:
+            c.post("/api/cart/items", json={"product_id": product.id, "quantity": 1})
+            r = c.post("/api/cart/checkout", json={
+                "order_type": "dine_in",
+                "table_id": foreign_table.id,
+            })
+        assert r.status_code == 404, r.text
+        app.dependency_overrides.clear()
+
+    def test_idor02_foreign_location_table_in_checkout_denied(
+        self, db, restaurant, location, tg_user, location_a2, product
+    ):
+        """T-IDOR-02: Restaurant A, Location A1 context + table in Location A2 → 404."""
+        from auth import get_telegram_user
+        from database import get_db
+
+        table_a2 = RestaurantTable(
+            restaurant_id=restaurant.id,
+            location_id=location_a2.id,
+            table_number="IDOR-A2",
+        )
+        db.add(table_a2)
+        db.flush()
+
+        def _db():
+            yield db
+
+        app.dependency_overrides[get_db] = _db
+        app.dependency_overrides[get_telegram_user] = lambda: tg_user
+        headers = {
+            "X-Restaurant-Id": str(restaurant.id),
+            "X-Location-Id": str(location.id),   # Location A1 context
+            "X-Cart-Session": "idor-test-session-02",
+        }
+        with _TestClient(app, raise_server_exceptions=True, headers=headers) as c:
+            c.post("/api/cart/items", json={"product_id": product.id, "quantity": 1})
+            r = c.post("/api/cart/checkout", json={
+                "order_type": "dine_in",
+                "table_id": table_a2.id,   # Table in Location A2
+            })
+        assert r.status_code == 404, r.text
+        app.dependency_overrides.clear()
+
+    def test_idor03_foreign_location_id_header_rejected_by_cart_context(
+        self, db, restaurant, location, tg_user, location2
+    ):
+        """T-IDOR-03: X-Location-Id from different restaurant → CartContext → 404 (existing protection, regression)."""
+        from auth import get_telegram_user
+        from database import get_db
+
+        def _db():
+            yield db
+
+        app.dependency_overrides[get_db] = _db
+        app.dependency_overrides[get_telegram_user] = lambda: tg_user
+        headers = {
+            "X-Restaurant-Id": str(restaurant.id),
+            "X-Location-Id": str(location2.id),   # foreign location
+            "X-Cart-Session": "idor-test-session-03",
+        }
+        with _TestClient(app, raise_server_exceptions=True, headers=headers) as c:
+            r = c.get("/api/cart")
+        # CartContext should reject foreign location
+        assert r.status_code in (404, 400), r.text
+        app.dependency_overrides.clear()
+
+    def test_idor04_table_lookup_cross_slug_isolation(
+        self, db, restaurant, location, table, restaurant2, location2
+    ):
+        """T-IDOR-04: slug of restaurant A cannot access tables of restaurant B."""
+        t_b = RestaurantTable(
+            restaurant_id=restaurant2.id,
+            location_id=location2.id,
+            table_number="IDOR-CROSS",
+        )
+        db.add(t_b)
+        db.flush()
+
+        c = _public_client(db)
+        # Use slug of restaurant A, try to find table "IDOR-CROSS" — should 404
+        # because that table is in restaurant B's location, not restaurant A's
+        r = c.get(f"/api/restaurants/{location.slug}/table/IDOR-CROSS")
+        assert r.status_code == 404, r.text
