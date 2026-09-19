@@ -300,29 +300,59 @@ def get_restaurant_by_slug(
     Возвращает публичную информацию о ресторане по slug.
     Phase 4: ?lang=uz/ru/en для локализации меню. Дефолт: Location.language → "uz".
     """
-    restaurant = db.query(Restaurant).filter(
-        Restaurant.slug == slug.lower().strip(),
-        Restaurant.is_active == True,
-    ).first()
+    _slug = slug.lower().strip()
 
-    if not restaurant:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Ресторан не найден",
-        )
+    # Phase 11 — dual lookup (Architecture v2 Section 2):
+    # Step 1: try Location.slug first (canonical Phase 11 QR path).
+    # Step 2: fallback to Restaurant.slug for backward compatibility
+    #         (existing QR, admin login, single-location restaurants).
+    # Invariant: for every restaurant, location.slug == restaurant.slug for
+    # the first Location (enforced at creation in agency.py), so existing
+    # QR and admin flows always hit Step 1 without needing the fallback.
 
-    # S1-7: operational settings берутся из первой активной Location.
-    # Если Location не найдена (баг данных) — fallback на Restaurant поля,
-    # чтобы публичный эндпоинт не упал с 500 (graceful degradation).
     _loc = (
         db.query(Location)
         .filter(
-            Location.restaurant_id == restaurant.id,
+            Location.slug == _slug,
             Location.is_active == True,
         )
-        .order_by(Location.id)
         .first()
     )
+
+    if _loc is not None:
+        # Step 1 hit: derive restaurant from location
+        restaurant = db.query(Restaurant).filter(
+            Restaurant.id == _loc.restaurant_id,
+            Restaurant.is_active == True,
+        ).first()
+        if not restaurant:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ресторан не найден",
+            )
+    else:
+        # Step 2: fallback — try Restaurant.slug
+        restaurant = db.query(Restaurant).filter(
+            Restaurant.slug == _slug,
+            Restaurant.is_active == True,
+        ).first()
+        if not restaurant:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ресторан не найден",
+            )
+        # Find the corresponding Location (first active, ORDER BY id — existing behavior)
+        _loc = (
+            db.query(Location)
+            .filter(
+                Location.restaurant_id == restaurant.id,
+                Location.is_active == True,
+            )
+            .order_by(Location.id)
+            .first()
+        )
+        # If no Location exists at all, graceful degradation continues below
+
     _settings_source = _loc if _loc is not None else restaurant
 
     # Phase 3: timezone для schedule evaluation.
@@ -488,6 +518,7 @@ def list_tables(
         TableItem(
             id=t.id,
             table_number=t.table_number,
+            location_id=t.location_id,          # Phase 11: required for admin QR URL generation
             created_at=t.created_at.isoformat(),
         )
         for t in tables
@@ -516,20 +547,48 @@ def create_table(
             detail=f"Стол '{data.table_number}' уже существует",
         )
 
-    # S1-2: resolve location_id for this restaurant.
-    # Each restaurant has exactly 1 Location (migration 0010 backfill guarantee).
-    # We take the first active location; fallback to any location if none active.
-    _loc = (
-        db.query(Location)
-        .filter(Location.restaurant_id == restaurant.id)
-        .order_by(Location.id)
-        .first()
-    )
-    if _loc is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Локация ресторана не найдена. Обратитесь к администратору.",
+    # Phase 11: if location_id supplied — validate ownership and use it.
+    # If not supplied — backward-compatible fallback to first active Location.
+    # (For multi-location restaurants the caller SHOULD supply location_id explicitly.)
+    if data.location_id is not None:
+        _loc = (
+            db.query(Location)
+            .filter(
+                Location.id == data.location_id,
+                Location.restaurant_id == restaurant.id,
+                Location.is_active == True,
+            )
+            .first()
         )
+        if _loc is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Локация не найдена или не принадлежит ресторану.",
+            )
+    else:
+        # Compatibility fallback — first active Location (ORDER BY id).
+        _loc = (
+            db.query(Location)
+            .filter(
+                Location.restaurant_id == restaurant.id,
+                Location.is_active == True,
+            )
+            .order_by(Location.id)
+            .first()
+        )
+        if _loc is None:
+            # Last resort: any location (original behaviour for edge cases)
+            _loc = (
+                db.query(Location)
+                .filter(Location.restaurant_id == restaurant.id)
+                .order_by(Location.id)
+                .first()
+            )
+        if _loc is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Локация ресторана не найдена. Обратитесь к администратору.",
+            )
 
     table = RestaurantTable(
         restaurant_id=restaurant.id,
@@ -557,7 +616,7 @@ def create_table(
         table.table_number,
         table.id,
     )
-    return TableCreateResponse(ok=True, id=table.id, table_number=table.table_number)
+    return TableCreateResponse(ok=True, id=table.id, table_number=table.table_number, location_id=table.location_id)
 
 
 @router.delete("/me/tables/{table_id}", status_code=204)
@@ -793,27 +852,62 @@ def delete_location(
 @router.get("/{slug}/table/{table_number}", response_model=TableResponse)
 def get_table_by_number(slug: str, table_number: str, db: Session = Depends(get_db)):
     """
-    Возвращает данные стола по slug ресторана и номеру стола.
+    Возвращает данные стола по slug (Location.slug) и номеру стола.
 
-    Используется при сканировании QR-кода:
-      QR → /restaurants/{slug}/table/{table_number}
-      → фронтенд получает restaurant_id и table_id
-      → кладёт в X-Restaurant-Id и передаёт в заказ
+    Phase 11: slug = Location.slug (canonical QR path).
+    Backward compat: для ресторанов с одной Location location.slug == restaurant.slug
+    (инвариант, установленный при создании ресторана в agency.py).
+
+    QR URL: /app?slug={location_slug}&table={table_number}&type=dine_in
+      → GET /api/restaurants/{location_slug}/table/{table_number}
+      → фронтенд получает restaurant_id, location_id, table_id
+      → устанавливает X-Restaurant-Id, X-Location-Id, table_id для checkout
 
     Авторизация не требуется — публичный эндпоинт.
     """
-    restaurant = db.query(Restaurant).filter(
-        Restaurant.slug == slug.lower().strip(),
-        Restaurant.is_active == True,
-    ).first()
-    if not restaurant:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Ресторан не найден",
-        )
+    _slug = slug.lower().strip()
 
+    # Phase 11: resolve via Location.slug (supports multi-location correctly).
+    # Dual-lookup for backward compatibility — same strategy as get_restaurant_by_slug.
+    location = db.query(Location).filter(
+        Location.slug == _slug,
+        Location.is_active == True,
+    ).first()
+
+    if location is not None:
+        restaurant = db.query(Restaurant).filter(
+            Restaurant.id == location.restaurant_id,
+            Restaurant.is_active == True,
+        ).first()
+        if not restaurant:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ресторан не найден",
+            )
+    else:
+        # Fallback: try Restaurant.slug (old QR backward compat)
+        restaurant = db.query(Restaurant).filter(
+            Restaurant.slug == _slug,
+            Restaurant.is_active == True,
+        ).first()
+        if not restaurant:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ресторан не найден",
+            )
+        location = db.query(Location).filter(
+            Location.restaurant_id == restaurant.id,
+            Location.is_active == True,
+        ).order_by(Location.id).first()
+        if not location:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ресторан не найден",
+            )
+
+    # Resolve table within the identified location (unambiguous for multi-location)
     table = db.query(RestaurantTable).filter(
-        RestaurantTable.restaurant_id == restaurant.id,
+        RestaurantTable.location_id == location.id,
         RestaurantTable.table_number == table_number,
     ).first()
     if not table:
@@ -825,7 +919,9 @@ def get_table_by_number(slug: str, table_number: str, db: Session = Depends(get_
     return {
         "restaurant_id": restaurant.id,
         "restaurant_name": restaurant.name,
-        "slug": restaurant.slug,
+        "slug": location.slug,
         "table_id": table.id,
         "table_number": table.table_number,
+        "location_id": location.id,
+        "location_name": location.name,
     }
