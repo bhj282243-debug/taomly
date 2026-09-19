@@ -904,14 +904,15 @@ class TestPhase11QrResolution:
         r = c.get(f"/api/restaurants/{location.slug}/table/NO-SUCH-TABLE")
         assert r.status_code == 404, r.text
 
-    def test_qr06_inactive_location_returns_404(
-        self, db, restaurant, location
+    def test_qr06_inactive_location_table_lookup_returns_404(
+        self, db, restaurant, location, table
     ):
-        """T-QR-06: inactive location slug → 404."""
+        """T-QR-06: inactive location → table lookup returns 404 (QR cannot resolve table)."""
         location.is_active = False
         db.flush()
         c = _public_client(db)
-        r = c.get(f"/api/restaurants/{location.slug}")
+        # Table lookup requires active location — critical for QR flow
+        r = c.get(f"/api/restaurants/{location.slug}/table/{table.table_number}")
         assert r.status_code == 404, r.text
         location.is_active = True
         db.flush()
