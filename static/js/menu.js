@@ -70,8 +70,17 @@ async function loadMenu(){
 // ── TABLE RESOLVER ────────────────────────────────────────────────────────────
 
 async function resolveTableId(){
-  try{const r=await fetch(`${API_BASE}/api/restaurants/${restaurantSlug}/table/${tableNumber}`);if(r.ok){const d=await r.json();tableDbId=d.table_id;}}
-  catch(e){tableDbId=null;}
+  try{
+    const r=await fetch(`${API_BASE}/api/restaurants/${restaurantSlug}/table/${tableNumber}`);
+    if(r.ok){
+      const d=await r.json();
+      tableDbId=d.table_id||null;
+      // Phase 11: use location_id from table lookup response for precise Cart context.
+      // Overrides the location_id received from the restaurant endpoint, which is
+      // always the first Location. For multi-location, the table knows its own Location.
+      if(d.location_id){_cartLocationId=d.location_id;}
+    }
+  }catch(e){tableDbId=null;}
 }
 
 // ── CATEGORIES NAV ────────────────────────────────────────────────────────────
