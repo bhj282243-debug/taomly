@@ -787,3 +787,256 @@ class TestStateMachine:
         client.patch(f"/api/orders/{order_id}/status", json={"status": "cancelled"})
         r = client.patch(f"/api/orders/{order_id}/status", json={"status": "accepted"})
         assert r.status_code in (400, 422)
+
+
+# ──────────────────────────────────────────
+# PHASE 11 — QR / TABLE COMMERCE SECURITY
+# ──────────────────────────────────────────
+# T-CHK-01..10: checkout table ownership validation
+# T-ADMIN-01..05: table create/list with location_id
+# ──────────────────────────────────────────
+
+class TestPhase11TableCheckoutSecurity:
+    """
+    Phase 11 — object-level authorization on table_id at checkout.
+
+    Security rule (Architecture v2 Section 7):
+      table.restaurant_id == current_restaurant_id
+      AND table.location_id == current_location_id
+      → 404 on ANY mismatch (no information leakage)
+
+    Non-dine-in + table_id → 422
+    """
+
+    # ── T-CHK-01: valid dine_in checkout ─────────────────────────────
+
+    def test_chk01_dine_in_valid_table_creates_order(
+        self, checkout_client, product, seeded_cart, table, db
+    ):
+        """T-CHK-01: dine_in + valid table (correct restaurant + location) → 201."""
+        r = checkout_client.post("/api/cart/checkout", json={
+            "order_type": "dine_in",
+            "table_id": table.id,
+        })
+        assert r.status_code == 201, r.text
+        data = r.json()
+        assert data["order_type"] == "dine_in"
+        assert data["table_id"] == table.id
+
+    # ── T-CHK-02: dine_in without table_id ──────────────────────────
+
+    def test_chk02_dine_in_null_table_id_returns_422(
+        self, checkout_client, product, seeded_cart
+    ):
+        """T-CHK-02: dine_in + table_id = null → 422."""
+        r = checkout_client.post("/api/cart/checkout", json={"order_type": "dine_in"})
+        assert r.status_code == 422, r.text
+
+    # ── T-CHK-03: foreign restaurant table ─────────────────────────
+
+    def test_chk03_foreign_restaurant_table_returns_404(
+        self, checkout_client, product, seeded_cart, db,
+        restaurant2, location2
+    ):
+        """T-CHK-03: dine_in + table from a different restaurant → 404."""
+        from models import RestaurantTable
+        foreign_table = RestaurantTable(
+            restaurant_id=restaurant2.id,
+            location_id=location2.id,
+            table_number="X-FOREIGN",
+        )
+        db.add(foreign_table)
+        db.flush()
+
+        r = checkout_client.post("/api/cart/checkout", json={
+            "order_type": "dine_in",
+            "table_id": foreign_table.id,
+        })
+        assert r.status_code == 404, r.text
+        assert "Table not found" in r.text or r.status_code == 404
+
+    # ── T-CHK-04: same restaurant, foreign location table ───────────
+
+    def test_chk04_foreign_location_table_returns_404(
+        self, checkout_client, product, seeded_cart, db,
+        restaurant, location_a2
+    ):
+        """T-CHK-04: dine_in + table in same restaurant but different location → 404."""
+        from models import RestaurantTable
+        table_a2 = RestaurantTable(
+            restaurant_id=restaurant.id,
+            location_id=location_a2.id,
+            table_number="A2-99",
+        )
+        db.add(table_a2)
+        db.flush()
+
+        r = checkout_client.post("/api/cart/checkout", json={
+            "order_type": "dine_in",
+            "table_id": table_a2.id,
+        })
+        assert r.status_code == 404, r.text
+
+    # ── T-CHK-05: nonexistent table_id ───────────────────────────────
+
+    def test_chk05_nonexistent_table_id_returns_404(
+        self, checkout_client, product, seeded_cart
+    ):
+        """T-CHK-05: dine_in + table_id that does not exist in DB → 404."""
+        r = checkout_client.post("/api/cart/checkout", json={
+            "order_type": "dine_in",
+            "table_id": 999999,
+        })
+        assert r.status_code == 404, r.text
+
+    # ── T-CHK-06: delivery + table_id rejected ───────────────────────
+
+    def test_chk06_delivery_with_table_id_returns_422(
+        self, checkout_client, product, seeded_cart, table
+    ):
+        """T-CHK-06: delivery + table_id → 422 (table_id not allowed)."""
+        r = checkout_client.post("/api/cart/checkout", json={
+            "order_type": "delivery",
+            "address": "ул. Навои, 1",
+            "table_id": table.id,
+        })
+        assert r.status_code == 422, r.text
+
+    # ── T-CHK-07: takeaway + table_id rejected ───────────────────────
+
+    def test_chk07_takeaway_with_table_id_returns_422(
+        self, checkout_client, product, seeded_cart, table
+    ):
+        """T-CHK-07: takeaway + table_id → 422 (table_id not allowed)."""
+        r = checkout_client.post("/api/cart/checkout", json={
+            "order_type": "takeaway",
+            "table_id": table.id,
+        })
+        assert r.status_code == 422, r.text
+
+    # ── T-CHK-08: delivery without table_id → normal ─────────────────
+
+    def test_chk08_delivery_null_table_id_creates_order(
+        self, checkout_client, product, seeded_cart
+    ):
+        """T-CHK-08: delivery + table_id null → 201 normal checkout."""
+        r = checkout_client.post("/api/cart/checkout", json=CHECKOUT_DELIVERY)
+        assert r.status_code == 201, r.text
+
+    # ── T-CHK-09: takeaway without table_id → normal ─────────────────
+
+    def test_chk09_takeaway_null_table_id_creates_order(
+        self, checkout_client, product, seeded_cart
+    ):
+        """T-CHK-09: takeaway + table_id null → 201 normal checkout."""
+        r = checkout_client.post("/api/cart/checkout", json=CHECKOUT_TAKEAWAY)
+        assert r.status_code == 201, r.text
+
+    # ── T-CHK-10: manipulated foreign table_id → 404 ─────────────────
+
+    def test_chk10_manipulated_foreign_table_id_denied(
+        self, checkout_client, product, seeded_cart, db,
+        restaurant2, location2
+    ):
+        """T-CHK-10: client manipulates table_id to a foreign table → 404 (IDOR protection)."""
+        from models import RestaurantTable
+        foreign_table = RestaurantTable(
+            restaurant_id=restaurant2.id,
+            location_id=location2.id,
+            table_number="MANIPULATED",
+        )
+        db.add(foreign_table)
+        db.flush()
+
+        r = checkout_client.post("/api/cart/checkout", json={
+            "order_type": "dine_in",
+            "table_id": foreign_table.id,
+        })
+        assert r.status_code == 404, r.text
+
+
+class TestPhase11TableAdminAPI:
+    """
+    Phase 11 — table create/list with location_id.
+    T-ADMIN-01..05
+    """
+
+    def _admin_client(self, db, restaurant):
+        from auth import get_current_restaurant_admin
+        def _db():
+            yield db
+        app.dependency_overrides[get_db] = _db
+        app.dependency_overrides[get_current_restaurant_admin] = lambda: restaurant
+        c = TestClient(app, raise_server_exceptions=True)
+        return c
+
+    def test_admin01_create_without_location_id_uses_first_location(
+        self, db, restaurant, location
+    ):
+        """T-ADMIN-01: create_table without location_id → created in first active location."""
+        c = self._admin_client(db, restaurant)
+        r = c.post("/api/restaurants/me/tables", json={"table_number": "P11-AUTO"})
+        assert r.status_code == 201, r.text
+        data = r.json()
+        assert data["location_id"] == location.id
+        app.dependency_overrides.clear()
+
+    def test_admin02_create_with_valid_location_id(
+        self, db, restaurant, location
+    ):
+        """T-ADMIN-02: create_table with valid location_id → created in that location."""
+        c = self._admin_client(db, restaurant)
+        r = c.post("/api/restaurants/me/tables", json={
+            "table_number": "P11-LOC",
+            "location_id": location.id,
+        })
+        assert r.status_code == 201, r.text
+        data = r.json()
+        assert data["location_id"] == location.id
+        app.dependency_overrides.clear()
+
+    def test_admin03_create_with_foreign_location_id_rejected(
+        self, db, restaurant, location, restaurant2, location2
+    ):
+        """T-ADMIN-03: create_table with foreign location_id → 422."""
+        c = self._admin_client(db, restaurant)
+        r = c.post("/api/restaurants/me/tables", json={
+            "table_number": "P11-FOREIGN",
+            "location_id": location2.id,   # belongs to restaurant2
+        })
+        assert r.status_code == 422, r.text
+        app.dependency_overrides.clear()
+
+    def test_admin04_list_tables_returns_location_id(
+        self, db, restaurant, location, table
+    ):
+        """T-ADMIN-04: list_tables → each TableItem contains location_id."""
+        c = self._admin_client(db, restaurant)
+        r = c.get("/api/restaurants/me/tables")
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert data["total"] >= 1
+        for t in data["tables"]:
+            assert "location_id" in t, f"location_id missing in table {t}"
+            assert t["location_id"] is not None
+        app.dependency_overrides.clear()
+
+    def test_admin05_list_tables_only_own_restaurant(
+        self, db, restaurant, location, table, restaurant2, location2
+    ):
+        """T-ADMIN-05: list_tables returns only tables of current restaurant."""
+        from models import RestaurantTable
+        foreign = RestaurantTable(
+            restaurant_id=restaurant2.id,
+            location_id=location2.id,
+            table_number="R2-ONLY",
+        )
+        db.add(foreign)
+        db.flush()
+
+        c = self._admin_client(db, restaurant)
+        r = c.get("/api/restaurants/me/tables")
+        assert r.status_code == 200, r.text
+        ids = [t["id"] for t in r.json()["tables"]]
+        assert foreign.id not in ids
+        app.dependency_overrides.clear()
