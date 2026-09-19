@@ -170,6 +170,10 @@ class TableCreateRequest(BaseModel):
     table_number: str = Field(
         ..., min_length=1, max_length=50, description="Номер или название стола (1, 2, VIP...)"
     )
+    location_id: Optional[int] = Field(
+        None,
+        description="ID локации. Если не передан — первая активная Location (backward compat).",
+    )
 
     @field_validator("table_number")
     @classmethod
@@ -188,6 +192,7 @@ class TableCreateRequest(BaseModel):
 class TableItem(BaseModel):
     id:           int
     table_number: str
+    location_id:  int
     created_at:   str
 
     model_config = ConfigDict(from_attributes=True)
@@ -202,6 +207,7 @@ class TableCreateResponse(BaseModel):
     ok:           bool
     id:           int
     table_number: str
+    location_id:  int
 
 
 class TableResponse(BaseModel):
@@ -210,6 +216,8 @@ class TableResponse(BaseModel):
     slug:            str
     table_id:        int
     table_number:    str
+    location_id:     int
+    location_name:   str
 
     model_config = ConfigDict(from_attributes=True)
 
