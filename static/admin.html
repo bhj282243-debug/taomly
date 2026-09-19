@@ -865,7 +865,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 <script>
 const API='';
 const SESSION_KEY='taomly_admin_session';
-let AUTH_TOKEN=null,RESTAURANT_ID=null,RESTAURANT_SLUG=null,RESTAURANT_CURRENCY='UZS';
+let AUTH_TOKEN=null,RESTAURANT_ID=null,RESTAURANT_SLUG=null,RESTAURANT_CURRENCY='UZS',LOCATION_SLUG=null;
 let allOrders=[],prevNewCount=0,soundEnabled=localStorage.getItem('taomly_sound')==='true';
 let currentFilter='active',currentPage='orders',menuData=null,editingProductId=null,analyticsPeriod='30d';
 let qrTables=[],qrCurrentTab='tables',qrPageInitialized=false;
@@ -1063,7 +1063,7 @@ async function doLogin(){
     const rRes=await fetch(`${API}/api/restaurants/${slugInput}`);
     if(!rRes.ok)throw new Error(t('admin.error.not_found_title'));
     const rData=await rRes.json();
-    RESTAURANT_ID=rData.id;RESTAURANT_SLUG=slugInput;
+    RESTAURANT_ID=rData.id;RESTAURANT_SLUG=slugInput;LOCATION_SLUG=slugInput; // Phase 11: will be refined by initQrPage
     sessionStorage.setItem(SESSION_KEY,JSON.stringify({slug:slugInput,id:rData.id}));
     document.getElementById('passwordInput').value='';
     await loadApp(rData);
@@ -1971,11 +1971,15 @@ function switchQrTab(tab){
   if(tab==='takeaway'&&!_qrTakeawayDone){_qrTakeawayDone=true;setTimeout(function(){makeQR(document.getElementById('qr-takeaway-canvas'),buildQrUrl('takeaway'));},50);}
   if(tab==='delivery'&&!_qrDeliveryDone){_qrDeliveryDone=true;setTimeout(function(){makeQR(document.getElementById('qr-delivery-canvas'),buildQrUrl('delivery'));},50);}
 }
-function buildQrUrl(type,tableNumber){
-  const base=`${window.location.origin}/app`;const slug=RESTAURANT_SLUG||'';
-  if(type==='table')return`${base}?slug=${slug}&table=${encodeURIComponent(tableNumber)}&type=dine_in`;
-  if(type==='takeaway')return`${base}?slug=${slug}&type=takeaway`;
-  if(type==='delivery')return`${base}?slug=${slug}&type=delivery`;
+function buildQrUrl(type,tableNumber,locationSlug){
+  const base=`${window.location.origin}/app`;
+  // Phase 11: table QR uses location.slug (supports multi-location correctly).
+  // takeaway/delivery QR use restaurant.slug (not location-specific).
+  const tblSlug=locationSlug||LOCATION_SLUG||RESTAURANT_SLUG||'';
+  const restSlug=RESTAURANT_SLUG||'';
+  if(type==='table')return`${base}?slug=${tblSlug}&table=${encodeURIComponent(tableNumber)}&type=dine_in`;
+  if(type==='takeaway')return`${base}?slug=${restSlug}&type=takeaway`;
+  if(type==='delivery')return`${base}?slug=${restSlug}&type=delivery`;
   return base;
 }
 function makeQR(container,url){
@@ -1994,7 +1998,10 @@ function downloadQR(containerId,label){
 function generateTableQR(){
   const input=document.getElementById('newTableNumber');const num=input.value.trim();if(!num){input.focus();return;}
   if(qrTables.find(tbl=>tbl.number===num)){showToast(t('admin.qr.table_duplicate',{num}),true);input.value='';return;}
-  const url=buildQrUrl('table',num);
+  // Phase 11: determine location slug for this table number.
+  // _qrLocationsMap maps table_number → location_slug (loaded in initQrPage from API).
+  const locSlug=(_qrLocationsMap&&_qrLocationsMap[num])||LOCATION_SLUG||RESTAURANT_SLUG||'';
+  const url=buildQrUrl('table',num,locSlug);
   const canvasId=`qr-table-canvas-${num.replace(/\s+/g,'-')}`;
   const card=document.createElement('div');card.className='qr-card';card.id=`qr-table-card-${num}`;
   card.innerHTML=`
@@ -2004,17 +2011,49 @@ function generateTableQR(){
     <button class="qr-download-btn" onclick="downloadQR('${canvasId}','stol-${esc(num)}')">${esc(t('admin.qr.download_btn'))}</button>`;
   document.getElementById('qr-tables-list').prepend(card);
   makeQR(document.getElementById(canvasId),url);
-  qrTables.push({number:num});input.value='';input.focus();
+  qrTables.push({number:num,locationSlug:locSlug});input.value='';input.focus();
 }
 function removeTableQR(num){
   qrTables=qrTables.filter(t=>t.number!==num);
   const card=document.getElementById(`qr-table-card-${num}`);if(card)card.remove();
 }
 let _qrTakeawayDone=false,_qrDeliveryDone=false;
-function initQrPage(){
+// Phase 11: maps table_number → location_slug for multi-location QR generation.
+let _qrLocationsMap=null,_qrLocationsList=[];
+async function initQrPage(){
   _qrTakeawayDone=false;_qrDeliveryDone=false;
   document.getElementById('qr-takeaway-url').textContent=buildQrUrl('takeaway');
   document.getElementById('qr-delivery-url').textContent=buildQrUrl('delivery');
+  // Phase 11: load locations and tables to build location slug map.
+  try{
+    const [locRes,tblRes]=await Promise.all([
+      fetch(`${API}/api/restaurants/me/locations`,{headers:{'Authorization':`Bearer ${AUTH_TOKEN}`}}),
+      fetch(`${API}/api/restaurants/me/tables`,{headers:{'Authorization':`Bearer ${AUTH_TOKEN}`}}),
+    ]);
+    if(locRes.ok&&tblRes.ok){
+      const locData=await locRes.json();
+      const tblData=await tblRes.json();
+      _qrLocationsList=locData.locations||[];
+      // Build map: location_id → location_slug
+      const idToSlug={};
+      _qrLocationsList.forEach(loc=>{idToSlug[loc.id]=loc.slug;});
+      // Set primary LOCATION_SLUG from first active location
+      if(_qrLocationsList.length>0){LOCATION_SLUG=_qrLocationsList[0].slug;}
+      // Build map: table_number → location_slug
+      _qrLocationsMap={};
+      (tblData.tables||[]).forEach(tbl=>{
+        _qrLocationsMap[tbl.table_number]=idToSlug[tbl.location_id]||LOCATION_SLUG||RESTAURANT_SLUG||'';
+      });
+      // If multi-location: show selector hint (informational, no blocking UI)
+      if(_qrLocationsList.length>1){
+        const hint=document.getElementById('qr-location-hint');
+        if(hint){
+          hint.textContent='(' + _qrLocationsList.map(l=>l.name||l.slug).join(', ') + ')';
+          hint.style.display='block';
+        }
+      }
+    }
+  }catch(e){console.warn('Phase 11 QR init: failed to load locations/tables',e);}
 }
 
 // ── BILLING ──
