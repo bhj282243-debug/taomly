@@ -23,6 +23,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session, joinedload
 
 from models import Location, ModifierGroup, ModifierOption, Product, ProductVariant
+from models.operations import RestaurantTable
 from models.orders import Order, OrderItem, OrderItemModifier
 from modules.cart.models import Cart, CartItem, CartItemModifier
 from modules.cart.schemas import CartItemModifierResponse, CartItemResponse, CartResponse
@@ -655,6 +656,28 @@ def checkout_cart(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Table ID is required for dine_in orders.",
         )
+
+    # Phase 11: non-dine_in must NOT supply table_id
+    if order_type != "dine_in" and table_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="table_id is only allowed for dine_in orders.",
+        )
+
+    # Phase 11: dine_in table ownership validation (object-level authorization)
+    # Client-supplied table_id must belong to both the current restaurant AND location.
+    # Unified 404 on any mismatch — no information leakage about ownership structure.
+    if order_type == "dine_in" and table_id is not None:
+        table_obj = db.query(RestaurantTable).filter(
+            RestaurantTable.id == table_id,
+            RestaurantTable.restaurant_id == restaurant_id,
+            RestaurantTable.location_id == location.id,
+        ).first()
+        if not table_obj:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Table not found.",
+            )
 
     # Step 9: Create Order
     order = Order(
