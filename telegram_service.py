@@ -24,7 +24,6 @@ from typing import Optional
 
 import telebot
 
-from auth import decrypt_token
 
 logger = logging.getLogger(__name__)
 
@@ -40,25 +39,6 @@ class WebhookResult:
 def _build_webhook_url(webhook_base_url: str, slug: str) -> str:
     return f"{webhook_base_url.rstrip('/')}/webhook/{slug}"
 
-
-def verify_bot_token(bot_token: str) -> Optional[str]:
-    """
-    Проверяет токен бота через Telegram getMe.
-
-    TODO: функция не вызывается в текущей кодовой базе (F-34).
-    Планируется использовать при валидации токена в agency admin
-    перед сохранением в БД.
-
-    Returns:
-        username бота при успехе, None если токен невалиден.
-    """
-    try:
-        bot = telebot.TeleBot(bot_token)
-        me = bot.get_me()
-        return me.username
-    except Exception as exc:
-        logger.warning("verify_bot_token: токен невалиден — %s", exc)
-        return None
 
 
 def register_restaurant_webhook(
@@ -148,33 +128,4 @@ def remove_restaurant_webhook(bot_token: str, slug: str, restaurant_name: str = 
         )
 
 
-def setup_restaurant_bot_from_encrypted(
-    encrypted_token: str,
-    slug: str,
-    webhook_base_url: Optional[str],
-    webhook_secret: str,
-    restaurant_name: str = "",
-) -> WebhookResult:
-    """
-    Удобная обёртка: расшифровывает токен и регистрирует webhook.
 
-    TODO: функция не вызывается в текущей кодовой базе (F-34).
-    Планируется использовать в agency admin при создании/обновлении ресторана
-    вместо прямого вызова setup_restaurant_bot().
-    """
-    try:
-        bot_token = decrypt_token(encrypted_token)
-    except Exception:
-        logger.exception(
-            "setup_restaurant_bot_from_encrypted: не удалось расшифровать токен "
-            "ресторана «%s» (slug=%s)", restaurant_name, slug,
-        )
-        return WebhookResult(ok=False, detail="Не удалось расшифровать токен бота")
-
-    return register_restaurant_webhook(
-        bot_token=bot_token,
-        slug=slug,
-        webhook_base_url=webhook_base_url,
-        webhook_secret=webhook_secret,
-        restaurant_name=restaurant_name,
-    )
