@@ -75,22 +75,23 @@ def _bot_token_in_use(
     exclude_restaurant_id: int | None = None,
 ) -> bool:
     """
-    True если plain_token уже используется другим рестораном.
+    True если plain_token уже используется другой Location.
 
+    Phase 12: проверяет Location.telegram_bot_token_encrypted (source of truth).
     Fernet-шифрование не детерминировано — сравнить ciphertext напрямую
     нельзя, поэтому расшифровываем существующие токены и сравниваем
     в открытом виде. Приемлемо при текущем масштабе (десятки-сотни
     ресторанов): полный пересчёт архитектуры/индекса не требуется.
     """
-    query = db.query(Restaurant).filter(Restaurant.telegram_bot_token_encrypted.isnot(None))
+    query = db.query(Location).filter(Location.telegram_bot_token_encrypted.isnot(None))
     if exclude_restaurant_id is not None:
-        query = query.filter(Restaurant.id != exclude_restaurant_id)
+        query = query.filter(Location.restaurant_id != exclude_restaurant_id)
     for other in query.all():
         try:
             if decrypt_token(other.telegram_bot_token_encrypted) == plain_token:
                 return True
         except HTTPException:
-            # Повреждённый/нерасшифровываемый токен другого ресторана —
+            # Повреждённый/нерасшифровываемый токен другой локации —
             # не блокируем текущую операцию из-за чужой проблемы.
             continue
     return False
@@ -321,16 +322,12 @@ def create_restaurant(
         accent_color=data.accent_color or "#D4A853",
         welcome_text=data.welcome_text,
         custom_domain=custom_domain,
-        telegram_bot_token_encrypted=encrypted_token,
-        telegram_dispatcher_id=data.telegram_dispatcher_id,
     )
     db.add(restaurant)
 
+    # Phase 12: Telegram credentials записываются только в Location (ADR-001 source of truth).
     # S1-6: первая Location создаётся атомарно вместе с Restaurant.
-    # slug Location = slug Restaurant (backward compat: /webhook/{slug} ищет по Restaurant.slug,
-    # но Location.slug должен совпадать для будущего роутинга по QR/URL).
-    # Telegram-конфигурация дублируется в Location (ADR-001: 1 Location = 1 Bot).
-    # is_waiter_call_enabled берётся из Restaurant-уровня — REST схема передаёт его в Restaurant.
+    # slug Location = slug Restaurant (Location.slug используется для webhook routing).
     db.flush()  # получаем restaurant.id без commit
     default_location = Location(
         restaurant_id=restaurant.id,
@@ -346,7 +343,7 @@ def create_restaurant(
         language="uz",
         is_waiter_call_enabled=getattr(restaurant, "is_waiter_call_enabled", False),
         telegram_bot_token_encrypted=encrypted_token,
-        telegram_dispatcher_id=restaurant.telegram_dispatcher_id,
+        telegram_dispatcher_id=data.telegram_dispatcher_id,
     )
     db.add(default_location)
 
@@ -490,40 +487,41 @@ def update_restaurant(
                     "нового через @BotFather)."
                 ),
             )
-        restaurant.telegram_bot_token_encrypted = encrypt_token(new_plain_token)
         token_changed = True
+
+    # Phase 12: telegram_dispatcher_id не хранится в Restaurant — извлекаем ДО setattr.
+    new_dispatcher_id = update_fields.pop("telegram_dispatcher_id", None)
 
     for field, value in update_fields.items():
         setattr(restaurant, field, value)
 
-    # S1-8: при смене Telegram credentials — синхронно обновить Location в той же транзакции.
-    # Invariant I-2: Restaurant + Location обновляются атомарно, коммит один.
+    # Phase 12: Telegram credentials пишутся только в Location (source of truth).
+    # Invariant I-2 упразднён — Restaurant больше не хранит Telegram fields.
     location_for_cache: Optional["Location"] = None
-    if token_changed or ("telegram_dispatcher_id" in update_fields):
+    if token_changed or new_dispatcher_id is not None:
         default_location = (
             db.query(Location)
             .filter(
                 Location.restaurant_id == restaurant_id,
                 Location.is_active == True,
             )
+            .order_by(Location.id)
             .first()
         )
         if default_location:
             location_for_cache = default_location
             if token_changed:
-                default_location.telegram_bot_token_encrypted = (
-                    restaurant.telegram_bot_token_encrypted
-                )
-            if "telegram_dispatcher_id" in update_fields:
-                default_location.telegram_dispatcher_id = restaurant.telegram_dispatcher_id
+                default_location.telegram_bot_token_encrypted = encrypt_token(new_plain_token)
+            if new_dispatcher_id is not None:
+                default_location.telegram_dispatcher_id = new_dispatcher_id
             logger.info(
-                "S1-8: Telegram credentials синхронизированы в Location (location_id=%s)",
+                "Phase 12: Telegram credentials записаны в Location (location_id=%s)",
                 default_location.id,
             )
         else:
             logger.warning(
-                "S1-8: активная Location для restaurant_id=%s не найдена — "
-                "синхронизация credentials пропущена",
+                "Phase 12: активная Location для restaurant_id=%s не найдена — "
+                "Telegram credentials не обновлены",
                 restaurant_id,
             )
 
@@ -548,9 +546,8 @@ def update_restaurant(
         )
 
     if token_changed:
-        # S1-8: инвалидируем кэш по location.id (Invariant I-3).
-        # Также инвалидируем по restaurant_id для backward compat
-        # (legacy код мог положить бот в кэш по restaurant.id через get_restaurant_bot).
+        # Phase 12: инвалидируем кэш по location.id (source of truth).
+        # Также инвалидируем по restaurant_id для очистки возможных сталых записей.
         _cache_key = location_for_cache.id if location_for_cache else restaurant_id
         old_bot = handlers._BOT_CACHE.get(_cache_key)
         if old_bot:
@@ -625,10 +622,21 @@ def delete_restaurant(
             detail="Ошибка при деактивации ресторана",
         )
 
-    if restaurant.telegram_bot_token_encrypted:
+    # Phase 12: webhook снимается через токен из Location (source of truth).
+    # Location загружается после commit деактивации Restaurant — Location не удаляется.
+    _loc_for_delete = (
+        db.query(Location)
+        .filter(
+            Location.restaurant_id == restaurant_id,
+            Location.telegram_bot_token_encrypted.isnot(None),
+        )
+        .order_by(Location.id)
+        .first()
+    )
+    if _loc_for_delete:
         try:
             from auth import decrypt_token as _decrypt_token
-            bot_token = _decrypt_token(restaurant.telegram_bot_token_encrypted)
+            bot_token = _decrypt_token(_loc_for_delete.telegram_bot_token_encrypted)
             telegram_service.remove_restaurant_webhook(
                 bot_token=bot_token,
                 slug=restaurant.slug,
@@ -639,16 +647,6 @@ def delete_restaurant(
                 "Не удалось снять webhook при деактивации restaurant_id=%s — продолжаем",
                 restaurant_id,
             )
-
-    # S1-8: инвалидируем кэш по location.id (Invariant I-3).
-    # При деактивации ресторана ищем его Location чтобы сбросить кэш по location.id.
-    # Backward compat: также сбрасываем по restaurant_id.
-    _loc_for_delete = (
-        db.query(Location)
-        .filter(Location.restaurant_id == restaurant_id)
-        .first()
-    )
-    if _loc_for_delete:
         handlers.invalidate_bot_cache(_loc_for_delete.id)
     handlers.invalidate_bot_cache(restaurant_id)
     logger.info(
