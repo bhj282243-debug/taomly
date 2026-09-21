@@ -1064,8 +1064,6 @@ class TestConcurrency:
                 primary_color="#000000",
                 secondary_color="#FFFFFF",
                 accent_color="#FF0000",
-                telegram_bot_token_encrypted=encrypted_token,
-                telegram_dispatcher_id=_ts % 100000000,
                 currency="UZS",
             )
             db.add(restaurant)
@@ -1081,6 +1079,7 @@ class TestConcurrency:
                 address="Test Address",
                 currency="UZS",
                 is_active=True,
+                telegram_bot_token_encrypted=encrypted_token,
             )
             db.add(location)
             db.flush()
