@@ -388,9 +388,9 @@ class TestBusinessLogicIntact:
         def fake_bot_send(chat_id, text):
             sent["called"] = True
 
-        with patch("handlers._get_bot", return_value=MagicMock(send_message=fake_bot_send)):
+        with patch("handlers.get_location_bot", return_value=MagicMock(send_message=fake_bot_send)):
             import handlers
-            # _notify_client сам проверяет client_telegram_id
+            # _notify_client проверяет client_telegram_id первым — get_location_bot не вызывается
             handlers.notify_client_accepted(o, r)
 
         assert "called" not in sent  # ничего не отправлено
