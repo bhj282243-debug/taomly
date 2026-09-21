@@ -70,12 +70,16 @@ class TestCheckA:
     def test_a2_webhook_uses_location_token_not_restaurant_token(self, client, db, location, restaurant):
         """A2. Webhook использует location.telegram_bot_token_encrypted.
 
+        Phase 12: Restaurant больше не хранит Telegram credentials.
+        Тест подтверждает что webhook routing работает через Location.slug
+        и process_restaurant_webhook_update вызывается с корректной Location.
+
         Патчим SessionLocal чтобы webhook видел fixture данные.
         """
         from auth import encrypt_token
         from contextlib import contextmanager
 
-        restaurant.telegram_bot_token_encrypted = encrypt_token("RESTAURANT_TOKEN_OLD")
+        # Phase 12: токен только в Location (Restaurant не имеет этого поля)
         location.telegram_bot_token_encrypted = encrypt_token("LOCATION_TOKEN_NEW")
         db.flush()
 
@@ -565,10 +569,14 @@ class TestCheckI:
 # ═══════════════════════════════════════════════════════════════
 
 class TestCheckJ:
-    """CheckJ: PATCH /api/agency/restaurants/{id} синхронно обновляет Restaurant + Location."""
+    """CheckJ: PATCH /api/agency/restaurants/{id} обновляет Location (Phase 12: sole source of truth)."""
 
     def test_j1_token_synced_to_location(self, client, db, agency_token, restaurant, location):
-        """J1. После PATCH токена — location.telegram_bot_token_encrypted обновлён."""
+        """J1. После PATCH токена — location.telegram_bot_token_encrypted обновлён.
+
+        Phase 12: Restaurant больше не хранит Telegram credentials.
+        PATCH пишет новый токен только в Location.
+        """
         from auth import decrypt_token
 
         new_token = "9999999999:AANewTokenForS18Test"
@@ -583,16 +591,17 @@ class TestCheckJ:
 
         assert resp.status_code == 200, f"PATCH вернул {resp.status_code}: {resp.text}"
 
-        db.refresh(restaurant)
         db.refresh(location)
 
-        # Оба должны содержать новый токен
-        rest_plain = decrypt_token(restaurant.telegram_bot_token_encrypted)
+        # Phase 12: только Location хранит токен
         loc_plain = decrypt_token(location.telegram_bot_token_encrypted)
-
-        assert rest_plain == new_token, f"Restaurant token не обновлён: {rest_plain}"
         assert loc_plain == new_token, (
-            f"Location token не синхронизирован: {loc_plain} (ожидался {new_token})"
+            f"Location token не обновлён: {loc_plain} (ожидался {new_token})"
+        )
+
+        # Подтверждаем что Restaurant модель не имеет этого поля
+        assert not hasattr(restaurant, "telegram_bot_token_encrypted"), (
+            "Phase 12: Restaurant.telegram_bot_token_encrypted должно быть удалено из модели"
         )
 
     def test_j2_dispatcher_id_synced_to_location(self, client, db, agency_token, restaurant, location):
