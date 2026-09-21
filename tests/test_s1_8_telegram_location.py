@@ -424,7 +424,7 @@ class TestCheckG:
 
         captured = {}
 
-        def fake_notify(order, rest, text, event_name, **kwargs):
+        def fake_notify(order, rest, text, event_name, location=None):
             captured["text"] = text
 
         with patch("handlers._notify_client", side_effect=fake_notify):
@@ -468,7 +468,7 @@ class TestCheckG:
 
         captured = {}
 
-        def fake_notify(order, rest, text, event_name, **kwargs):
+        def fake_notify(order, rest, text, event_name, location=None):
             captured["text"] = text
 
         with patch("handlers._notify_client", side_effect=fake_notify):
@@ -511,7 +511,7 @@ class TestCheckH:
 
         captured = {}
 
-        def fake_notify(order, rest, text, event_name, **kwargs):
+        def fake_notify(order, rest, text, event_name, location=None):
             captured["text"] = text
 
         with patch("handlers._notify_client", side_effect=fake_notify):
