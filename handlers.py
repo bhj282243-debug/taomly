@@ -1,17 +1,20 @@
 """
 handlers.py — Taomly Platform
 
+Изменения v5 (Phase 12: Location = единственный source of truth):
+  - get_restaurant_bot() alias удалён (был deprecated, не использовался production кодом).
+  - _notify_client: добавлен параметр location=None. Bot берётся из get_location_bot(location).
+    Fallback на restaurant сохранён для тестовой совместимости (location=None).
+  - notify_client_*: передают location явно в _notify_client (пятый аргумент).
+
 Изменения v4 (S1-8: Telegram Credentials Migration to Location):
-  - get_location_bot(location): новая функция, читает location.telegram_bot_token_encrypted.
-    Кэш: _BOT_CACHE[location.id]. Backward compat: get_restaurant_bot сохранён как alias.
-  - invalidate_bot_cache(location_id): теперь принимает location_id.
-  - notify_new_order: dispatcher_id из location.telegram_dispatcher_id (обязательно).
+  - get_location_bot(location): читает location.telegram_bot_token_encrypted.
+    Кэш: _BOT_CACHE[location.id].
+  - invalidate_bot_cache(location_id): принимает location_id.
+  - notify_new_order: dispatcher_id из location.telegram_dispatcher_id.
     bot через get_location_bot(location).
   - notify_client_*: принимают опциональный location.
     language/currency берутся из location если передан, иначе fallback на restaurant.
-    (backward compat для test_i18n_notifications.py, который передаёт только restaurant)
-  - _notify_client: bot через get_location_bot(location) если location передан,
-    иначе get_location_bot(restaurant) — fallback для legacy calls.
   - process_restaurant_webhook_update: принимает location, bot через get_location_bot.
 
 Изменения v2:
@@ -109,18 +112,6 @@ def get_location_bot(location) -> telebot.TeleBot:
     )
     return bot
 
-
-def get_restaurant_bot(restaurant) -> telebot.TeleBot:
-    """
-    Backward compat alias для get_location_bot.
-
-    Читает restaurant.telegram_bot_token_encrypted.
-    Кэш ключ = restaurant.id.
-
-    До Migration 0015 (DROP legacy columns) этот alias позволяет старому коду
-    продолжать работать без изменений. После Migration 0015 — удалить.
-    """
-    return get_location_bot(restaurant)
 
 
 def invalidate_bot_cache(location_id: int) -> None:
@@ -411,24 +402,19 @@ def notify_new_order(order, items, restaurant, location=None) -> None:
 # ХЕЛПЕР — отправка уведомлений клиенту
 # ──────────────────────────────────────────
 
-def _notify_client(order, restaurant, text: str, event_name: str) -> None:
+def _notify_client(order, restaurant, text: str, event_name: str, location=None) -> None:
     """
     Общая логика отправки Telegram-уведомления клиенту о смене статуса заказа.
 
-    Вызывается из публичных notify_client_* через BackgroundTasks — не блокирует
-    HTTP-ответ. Публичные функции отвечают за формирование текста (language/currency
-    уже применены из location при их вызове), этот хелпер — только за отправку.
+    Phase 12: принимает location=None как пятый аргумент.
+    Bot берётся из get_location_bot(location) если location передан,
+    иначе fallback на get_location_bot(restaurant) для тестовой совместимости
+    (test_i18n_notifications.py вызывает notify_client_* без location).
 
-    Bot получается через get_location_bot(restaurant). Это архитектурно корректно:
-    restaurant.telegram_bot_token_encrypted синхронизирован с location через
-    Invariant I-2 (agency update пишет в обе таблицы атомарно).
-    Кэш-ключ = restaurant.id — допустимо до Migration 0015.
+    Production notify_client_* всегда передают location явно.
 
-    ВАЖНО: location НЕ передаётся в эту функцию намеренно — сигнатура
-    (order, restaurant, text, event_name) соответствует ожиданиям
-    test_i18n_notifications.py, который патчит эту функцию как fake.
-    language и currency уже применены снаружи в notify_client_*,
-    поэтому здесь нужен только bot для отправки.
+    Вызывается через BackgroundTasks — не блокирует HTTP-ответ.
+    language/currency уже применены снаружи в notify_client_*.
 
     Если нужно добавить retry, таймаут или метрики — менять только здесь.
     """
@@ -439,7 +425,8 @@ def _notify_client(order, restaurant, text: str, event_name: str) -> None:
         )
         return
     try:
-        bot = get_location_bot(restaurant)
+        _bot_src = location if location is not None else restaurant
+        bot = get_location_bot(_bot_src)
         bot.send_message(order.client_telegram_id, text)
         logger.info(
             "%s: заказ #%s клиент %s",
@@ -478,7 +465,7 @@ def notify_client_accepted(order, restaurant, location=None) -> None:
         amount=_fmt_price(int(order.total_amount), getattr(_src, "currency", None) or "UZS"),
         action=action,
     )
-    _notify_client(order, restaurant, text, "notify_client_accepted")
+    _notify_client(order, restaurant, text, "notify_client_accepted", location)
 
 
 def notify_client_preparing(order, restaurant, location=None) -> None:
@@ -492,7 +479,7 @@ def notify_client_preparing(order, restaurant, location=None) -> None:
         id=order.id,
         amount=_fmt_price(int(order.total_amount), getattr(_src, "currency", None) or "UZS"),
     )
-    _notify_client(order, restaurant, text, "notify_client_preparing")
+    _notify_client(order, restaurant, text, "notify_client_preparing", location)
 
 
 def notify_client_ready(order, restaurant, location=None) -> None:
@@ -512,7 +499,7 @@ def notify_client_ready(order, restaurant, location=None) -> None:
         amount=_fmt_price(int(order.total_amount), getattr(_src, "currency", None) or "UZS"),
         detail=detail,
     )
-    _notify_client(order, restaurant, text, "notify_client_ready")
+    _notify_client(order, restaurant, text, "notify_client_ready", location)
 
 
 def notify_client_delivering(order, restaurant, location=None) -> None:
@@ -526,7 +513,7 @@ def notify_client_delivering(order, restaurant, location=None) -> None:
         id=order.id,
         amount=_fmt_price(int(order.total_amount), getattr(_src, "currency", None) or "UZS"),
     )
-    _notify_client(order, restaurant, text, "notify_client_delivering")
+    _notify_client(order, restaurant, text, "notify_client_delivering", location)
 
 
 def notify_client_completed(order, restaurant, location=None) -> None:
@@ -540,7 +527,7 @@ def notify_client_completed(order, restaurant, location=None) -> None:
         id=order.id,
         amount=_fmt_price(int(order.total_amount), getattr(_src, "currency", None) or "UZS"),
     )
-    _notify_client(order, restaurant, text, "notify_client_completed")
+    _notify_client(order, restaurant, text, "notify_client_completed", location)
 
 
 def notify_client_cancelled(order, restaurant, comment: str = "", location=None) -> None:
@@ -559,4 +546,4 @@ def notify_client_cancelled(order, restaurant, comment: str = "", location=None)
         amount=_fmt_price(int(order.total_amount), getattr(_src, "currency", None) or "UZS"),
         reason=reason,
     )
-    _notify_client(order, restaurant, text, "notify_client_cancelled")
+    _notify_client(order, restaurant, text, "notify_client_cancelled", location)
