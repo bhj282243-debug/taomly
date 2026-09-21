@@ -118,7 +118,7 @@ def test_valid_init_data_accepted(db, restaurant, location):
 
 
 @pytest.mark.security
-def test_missing_hash_rejected(db, restaurant):
+def test_missing_hash_rejected(db, restaurant, location):
     """initData без поля hash → 401."""
     fields = {"auth_date": str(int(time.time())), "user": json.dumps({"id": 1})}
     init_data = urlencode(fields)  # без hash
@@ -262,7 +262,7 @@ def test_modified_auth_date_rejected(db, restaurant, location):
 # 10-11 — WRONG bot token / WRONG restaurant context
 # ═════════════════════════════════════════
 @pytest.mark.security
-def test_wrong_bot_token_rejected(db, restaurant):
+def test_wrong_bot_token_rejected(db, restaurant, location):
     """initData подписана НЕ тем токеном, что хранится у ресторана → 401."""
     init_data = _build_init_data("0000000000:CompletelyWrongToken")
     c = _raw_client(db)
@@ -277,7 +277,7 @@ def test_wrong_bot_token_rejected(db, restaurant):
 
 
 @pytest.mark.security
-def test_wrong_restaurant_context_rejected(db, restaurant, restaurant2, location):
+def test_wrong_restaurant_context_rejected(db, restaurant, restaurant2, location, location2):
     """
     Критический сценарий: initData ресторана A (подписана токеном A)
     + X-Restaurant-Id ресторана B → 401, т.к. HMAC проверяется токеном B.
@@ -431,14 +431,14 @@ def test_bot_token_not_exposed_in_agency_response(db, agency, restaurant, agency
 # CROSS-RESTAURANT — Duplicate bot token guard (Task 8 minimal fix)
 # ═════════════════════════════════════════
 @pytest.mark.security
-def test_duplicate_bot_token_rejected_on_create(db, agency, agency_token, restaurant):
+def test_duplicate_bot_token_rejected_on_create(db, agency, agency_token, restaurant, location):
     """
     Нельзя создать второй ресторан с ТЕМ ЖЕ bot token, что уже используется.
 
-    FIX v3: добавлен `restaurant` в параметры — fixture создаёт запись с токеном
-    "1234567890:AAFakeTokenForTests" в тестовой сессии до вызова. _raw_client(db)
-    использует тот же db session, поэтому _bot_token_in_use() видит существующий
-    токен и возвращает True → 400.
+    Phase 12: _bot_token_in_use проверяет Location.telegram_bot_token_encrypted.
+    `location` fixture создаёт Location с токеном "1234567890:AAFakeTokenForTests"
+    в тестовой сессии до вызова. _raw_client(db) использует тот же db session,
+    поэтому _bot_token_in_use() видит существующий токен и возвращает True → 400.
     """
     c = _raw_client(db)
     try:
@@ -459,8 +459,12 @@ def test_duplicate_bot_token_rejected_on_create(db, agency, agency_token, restau
 
 
 @pytest.mark.security
-def test_duplicate_bot_token_rejected_on_update(db, agency, agency_token, restaurant, restaurant2):
-    """Нельзя переключить restaurant на bot token, который уже занят restaurant2."""
+def test_duplicate_bot_token_rejected_on_update(db, agency, agency_token, restaurant, restaurant2, location, location2):
+    """Нельзя переключить restaurant на bot token, который уже занят restaurant2.
+
+    Phase 12: _bot_token_in_use проверяет Location таблицу.
+    location2 fixture создаёт Location для restaurant2 с токеном AAFakeTokenForTests2.
+    """
     c = _raw_client(db)
     try:
         resp = c.patch(
