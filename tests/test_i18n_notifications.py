@@ -56,7 +56,7 @@ def _call_notify(func_name, *args, **kwargs):
     """
     captured = {}
 
-    def fake_notify_client(order, restaurant, text, event_name):
+    def fake_notify_client(order, restaurant, text, event_name, location=None):
         captured["text"] = text
         captured["event"] = event_name
 
