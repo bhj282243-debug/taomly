@@ -109,9 +109,9 @@ class Restaurant(Base):
     welcome_text    = Column(Text, nullable=True)
     custom_domain   = Column(String(255), nullable=True, unique=True, index=True)
 
-    # Telegram White Label
-    telegram_bot_token_encrypted = Column(Text, nullable=True)
-    telegram_dispatcher_id       = Column(BigInteger, nullable=True)
+    # Telegram White Label credentials removed in Phase 12 (Migration 0023).
+    # Location.telegram_bot_token_encrypted and Location.telegram_dispatcher_id
+    # are the sole source of truth (ADR-001).
 
     # Delivery Settings (миграция 0004_add_delivery_fields)
     # working_hours    — часы работы, отображаются клиенту на Hero-экране
