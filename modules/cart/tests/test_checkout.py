@@ -466,8 +466,6 @@ class TestConcurrency:
                 slug=f"conc-rest-{suffix}",
                 admin_password_hash=hash_password("pw"),
                 currency="UZS",
-                telegram_bot_token_encrypted="stub",
-                telegram_dispatcher_id=0,
             )
             s.add(rest)
             s.flush()
