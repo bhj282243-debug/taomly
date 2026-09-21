@@ -42,7 +42,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from config import settings
 from database import get_db
-from models import Agency, Restaurant, RevokedToken
+from models import Agency, Location, Restaurant, RevokedToken
 
 logger = logging.getLogger(__name__)
 
@@ -278,13 +278,26 @@ def get_telegram_user(
         )
 
     # Если initData есть — верифицируем через Telegram HMAC
+    # Phase 12: токен берётся из Location (source of truth, ADR-001).
+    # Выбираем первую активную Location с настроенным ботом (ORDER BY id —
+    # детерминированный выбор при текущем single-bot-per-Restaurant поведении).
     if x_init_data:
-        if not restaurant.telegram_bot_token_encrypted:
+        tg_location = (
+            db.query(Location)
+            .filter(
+                Location.restaurant_id == restaurant.id,
+                Location.telegram_bot_token_encrypted.isnot(None),
+                Location.is_active == True,
+            )
+            .order_by(Location.id)
+            .first()
+        )
+        if not tg_location:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Telegram Bot не настроен для этого ресторана",
             )
-        bot_token = decrypt_token(restaurant.telegram_bot_token_encrypted)
+        bot_token = decrypt_token(tg_location.telegram_bot_token_encrypted)
         user_dict = verify_telegram_init_data(x_init_data, bot_token)
         return TelegramUser.from_dict(user_dict, restaurant)
 
