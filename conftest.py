@@ -192,8 +192,6 @@ def restaurant(db, agency) -> Restaurant:
         primary_color="#8B1A2E",
         secondary_color="#FAF6EE",
         accent_color="#D4A853",
-        telegram_bot_token_encrypted=_encrypt("1234567890:AAFakeTokenForTests"),
-        telegram_dispatcher_id=12345678,
         currency="UZS",
     )
     db.add(r)
@@ -212,8 +210,6 @@ def restaurant2(db, agency2) -> Restaurant:
         primary_color="#1A1A2E",
         secondary_color="#F0F0F0",
         accent_color="#C0A060",
-        telegram_bot_token_encrypted=_encrypt("9876543210:AAFakeTokenForTests2"),
-        telegram_dispatcher_id=87654321,
         currency="USD",
     )
     db.add(r)
@@ -232,8 +228,6 @@ def restaurant_rub(db, agency) -> Restaurant:
         primary_color="#1A1A2E",
         secondary_color="#F0F0F0",
         accent_color="#C0A060",
-        telegram_bot_token_encrypted=_encrypt("1111111111:AAFakeTokenRUB"),
-        telegram_dispatcher_id=11111111,
         currency="RUB",
     )
     db.add(r)
