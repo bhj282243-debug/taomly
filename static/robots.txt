@@ -12,4 +12,5 @@ Disallow: /static/agency_admin.html
 Allow: /app
 Allow: /static/index.html
 
-
+# Phase 13: Allow public restaurant ordering pages
+Allow: /r/
