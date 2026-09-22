@@ -2,6 +2,7 @@
 modules/cart/router.py — Taomly Platform
 Phase 6: Cart Engine HTTP endpoints.
 Phase 7: Added POST /api/cart/checkout.
+Phase 13: checkout response includes web_order_token for anonymous web orders.
 """
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
@@ -156,4 +157,11 @@ def checkout(
         ctx.location,
     )
 
-    return order_with_items
+    # Phase 13: inject raw web token into response for anonymous web orders.
+    # The raw token is set transiently on the order object by checkout_cart().
+    # It is NEVER stored in DB — only its SHA-256 hash is stored.
+    # On idempotency replay, _web_order_token_raw is None (client already has it).
+    _raw_token = getattr(order, "_web_order_token_raw", None)
+    response_data = OrderResponse.model_validate(order_with_items)
+    response_data.web_order_token = _raw_token
+    return response_data
