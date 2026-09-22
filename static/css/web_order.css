@@ -1,0 +1,418 @@
+/*
+ * web_order.css — Phase 13: Public Web Ordering
+ *
+ * Responsive additions for /r/{slug} public page.
+ * DO NOT modify app.css — this file is isolated from Telegram/QR styles.
+ *
+ * Mobile-first: base styles target ≤767px.
+ * Tablet: 768px+ — 2-column menu grid.
+ * Desktop: 1024px+ — centered max-width container.
+ */
+
+/* ── BASE (mobile ≤767px) ─────────────────────────────────────── */
+
+.web-page {
+  background: var(--color-secondary, #FAF6EE);
+  min-height: 100vh;
+  color: var(--color-text, #1a1a1a);
+}
+
+/* Centered container */
+.web-container {
+  max-width: 100%;
+  padding: 0 16px;
+  margin: 0 auto;
+}
+
+/* Header */
+.web-header {
+  background: var(--color-primary, #8B1A2E);
+  color: #fff;
+  padding: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.web-header__logo {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+}
+
+.web-header__name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.web-header__inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* Restaurant info */
+.web-restaurant-info {
+  padding: 16px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.web-restaurant-info__name {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-primary, #8B1A2E);
+  margin-bottom: 4px;
+}
+
+.web-restaurant-info__meta {
+  font-size: 0.85rem;
+  color: var(--color-muted, #666);
+  margin-bottom: 2px;
+}
+
+/* Menu */
+.web-menu {
+  padding: 0 16px 120px;
+  max-width: 100%;
+}
+
+.web-category {
+  margin-bottom: 24px;
+}
+
+.web-category__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-primary, #8B1A2E);
+  padding: 12px 0 8px;
+  border-bottom: 2px solid var(--color-primary, #8B1A2E);
+  margin-bottom: 12px;
+}
+
+/* Product cards — single column on mobile */
+.web-product-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.web-product-card {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: stretch;
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);
+  cursor: pointer;
+  transition: box-shadow .15s ease;
+}
+
+.web-product-card:hover {
+  box-shadow: 0 3px 10px rgba(0,0,0,.12);
+}
+
+.web-product-card__image {
+  width: 100px;
+  min-height: 100px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--color-border, #e5e5e5);
+}
+
+.web-product-card__body {
+  padding: 12px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.web-product-card__name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.web-product-card__desc {
+  font-size: 0.8rem;
+  color: var(--color-muted, #666);
+  margin-bottom: 8px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.web-product-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.web-product-card__price {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-primary, #8B1A2E);
+}
+
+/* Cart bar (fixed bottom) */
+.web-cart-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-primary, #8B1A2E);
+  color: #fff;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 200;
+  transition: transform .2s ease;
+}
+
+.web-cart-bar--hidden {
+  transform: translateY(100%);
+}
+
+.web-cart-bar__info {
+  font-size: 0.9rem;
+}
+
+.web-cart-bar__count {
+  font-weight: 700;
+}
+
+.web-cart-bar__total {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.web-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+
+.web-btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.web-btn--primary {
+  background: var(--color-accent, #D4A853);
+  color: #1a1a1a;
+}
+
+.web-btn--secondary {
+  background: #fff;
+  color: var(--color-primary, #8B1A2E);
+}
+
+/* Checkout form */
+.web-checkout {
+  padding: 16px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.web-checkout__title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-primary, #8B1A2E);
+  margin-bottom: 16px;
+}
+
+.web-form-group {
+  margin-bottom: 14px;
+}
+
+.web-form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--color-text, #1a1a1a);
+}
+
+.web-form-group input,
+.web-form-group select,
+.web-form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--color-border, #e5e5e5);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: #fff;
+  color: var(--color-text, #1a1a1a);
+  transition: border-color .15s;
+}
+
+.web-form-group input:focus,
+.web-form-group select:focus,
+.web-form-group textarea:focus {
+  outline: none;
+  border-color: var(--color-primary, #8B1A2E);
+}
+
+/* Order confirmation */
+.web-confirmation {
+  padding: 24px 16px;
+  max-width: 480px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.web-confirmation__icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.web-confirmation__title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-primary, #8B1A2E);
+  margin-bottom: 8px;
+}
+
+.web-confirmation__order-id {
+  font-size: 0.9rem;
+  color: var(--color-muted, #666);
+  margin-bottom: 20px;
+}
+
+.web-confirmation__details {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: left;
+  margin-bottom: 16px;
+}
+
+.web-confirmation__row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--color-border, #e5e5e5);
+}
+
+.web-confirmation__row:last-child {
+  border-bottom: none;
+  font-weight: 700;
+}
+
+/* Loading / error states */
+.web-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: var(--color-muted, #666);
+  font-size: 0.9rem;
+}
+
+.web-error {
+  background: #fff0f0;
+  color: #c00;
+  padding: 16px;
+  border-radius: 8px;
+  margin: 16px;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+/* ── TABLET (768px+): 2-column product grid ───────────────────── */
+
+@media (min-width: 768px) {
+  .web-container,
+  .web-menu,
+  .web-header__inner,
+  .web-restaurant-info,
+  .web-checkout,
+  .web-confirmation {
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .web-product-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+
+  .web-product-card {
+    flex-direction: column;
+  }
+
+  .web-product-card__image {
+    width: 100%;
+    height: 160px;
+    min-height: unset;
+  }
+
+  .web-cart-bar {
+    max-width: 600px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 12px 12px 0 0;
+  }
+
+  .web-cart-bar--hidden {
+    transform: translateX(-50%) translateY(100%);
+  }
+}
+
+/* ── DESKTOP (1024px+): centered, constrained width ──────────── */
+
+@media (min-width: 1024px) {
+  .web-container,
+  .web-menu,
+  .web-header__inner,
+  .web-restaurant-info,
+  .web-checkout,
+  .web-confirmation {
+    max-width: 680px;
+  }
+
+  .web-product-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .web-cart-bar {
+    max-width: 680px;
+  }
+
+  .web-page {
+    padding-top: 0;
+  }
+}
+
+/* ── PREVENT HORIZONTAL OVERFLOW ─────────────────────────────── */
+.web-page,
+.web-container,
+.web-menu,
+.web-checkout,
+.web-confirmation {
+  overflow-x: hidden;
+}
+
+/* ── REDUCED MOTION ───────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .web-cart-bar,
+  .web-product-card,
+  .web-btn {
+    transition: none;
+  }
+}
