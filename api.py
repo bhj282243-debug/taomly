@@ -71,7 +71,7 @@ import models
 import telebot
 from config import settings
 from database import SessionLocal, engine
-from routers import agency, analytics, billing, menu_public, menu_admin, orders, reservations, restaurants, waiter_calls, ai, superadmin
+from routers import agency, analytics, billing, menu_public, menu_admin, orders, public_web, reservations, restaurants, waiter_calls, ai, superadmin
 from modules.cart.router import router as cart_router
 from modules.payments.router import router as payments_router
 
@@ -508,6 +508,9 @@ app.add_middleware(ApiVersioningMiddleware)
 # ──────────────────────────────────────────
 # ROUTERS
 # ──────────────────────────────────────────
+# Phase 13: Public web ordering pages (/r/{slug})
+app.include_router(public_web.router)
+
 app.include_router(menu_public.router,  prefix="/api/menu",         tags=["menu"])
 app.include_router(menu_admin.router,   prefix="/api/menu",         tags=["menu"])
 app.include_router(cart_router,         prefix="/api/cart",         tags=["cart"])
