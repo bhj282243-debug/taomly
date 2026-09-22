@@ -38,6 +38,8 @@ from schemas import (
     CategoryPublicResponse,
     CategoryResponseWithTranslations,
 )
+from fastapi import Request
+from limiter import limiter
 from utils import is_within_schedule
 
 logger = logging.getLogger(__name__)
@@ -71,7 +73,9 @@ def _get_active_restaurant(restaurant_id: int, db: Session) -> Restaurant:
 # GET /{restaurant_id} — публичное меню (клиент)
 # ──────────────────────────────────────────
 @router.get("/{restaurant_id}", response_model=List[CategoryPublicResponse])
+@limiter.limit("60/minute")
 def get_menu(
+    request: Request,
     restaurant_id: int,
     lang: Optional[Literal["uz", "ru", "en"]] = Query(None),
     db: Session = Depends(get_db),
