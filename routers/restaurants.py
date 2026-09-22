@@ -50,7 +50,7 @@ routers/restaurants.py — Taomly Platform
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
@@ -76,6 +76,7 @@ from schemas import (
     TablesListResponse,
     TableResponse,
 )
+from limiter import limiter
 from utils import is_within_schedule
 
 logger = logging.getLogger(__name__)
@@ -291,7 +292,9 @@ def update_restaurant_settings(
 # GET /{slug} — публичная информация о ресторане
 # ──────────────────────────────────────────
 @router.get("/{slug}", response_model=RestaurantPublicResponse)
+@limiter.limit("60/minute")
 def get_restaurant_by_slug(
+    request: Request,
     slug: str,
     lang: Optional[Literal["uz", "ru", "en"]] = Query(None),
     db: Session = Depends(get_db),
