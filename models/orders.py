@@ -77,6 +77,14 @@ class Order(Base):
     # Stored only on transition to 'cancelled'. NOT a payment/refund reason.
     cancellation_reason = Column(Text, nullable=True)
 
+    # Phase 13: secure web order token hash (SHA-256 hex of raw token).
+    # NULL for Telegram-authenticated orders and all pre-Phase-13 orders.
+    # Raw token is NEVER stored — only this hash. Token returned once at checkout.
+    # Lookup: SHA-256(incoming_raw_token).hexdigest() == web_order_token_hash.
+    web_order_token_hash = Column(String(64), nullable=True, unique=False)
+    # Note: unique constraint enforced via partial index in migration 0024
+    # (WHERE web_order_token_hash IS NOT NULL) to allow multiple NULLs.
+
     restaurant = relationship("Restaurant", back_populates="orders", lazy="select")
     location   = relationship("Location", lazy="select")
     client     = relationship("User", lazy="select")
@@ -150,3 +158,5 @@ class OrderItemModifier(Base):
             f"<OrderItemModifier id={self.id} "
             f"order_item_id={self.order_item_id} name={self.name!r}>"
         )
+
+# --- Phase 13 patch applied below via str replacement (see implementation) ---
