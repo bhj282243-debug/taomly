@@ -3,6 +3,8 @@ schemas/orders.py — Taomly Platform
 Phase 7: Added currency field to OrderResponse.
 Phase 9: Added paid_at and cancellation_reason to OrderResponse.
          Added cancellation_reason to OrderStatusUpdate.
+Phase 13: Added web_order_token to OrderResponse (anonymous web order tracking).
+          Added WebOrderItemResponse and WebOrderResponse (public-safe schema).
 """
 
 from datetime import datetime
@@ -111,6 +113,10 @@ class OrderResponse(BaseModel):
     items: List[OrderItemResponse] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
+    # Phase 13: raw web order token returned ONCE at checkout for anonymous web orders.
+    # None for Telegram-authenticated orders and legacy orders.
+    # The raw token is never stored server-side — only its SHA-256 hash is in DB.
+    web_order_token: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -192,3 +198,56 @@ class OrderStatusUpdate(BaseModel):
         default=None,
         max_length=500,
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 13: Public Web Order schemas
+#
+# WebOrderItemResponse: public-safe order item for anonymous web clients.
+#   - No modifier price_adjustment (not needed for web confirmation).
+# WebOrderResponse: public-safe order for anonymous web clients.
+#   - NO: client_phone, client_telegram_id, restaurant_id, location_id,
+#         cancellation_reason, admin-only fields.
+#   - YES: id, status, order_type, total_amount, currency, client_name,
+#          comment, paid_at, created_at, items.
+# ─────────────────────────────────────────────────────────────────────────────
+
+class WebOrderItemResponse(BaseModel):
+    """Order item visible to anonymous web client on confirmation/status page."""
+    id:           int
+    name:         str
+    variant_name: Optional[str] = None
+    price:        int
+    quantity:     int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class WebOrderResponse(BaseModel):
+    """
+    Public-safe order response for anonymous web clients.
+
+    SECURITY CONTRACT:
+    - client_phone: EXCLUDED (PII)
+    - client_telegram_id: EXCLUDED (internal identity)
+    - restaurant_id: EXCLUDED (internal tenant structure)
+    - location_id: EXCLUDED (internal tenant structure)
+    - cancellation_reason: EXCLUDED (internal admin data)
+    - web_order_token_hash: EXCLUDED (internal security field)
+    - admin-only fields: EXCLUDED
+
+    Authentication: the caller already proved possession of the raw token
+    (which hashes to web_order_token_hash) by providing it in the URL.
+    """
+    id:           int
+    status:       str
+    order_type:   str
+    total_amount: int
+    currency:     str
+    client_name:  Optional[str] = None
+    comment:      Optional[str] = None
+    paid_at:      Optional[datetime] = None
+    created_at:   datetime
+    items:        List[WebOrderItemResponse] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
