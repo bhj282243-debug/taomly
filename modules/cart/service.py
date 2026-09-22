@@ -2,6 +2,7 @@
 modules/cart/service.py — Taomly Platform
 Phase 6: Cart Engine business logic.
 Phase 7: Cart mutation serialization via Cart row lock + checkout_cart().
+Phase 13: Added min_order_amount backend enforcement + web_order_token_hash generation.
 
 PHASE 7 — Cart Mutation Serialization (ADR-P7-LOCK):
 All Cart mutations (add_item, update_item_quantity, remove_item, clear_cart)
@@ -15,6 +16,7 @@ PostgreSQL NOWAIT failure → sqlalchemy.exc.OperationalError pgcode '55P03' →
 
 import hashlib
 import logging
+import secrets
 from typing import List, Optional
 
 from fastapi import HTTPException, status
@@ -27,7 +29,7 @@ from models.operations import RestaurantTable
 from models.orders import Order, OrderItem, OrderItemModifier
 from modules.cart.models import Cart, CartItem, CartItemModifier
 from modules.cart.schemas import CartItemModifierResponse, CartItemResponse, CartResponse
-from utils import is_within_schedule
+from utils import format_price as _fmt_price, is_within_schedule
 
 logger = logging.getLogger(__name__)
 
@@ -548,6 +550,12 @@ def checkout_cart(
         ):
             existing_order = _find_order_for_checked_out_cart(db, cart, restaurant_id)
             if existing_order:
+                # Phase 13: On idempotency replay, we cannot recover the raw token
+                # (only SHA-256 hash is stored). Mark as replay so router knows
+                # NOT to include web_order_token in response (client has it from
+                # the original response, stored in localStorage).
+                existing_order._web_order_token_raw = None  # type: ignore[attr-defined]
+                existing_order._is_idempotency_replay = True  # type: ignore[attr-defined]
                 return existing_order
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -645,6 +653,22 @@ def checkout_cart(
     # Step 7: Server-authoritative total (ADR-P7-PRICE + ADR-P7-1)
     total_amount = sum(item.unit_price * item.quantity for item in items)
 
+    # Step 7b: Phase 13 — minimum order amount backend enforcement (OD-05).
+    # Applies to delivery orders only (consistent with legacy path in routers/orders.py).
+    # Frontend validation is UX only; this check is the authoritative gate.
+    # Cart remains active on failure — no DB mutation occurs before this point.
+    _min_order = location.min_order_amount or 0
+    _currency = cart.currency or "UZS"
+    if order_type == "delivery" and _min_order > 0 and total_amount < _min_order:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Минимальная сумма заказа для доставки: "
+                f"{_fmt_price(_min_order, _currency)}. "
+                f"Ваш заказ: {_fmt_price(total_amount, _currency)}."
+            ),
+        )
+
     # Step 8: order_type business rules
     if order_type == "delivery" and not address:
         raise HTTPException(
@@ -680,6 +704,17 @@ def checkout_cart(
             )
 
     # Step 9: Create Order
+    # Phase 13: generate web_order_token for anonymous (non-Telegram) web orders.
+    # Raw token is cryptographically random (256-bit entropy via secrets module).
+    # ONLY the SHA-256 hash is stored in DB — raw token is NEVER persisted.
+    # Token is set on the Order object AFTER flush so it can be read by the caller.
+    _is_web_guest = telegram_id is None or telegram_id == 0
+    _raw_web_token: Optional[str] = None
+    _token_hash: Optional[str] = None
+    if _is_web_guest:
+        _raw_web_token = secrets.token_urlsafe(32)  # ~43 chars, 256-bit entropy
+        _token_hash = hashlib.sha256(_raw_web_token.encode()).hexdigest()  # 64-char hex
+
     order = Order(
         restaurant_id=restaurant_id,
         location_id=location.id,
@@ -693,6 +728,7 @@ def checkout_cart(
         total_amount=total_amount,
         currency=cart.currency,  # immutable snapshot
         status="accepted",       # compatible with legacy flow + notifications
+        web_order_token_hash=_token_hash,  # None for Telegram orders
     )
     db.add(order)
     db.flush()
@@ -740,6 +776,10 @@ def checkout_cart(
         raise
 
     db.refresh(order)
+    # Phase 13: attach raw token to Order object (transient, not a DB column).
+    # Router reads order._web_order_token_raw and includes it in checkout response.
+    # Raw token is never stored — only set here transiently in memory.
+    order._web_order_token_raw = _raw_web_token  # type: ignore[attr-defined]
     return order
 
 
