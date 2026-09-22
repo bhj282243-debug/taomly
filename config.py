@@ -201,6 +201,11 @@ class _Settings:
 
     RATE_LIMIT_LOGIN: str = os.getenv("RATE_LIMIT_LOGIN", "10/minute")
     RATE_LIMIT_API: str = os.getenv("RATE_LIMIT_API", "120/minute")
+
+    # Phase 13: Base URL for canonical URLs in SSR pages.
+    # Set to https://taomly.com in production via Render environment variables.
+    # Empty string in development (relative canonical URLs).
+    PUBLIC_BASE_URL: str = os.getenv("PUBLIC_BASE_URL", "")
     RATE_LIMIT_SUPERADMIN_LOGIN: str = os.getenv("RATE_LIMIT_SUPERADMIN_LOGIN", "5/minute")
 
     # AI-интеграция (OpenRouter / OpenAI / Anthropic / Gemini)
