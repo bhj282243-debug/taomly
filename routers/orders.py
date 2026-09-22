@@ -34,6 +34,7 @@ routers/orders.py — Taomly Platform
   - Quota остаётся Brand-level (restaurant_id) — S1-8 task.
 """
 
+import hashlib
 import logging
 from datetime import datetime, timezone
 from typing import List, Optional
@@ -46,6 +47,7 @@ from auth import TelegramUser, get_current_restaurant_admin, get_telegram_user
 from database import get_db
 from models import Location, ModifierGroup, ModifierOption, Order, OrderItem, OrderItemModifier, Product, ProductVariant, Restaurant, RestaurantTable, Subscription, SubscriptionPlan, UsageEvent, User
 from schemas import OrderCreate, OrderKDSResponse, OrderResponse, OrderStatusUpdate
+from schemas.orders import WebOrderItemResponse, WebOrderResponse
 import handlers
 from limiter import limiter
 
@@ -1128,3 +1130,89 @@ def update_order_status(
         )
 
     return order
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 13: Public web order tracking endpoint
+#
+# Authentication: the raw token IS the credential — no X-Restaurant-Id required.
+# The raw token is hashed with SHA-256 and compared against web_order_token_hash.
+# Returns only public-safe fields (WebOrderResponse — no PII, no internal IDs).
+#
+# Security properties:
+#   - 256-bit random token: not guessable, not sequential
+#   - Only hash stored in DB: raw token cannot be recovered from DB
+#   - Rate limited: 60/minute to prevent brute-force attempts
+#   - No enumeration: only the token holder can view this order
+#   - No cross-tenant access: the token is globally unique across all tenants
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get(
+    "/web/{token}",
+    response_model=WebOrderResponse,
+    tags=["orders"],
+    summary="Get web order by secure token (Phase 13 public endpoint)",
+)
+@limiter.limit("60/minute")
+def get_web_order_by_token(
+    request: Request,
+    token: str,
+    db: Session = Depends(get_db),
+):
+    """
+    GET /api/orders/web/{token} — public web order tracking.
+
+    Phase 13: Anonymous web clients use this endpoint to view their order
+    status after checkout. The raw token returned at checkout is the only
+    credential — no Telegram identity or X-Restaurant-Id required.
+
+    Security:
+    - SHA-256(token) is computed and looked up against web_order_token_hash.
+    - Response excludes: client_phone, client_telegram_id, restaurant_id,
+      location_id, cancellation_reason, admin fields.
+    - Rate limited to 60/minute per IP.
+    - Returns 404 for any invalid, missing, or non-web-order token (no info leak).
+    """
+    # Compute SHA-256 of incoming raw token
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+
+    # Look up order by hash — globally unique partial index
+    order = (
+        db.query(Order)
+        .options(joinedload(Order.items))
+        .filter(
+            Order.web_order_token_hash == token_hash,
+            Order.web_order_token_hash.isnot(None),
+        )
+        .first()
+    )
+
+    if order is None:
+        # Unified 404 — no distinction between "wrong token" and "not found"
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found.",
+        )
+
+    # Build public-safe response (WebOrderResponse excludes PII and internal fields)
+    return WebOrderResponse(
+        id=order.id,
+        status=order.status,
+        order_type=order.order_type,
+        total_amount=order.total_amount,
+        currency=order.currency,
+        client_name=order.client_name,
+        comment=order.comment,
+        paid_at=order.paid_at,
+        created_at=order.created_at,
+        items=[
+            WebOrderItemResponse(
+                id=item.id,
+                name=item.name,
+                variant_name=item.variant_name,
+                price=item.price,
+                quantity=item.quantity,
+            )
+            for item in order.items
+        ],
+    )
