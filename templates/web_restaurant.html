@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  {# ── SSR SEO HEAD (Phase 13) ─────────────────────────────────────────── #}
+  <title>{{ restaurant.name }} — меню и заказ онлайн</title>
+  <meta name="description" content="{{ seo_description | truncate(160, True, '...') }}">
+  <link rel="canonical" href="{{ canonical_url }}">
+
+  {# Open Graph #}
+  <meta property="og:type"        content="website">
+  <meta property="og:title"       content="{{ restaurant.name }}">
+  <meta property="og:description" content="{{ seo_description | truncate(200, True, '...') }}">
+  <meta property="og:url"         content="{{ canonical_url }}">
+  {% if og_image %}
+  <meta property="og:image"       content="{{ og_image }}">
+  {% endif %}
+
+  {# ── BRANDING: inlined CSS variables for zero-flash initial paint ─────── #}
+  <style>
+    :root {
+      --color-primary:   {{ restaurant.primary_color   or '#8B1A2E' }};
+      --color-secondary: {{ restaurant.secondary_color or '#FAF6EE' }};
+      --color-accent:    {{ restaurant.accent_color    or '#D4A853' }};
+      --color-text:      #1a1a1a;
+      --color-muted:     #666;
+      --color-border:    #e5e5e5;
+    }
+    /* Minimal layout before app.css loads — prevents layout flash */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--color-secondary); font-family: sans-serif; }
+    #web-ssr-content { padding: 20px; max-width: 480px; margin: 0 auto; }
+    #web-ssr-content h1 { color: var(--color-primary); font-size: 1.5rem; margin-bottom: 8px; }
+    #web-ssr-content .ssr-meta { color: var(--color-muted); font-size: 0.9rem; margin-bottom: 4px; }
+    #web-app { max-width: 480px; margin: 0 auto; }
+  </style>
+
+  {# Shared CSS — app.css NOT modified (Phase 13 rule) #}
+  <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="stylesheet" href="/static/css/web_order.css">
+
+  <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+</head>
+<body>
+
+  {# ── SSR CONTENT BLOCK (crawlable by search engines) ─────────────────── #}
+  {# JS replaces #web-app; this block is for bots that don't run JS.       #}
+  <div id="web-ssr-content" aria-hidden="true">
+    <h1>{{ restaurant.name }}</h1>
+    {% if seo_description and seo_description != restaurant.name %}
+    <p class="ssr-meta">{{ seo_description }}</p>
+    {% endif %}
+    {% if location.address %}
+    <address class="ssr-meta">{{ location.address }}</address>
+    {% endif %}
+    {% if location.working_hours %}
+    <p class="ssr-meta">{{ location.working_hours }}</p>
+    {% endif %}
+  </div>
+
+  {# ── WEB APP MOUNT POINT ────────────────────────────────────────────── #}
+  <div id="web-app"></div>
+
+  {# ── DATA BOOTSTRAP ─────────────────────────────────────────────────── #}
+  {# Pass slug to JS without an extra API round-trip for slug resolution.  #}
+  <script>
+    window.__TAOMLY_WEB__ = {
+      slug:       {{ canonical_slug | tojson }},
+      restaurantName: {{ restaurant.name | tojson }},
+    };
+  </script>
+
+  {# Shared JS modules (existing, not modified) #}
+  <script src="/static/js/state.js"></script>
+  <script src="/static/js/theme.js"></script>
+  <script src="/static/js/i18n.js"></script>
+
+  {# Phase 13 web ordering bootstrap #}
+  <script src="/static/js/web_order.js"></script>
+
+</body>
+</html>
