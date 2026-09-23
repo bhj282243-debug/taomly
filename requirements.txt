@@ -20,8 +20,10 @@ passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 cryptography==50.0.0  # Security: PYSEC-2026-35,1284,2141,3552,3553,3554,GHSA-537c (fix: 50.0.0)
 
-pyasn1==0.6.4  # Security: PYSEC-2026-2263,3455,3456,3457 (transitive dep of python-jose)
-# ecdsa 0.19.2: PYSEC-2026-1325 (no fix available, monitoring)
+# pyasn1: transitive dep of python-jose; python-jose 3.4.0 requires pyasn1<0.5.0
+# PYSEC-2026-2263,3455,3456,3457 affect pyasn1; no compatible fix with python-jose 3.4.0
+# Mitigation: upgrade to python-jose replacement (PyJWT) in future phase
+# ecdsa 0.19.2: PYSEC-2026-1325 (no fix available, vendor monitoring)
 
 # ── Telegram ─────────────────────────────────────────────────────────
 pytelegrambotapi==4.23.0
