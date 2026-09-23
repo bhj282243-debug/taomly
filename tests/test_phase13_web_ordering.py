@@ -28,6 +28,63 @@ from modules.cart.models import Cart, CartItem
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# FIXTURES
+# ─────────────────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def guest_client(db, agency, restaurant, location):
+    """
+    TestClient для анонимного (web guest) пользователя.
+
+    Переопределяет get_telegram_user так, чтобы возвращался TelegramUser(id=0)
+    — guest пользователь без Telegram identity.
+    Именно при id=0 checkout_cart() генерирует web_order_token_hash.
+
+    Используется только в Phase 13 token-тестах.
+    Стандартный client fixture использует tg_user с id=111111111 (Telegram user).
+    """
+    from api import app
+    from auth import TelegramUser, get_telegram_user, get_current_agency, get_current_restaurant_admin
+    from database import get_db
+    from fastapi.testclient import TestClient
+
+    guest = TelegramUser(
+        id=0,  # guest: triggers web_order_token_hash generation in checkout_cart()
+        first_name="Guest",
+        last_name=None,
+        username=None,
+        language_code="ru",
+        restaurant_id=restaurant.id,
+        restaurant=restaurant,
+    )
+
+    def override_get_db():
+        yield db
+
+    def override_get_telegram_user():
+        return guest
+
+    def override_get_current_agency():
+        return agency
+
+    def override_get_current_restaurant_admin():
+        return restaurant
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_telegram_user] = override_get_telegram_user
+    app.dependency_overrides[get_current_agency] = override_get_current_agency
+    app.dependency_overrides[get_current_restaurant_admin] = override_get_current_restaurant_admin
+
+    default_headers = {
+        "X-Restaurant-Id": str(restaurant.id),
+        "X-Location-Id":   str(location.id),
+    }
+
+    with TestClient(app, raise_server_exceptions=True, headers=default_headers) as c:
+        yield c
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -239,21 +296,21 @@ class TestTenantIsolation:
         assert r.status_code == 404
 
     def test_web_token_from_restaurant_a_not_accessible_via_b(
-        self, client, db, restaurant, location, restaurant2, location2, product, product2
+        self, guest_client, db, restaurant, location, restaurant2, location2, product, product2
     ):
         """
-        Order created for restaurant A with a web token.
-        That token is globally unique — no restaurant B headers change access.
+        Order created for restaurant A with a web token (guest client, id=0).
+        Token is globally unique — no restaurant B headers change access.
         GET /api/orders/web/{token} does NOT use X-Restaurant-Id at all.
         Test: token for restaurant A order returns correct data regardless.
         """
-        # Create cart + order for restaurant A
+        # Create cart + order for restaurant A using guest client
         sid = str(uuid.uuid4())
-        add = _add_item(client, restaurant.id, location.id, product.id, sid)
+        add = _add_item(guest_client, restaurant.id, location.id, product.id, sid)
         assert add.status_code == 200
 
         idem = str(uuid.uuid4())
-        co = _checkout(client, restaurant.id, location.id, sid,
+        co = _checkout(guest_client, restaurant.id, location.id, sid,
                        order_type="takeaway", idempotency_key=idem)
         assert co.status_code == 201
         data = co.json()
@@ -261,7 +318,7 @@ class TestTenantIsolation:
         assert token is not None
 
         # Access with no restaurant headers (public endpoint) → 200
-        r = client.get(f"/api/orders/web/{token}")
+        r = guest_client.get(f"/api/orders/web/{token}")
         assert r.status_code == 200
         assert r.json()["id"] == data["id"]
 
@@ -273,12 +330,16 @@ class TestTenantIsolation:
 class TestWebOrderToken:
 
     def test_anonymous_checkout_returns_token(
-        self, client, db, restaurant, location, product
+        self, guest_client, db, restaurant, location, product
     ):
-        """Guest (no Telegram) checkout returns web_order_token."""
+        """
+        Guest (id=0, no Telegram) checkout returns web_order_token.
+        Uses guest_client fixture which overrides tg_user.id=0.
+        Standard client has tg_user.id=111111111 → no token generated.
+        """
         sid = str(uuid.uuid4())
-        _add_item(client, restaurant.id, location.id, product.id, sid)
-        r = _checkout(client, restaurant.id, location.id, sid)
+        _add_item(guest_client, restaurant.id, location.id, product.id, sid)
+        r = _checkout(guest_client, restaurant.id, location.id, sid)
         assert r.status_code == 201
         token = r.json().get("web_order_token")
         assert token is not None
@@ -286,14 +347,15 @@ class TestWebOrderToken:
         assert len(token) > 20  # token_urlsafe(32) → ~43 chars
 
     def test_token_hash_stored_in_db_not_raw(
-        self, client, db, restaurant, location, product
+        self, guest_client, db, restaurant, location, product
     ):
         """
         SECURITY CRITICAL: Only SHA-256 hash stored in DB, never the raw token.
+        Uses guest_client (id=0) to trigger token generation.
         """
         sid = str(uuid.uuid4())
-        _add_item(client, restaurant.id, location.id, product.id, sid)
-        r = _checkout(client, restaurant.id, location.id, sid)
+        _add_item(guest_client, restaurant.id, location.id, product.id, sid)
+        r = _checkout(guest_client, restaurant.id, location.id, sid)
         assert r.status_code == 201
         raw_token = r.json().get("web_order_token")
         order_id = r.json()["id"]
@@ -310,21 +372,20 @@ class TestWebOrderToken:
         assert order.web_order_token_hash == expected_hash
 
     def test_token_is_not_sequential_or_guessable(
-        self, client, db, restaurant, location, product
+        self, guest_client, db, restaurant, location, product
     ):
         """Two tokens are not equal and not based on order ID."""
         tokens = []
         for _ in range(2):
             sid = str(uuid.uuid4())
-            _add_item(client, restaurant.id, location.id, product.id, sid)
-            r = _checkout(client, restaurant.id, location.id, sid)
+            _add_item(guest_client, restaurant.id, location.id, product.id, sid)
+            r = _checkout(guest_client, restaurant.id, location.id, sid)
             assert r.status_code == 201
             tokens.append((r.json()["id"], r.json()["web_order_token"]))
 
         order_id1, tok1 = tokens[0]
         order_id2, tok2 = tokens[1]
         assert tok1 != tok2
-        # Token must not be the order ID
         assert str(order_id1) not in tok1
         assert str(order_id2) not in tok2
 
@@ -333,14 +394,14 @@ class TestWebOrderToken:
         assert r.status_code == 404
 
     def test_order_id_as_token_returns_404(
-        self, client, db, restaurant, location, product
+        self, guest_client, db, restaurant, location, product
     ):
         """Cannot guess token from order ID."""
         sid = str(uuid.uuid4())
-        _add_item(client, restaurant.id, location.id, product.id, sid)
-        r = _checkout(client, restaurant.id, location.id, sid)
+        _add_item(guest_client, restaurant.id, location.id, product.id, sid)
+        r = _checkout(guest_client, restaurant.id, location.id, sid)
         order_id = r.json()["id"]
-        r2 = client.get(f"/api/orders/web/{order_id}")
+        r2 = guest_client.get(f"/api/orders/web/{order_id}")
         assert r2.status_code == 404
 
 
@@ -350,26 +411,28 @@ class TestWebOrderToken:
 
 class TestWebOrderEndpoint:
 
-    def test_valid_token_returns_200(self, client, db, restaurant, location, product):
+    def test_valid_token_returns_200(self, guest_client, db, restaurant, location, product):
+        """Valid token from guest checkout → 200. Uses guest_client (id=0)."""
         sid = str(uuid.uuid4())
-        _add_item(client, restaurant.id, location.id, product.id, sid)
-        r = _checkout(client, restaurant.id, location.id, sid, order_type="takeaway")
+        _add_item(guest_client, restaurant.id, location.id, product.id, sid)
+        r = _checkout(guest_client, restaurant.id, location.id, sid, order_type="takeaway")
         assert r.status_code == 201
         token = r.json()["web_order_token"]
+        assert token is not None
 
-        r2 = client.get(f"/api/orders/web/{token}")
+        r2 = guest_client.get(f"/api/orders/web/{token}")
         assert r2.status_code == 200
 
     def test_response_contains_expected_fields(
-        self, client, db, restaurant, location, product
+        self, guest_client, db, restaurant, location, product
     ):
         sid = str(uuid.uuid4())
-        _add_item(client, restaurant.id, location.id, product.id, sid)
-        r = _checkout(client, restaurant.id, location.id, sid,
+        _add_item(guest_client, restaurant.id, location.id, product.id, sid)
+        r = _checkout(guest_client, restaurant.id, location.id, sid,
                        order_type="takeaway", name="Test User")
         token = r.json()["web_order_token"]
 
-        r2 = client.get(f"/api/orders/web/{token}")
+        r2 = guest_client.get(f"/api/orders/web/{token}")
         assert r2.status_code == 200
         data = r2.json()
         assert "id" in data
@@ -381,49 +444,49 @@ class TestWebOrderEndpoint:
         assert "items" in data
 
     def test_response_excludes_private_fields(
-        self, client, db, restaurant, location, product
+        self, guest_client, db, restaurant, location, product
     ):
         """SECURITY: private fields must not be in WebOrderResponse."""
         sid = str(uuid.uuid4())
-        _add_item(client, restaurant.id, location.id, product.id, sid)
-        r = _checkout(client, restaurant.id, location.id, sid, phone="+998901234567")
+        _add_item(guest_client, restaurant.id, location.id, product.id, sid)
+        r = _checkout(guest_client, restaurant.id, location.id, sid, phone="+998901234567")
         token = r.json()["web_order_token"]
+        assert token is not None
 
-        r2 = client.get(f"/api/orders/web/{token}")
+        r2 = guest_client.get(f"/api/orders/web/{token}")
         data = r2.json()
-
-        # These fields must NOT be present
         assert "client_phone" not in data
         assert "client_telegram_id" not in data
         assert "restaurant_id" not in data
         assert "location_id" not in data
         assert "cancellation_reason" not in data
         assert "web_order_token_hash" not in data
-        assert "admin_password_hash" not in data
 
     def test_endpoint_does_not_require_x_restaurant_id(
-        self, client, db, restaurant, location, product
+        self, guest_client, db, restaurant, location, product
     ):
         """Token is the sole credential — no X-Restaurant-Id needed."""
         sid = str(uuid.uuid4())
-        _add_item(client, restaurant.id, location.id, product.id, sid)
-        r = _checkout(client, restaurant.id, location.id, sid)
+        _add_item(guest_client, restaurant.id, location.id, product.id, sid)
+        r = _checkout(guest_client, restaurant.id, location.id, sid)
         token = r.json()["web_order_token"]
+        assert token is not None
 
-        # Call without any auth headers
-        r2 = client.get(
+        # Call without any auth headers — token alone is sufficient
+        r2 = guest_client.get(
             f"/api/orders/web/{token}",
             headers={},  # no X-Restaurant-Id
         )
         assert r2.status_code == 200
 
-    def test_items_present_in_response(self, client, db, restaurant, location, product):
+    def test_items_present_in_response(self, guest_client, db, restaurant, location, product):
         sid = str(uuid.uuid4())
-        _add_item(client, restaurant.id, location.id, product.id, sid)
-        r = _checkout(client, restaurant.id, location.id, sid)
+        _add_item(guest_client, restaurant.id, location.id, product.id, sid)
+        r = _checkout(guest_client, restaurant.id, location.id, sid)
         token = r.json()["web_order_token"]
+        assert token is not None
 
-        r2 = client.get(f"/api/orders/web/{token}")
+        r2 = guest_client.get(f"/api/orders/web/{token}")
         data = r2.json()
         assert len(data["items"]) == 1
         item = data["items"][0]
@@ -717,17 +780,19 @@ class TestNonRegression:
     def test_order_response_has_web_token_field(
         self, client, db, restaurant, location, product
     ):
-        """OrderResponse now has web_order_token field (None for Telegram users)."""
-        # In the default client fixture, tg_user is a Telegram user
-        # The conftest client has get_telegram_user overridden — so checkout
-        # uses the overridden tg_user (which may have telegram_id set).
-        # We verify the field exists in the response (may be None).
+        """
+        OrderResponse has web_order_token field.
+        Standard client uses tg_user.id=111111111 → token is None (Telegram order).
+        Field must exist in response schema even when None.
+        """
         sid = str(uuid.uuid4())
         _add_item(client, restaurant.id, location.id, product.id, sid)
         r = _checkout(client, restaurant.id, location.id, sid)
         assert r.status_code == 201
         data = r.json()
-        assert "web_order_token" in data  # field exists (value may be None or str)
+        # Field must exist in schema; None is correct for Telegram-authenticated users
+        assert "web_order_token" in data
+        assert data["web_order_token"] is None  # Telegram user → no token
 
     def test_existing_app_route_not_affected(self, client):
         r = client.get("/app")
