@@ -46,6 +46,15 @@ class Cart(Base):
     # NULL = checkout without key (or not yet checked out).
     # Set atomically with status='checked_out' in checkout transaction.
     checkout_idempotency_key = Column(String(64), nullable=True)
+
+    # Phase 14 (SEC-03): direct cart → order link for safe idempotency replay.
+    # Set atomically in Step 11 (same transaction as checkout_idempotency_key).
+    # NULL for pre-Phase-14 carts; legacy heuristic lookup used as fallback.
+    order_id = Column(
+        BigInteger,
+        ForeignKey("orders.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     created_at  = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
     updated_at  = Column(
         TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False,
