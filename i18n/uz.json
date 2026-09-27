@@ -247,5 +247,6 @@
   "admin.months.9": "Sentabr",
   "admin.months.10": "Oktabr",
   "admin.months.11": "Noyabr",
-  "admin.months.12": "Dekabr"
+  "admin.months.12": "Dekabr",
+  "telegram.order_scheduled": "📅 Buyurtmangiz qabul qilindi! #{id}\n⏰ Rejadagi vaqt: {scheduled_at}\n💰 Jami: {amount}"
 }
