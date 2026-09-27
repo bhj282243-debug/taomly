@@ -854,13 +854,17 @@ def delete_location(
 # GET /{slug}/table/{table_number} — получить стол по номеру
 # ──────────────────────────────────────────
 @router.get("/{slug}/table/{table_number}", response_model=TableResponse)
-def get_table_by_number(slug: str, table_number: str, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")  # Phase 14: rate limit (public endpoint, QR scan)
+def get_table_by_number(request: Request, slug: str, table_number: str, db: Session = Depends(get_db)):
     """
     Возвращает данные стола по slug (Location.slug) и номеру стола.
 
     Phase 11: slug = Location.slug (canonical QR path).
     Backward compat: для ресторанов с одной Location location.slug == restaurant.slug
     (инвариант, установленный при создании ресторана в agency.py).
+
+    Phase 14: добавлен is_active фильтр на table (inactive tables not resolvable via QR).
+    Phase 14: rate limit 10/minute (public endpoint used by QR scan and web DINE_IN).
 
     QR URL: /app?slug={location_slug}&table={table_number}&type=dine_in
       → GET /api/restaurants/{location_slug}/table/{table_number}
@@ -909,10 +913,12 @@ def get_table_by_number(slug: str, table_number: str, db: Session = Depends(get_
                 detail="Ресторан не найден",
             )
 
-    # Resolve table within the identified location (unambiguous for multi-location)
+    # Phase 14: added is_active=True filter — inactive tables not resolvable via QR.
+    # Phase 11 original did not filter is_active (oversight corrected here).
     table = db.query(RestaurantTable).filter(
         RestaurantTable.location_id == location.id,
         RestaurantTable.table_number == table_number,
+        RestaurantTable.is_active == True,  # Phase 14: inactive tables return 404
     ).first()
     if not table:
         raise HTTPException(
