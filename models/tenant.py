@@ -246,6 +246,11 @@ class Location(Base):
 
     is_waiter_call_enabled = Column(Boolean, default=False, nullable=False)
 
+    # Phase 14: estimated kitchen preparation time in minutes.
+    # NULL = not configured (activation fallback = 0 min, i.e. activate at scheduled_at - BUFFER).
+    # Used for: (1) ETA display in notifications; (2) scheduled order activation formula.
+    preparation_time_minutes = Column(Integer, nullable=True)
+
     # Telegram config (per-location, ADR-001: 1 Location = 1 Bot)
     # Moved here from Restaurant in Stage 1. Restaurant fields kept for
     # backward compat until Migration 0015 (DROP legacy columns).
@@ -260,7 +265,10 @@ class Location(Base):
         nullable=False,
     )
 
-    restaurant = relationship("Restaurant", lazy="select")
+    restaurant     = relationship("Restaurant", lazy="select")
+    delivery_zones = relationship(
+        "DeliveryZone", back_populates="location", lazy="select",
+    )
 
     def __repr__(self) -> str:
         return f"<Location id={self.id} slug={self.slug!r} restaurant_id={self.restaurant_id}>"
