@@ -85,7 +85,30 @@ class Order(Base):
     # Note: unique constraint enforced via partial index in migration 0024
     # (WHERE web_order_token_hash IS NOT NULL) to allow multiple NULLs.
 
-    restaurant = relationship("Restaurant", back_populates="orders", lazy="select")
+    # Phase 14: delivery fee snapshot and subtotal.
+    # subtotal = sum(OrderItem.price * quantity) — items only, never from client.
+    # delivery_fee = snapshotted from DeliveryZone.fee or Location.delivery_fee at checkout.
+    # total_amount = subtotal + delivery_fee (application-level invariant).
+    # Neither subtotal nor delivery_fee mutates after Order creation.
+    subtotal     = Column(Integer, nullable=False, server_default="0", default=0)
+    delivery_fee = Column(Integer, nullable=False, server_default="0", default=0)
+
+    # Phase 14: delivery zone FK (nullable — NULL for non-delivery or no-zone delivery).
+    # ON DELETE SET NULL: historical Order survives zone deletion (fee already snapshotted).
+    delivery_zone_id = Column(
+        BigInteger,
+        ForeignKey("delivery_zones.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    # Phase 14: scheduled order target time (timezone-aware UTC stored).
+    # NULL = immediate order. NOT NULL = order to be fulfilled at this time.
+    # Semantics: time at which customer wants to receive the order (pickup/delivery/dine_in).
+    # Activation: now >= scheduled_at - prep_time - zone_eta - BUFFER → status new→accepted.
+    scheduled_at = Column(TIMESTAMP(timezone=True), nullable=True)
+
+    restaurant    = relationship("Restaurant", back_populates="orders", lazy="select")
+    delivery_zone = relationship("DeliveryZone", lazy="select")
     location   = relationship("Location", lazy="select")
     client     = relationship("User", lazy="select")
     items      = relationship(
