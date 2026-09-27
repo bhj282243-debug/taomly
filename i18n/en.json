@@ -247,5 +247,6 @@
   "admin.months.9": "September",
   "admin.months.10": "October",
   "admin.months.11": "November",
-  "admin.months.12": "December"
+  "admin.months.12": "December",
+  "telegram.order_scheduled": "📅 Your order is confirmed! #{id}\n⏰ Scheduled for: {scheduled_at}\n💰 Total: {amount}"
 }
