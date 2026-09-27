@@ -45,6 +45,9 @@ class OrderCreate(BaseModel):
     table_id: Optional[int] = Field(None, gt=0)
     comment: Optional[str] = Field(None, max_length=500)
     items: List[OrderItemCreate] = Field(..., min_length=1, max_length=50)
+    # Phase 14:
+    zone_id:      Optional[int]      = Field(None, gt=0)
+    scheduled_at: Optional[datetime] = None
 
     @field_validator("client_phone", mode="before")
     @classmethod
@@ -60,6 +63,13 @@ class OrderCreate(BaseModel):
     @classmethod
     def validate_lng(cls, v: Optional[float]) -> Optional[float]:
         return _validate_coordinate(v, -180.0, 180.0, "location_lng")
+
+    @field_validator("scheduled_at", mode="after")
+    @classmethod
+    def validate_scheduled_tz(cls, v: Optional[datetime]) -> Optional[datetime]:
+        if v is not None and v.tzinfo is None:
+            raise ValueError("scheduled_at must be timezone-aware (include UTC offset).")
+        return v
 
     @model_validator(mode="after")
     def validate_order_type_fields(self) -> "OrderCreate":
@@ -117,6 +127,11 @@ class OrderResponse(BaseModel):
     # None for Telegram-authenticated orders and legacy orders.
     # The raw token is never stored server-side — only its SHA-256 hash is in DB.
     web_order_token: Optional[str] = None
+    # Phase 14: delivery fee breakdown and scheduled_at.
+    subtotal:          int              = 0
+    delivery_fee:      int              = 0
+    delivery_zone_id:  Optional[int]    = None
+    scheduled_at:      Optional[datetime] = None
 
     model_config = {"from_attributes": True}
 
@@ -166,6 +181,7 @@ class OrderKDSResponse(BaseModel):
     client_name:  operational for takeaway (customer pickup identification).
     paid_at:      read-only projection fact from Order.paid_at (written by
                   Payment Service only). KDS never writes this field.
+    Phase 14: address and scheduled_at added for delivery/scheduled context (read-only).
     """
     id:                 int
     status:             str
@@ -183,6 +199,10 @@ class OrderKDSResponse(BaseModel):
     paid_at:            Optional[datetime] = None
     cancellation_reason: Optional[str] = None
     items:              List[OrderKDSItemResponse] = Field(default_factory=list)
+    # Phase 14: delivery and scheduled context (read-only, not authority for KDS).
+    address:            Optional[str]      = None   # delivery orders only
+    scheduled_at:       Optional[datetime] = None   # scheduled orders only
+    delivery_zone_id:   Optional[int]      = None   # delivery zone reference
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -249,5 +269,9 @@ class WebOrderResponse(BaseModel):
     paid_at:      Optional[datetime] = None
     created_at:   datetime
     items:        List[WebOrderItemResponse] = Field(default_factory=list)
+    # Phase 14:
+    subtotal:     int              = 0
+    delivery_fee: int              = 0
+    scheduled_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
