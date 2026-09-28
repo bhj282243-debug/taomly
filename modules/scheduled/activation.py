@@ -33,6 +33,7 @@ Activation does NOT use raw UPDATE — uses PATCH /status domain logic
 equivalent (status transition validation + notify_client_accepted).
 """
 
+# ruff: noqa: I001
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
@@ -59,8 +60,8 @@ def activate_scheduled_orders(
     notify_fn signature: notify_fn(order, restaurant, location) -> None
     Called synchronously (no BackgroundTasks in loop context).
     """
-    from models.orders import Order
     from models.delivery_zones import DeliveryZone
+    from models.orders import Order
     from models.tenant import Location, Restaurant
     from status_transitions import VALID_STATUS_TRANSITIONS
 
