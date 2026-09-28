@@ -28,8 +28,9 @@ handlers.py — Taomly Platform
   - BOT_CACHE: задокументировано ограничение multi-worker.
 """
 
+# ruff: noqa: I001
 import logging
-from typing import Dict, Optional
+from typing import Dict
 
 from config import settings
 
