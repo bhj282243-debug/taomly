@@ -15,6 +15,7 @@ routers/waiter_calls.py — Taomly Platform
   - Логирование через logger.exception с контекстом
 """
 
+# ruff: noqa: I001
 import logging
 from typing import List, Optional
 
