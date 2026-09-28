@@ -21,6 +21,7 @@ Business rules:
   - Public listing returns only is_active=True zones ordered by sort_order ASC.
 """
 
+# ruff: noqa: I001
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -85,7 +86,7 @@ def create_delivery_zone(
     location = db.query(Location).filter(
         Location.id == location_id,
         Location.restaurant_id == admin.id,
-        Location.is_active == True,
+        Location.is_active,
     ).first()
     if not location:
         raise HTTPException(
@@ -198,7 +199,7 @@ def list_delivery_zones_public(
     """
     location = db.query(Location).filter(
         Location.slug == location_slug.lower().strip(),
-        Location.is_active == True,
+        Location.is_active,
     ).first()
     if not location:
         raise HTTPException(
@@ -210,7 +211,7 @@ def list_delivery_zones_public(
         db.query(DeliveryZone)
         .filter(
             DeliveryZone.location_id == location.id,
-            DeliveryZone.is_active == True,
+            DeliveryZone.is_active,
         )
         .order_by(DeliveryZone.sort_order.asc(), DeliveryZone.id.asc())
         .all()
