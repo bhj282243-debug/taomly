@@ -10,8 +10,9 @@ fee and min_order are in tiyins (same unit as Order.total_amount, Payment.amount
 eta_minutes: optional, must be > 0 if provided.
 """
 
-from typing import Optional
+# ruff: noqa: I001
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
