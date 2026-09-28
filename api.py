@@ -49,6 +49,7 @@ api.py — Taomly Platform
     Существующие /api/* endpoints продолжают работать без изменений.
 """
 
+# ruff: noqa: I001
 import hmac
 import logging
 import os
