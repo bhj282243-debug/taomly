@@ -23,6 +23,7 @@ Location (Stage 1):
            запрещено через ON DELETE RESTRICT на orders.location_id (S1-3).
 """
 
+# ruff: noqa: I001
 from sqlalchemy import (
     BigInteger, Boolean, Column, CheckConstraint, Index, Integer,
     String, Text, TIMESTAMP, UniqueConstraint,
