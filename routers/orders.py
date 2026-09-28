@@ -34,6 +34,7 @@ routers/orders.py — Taomly Platform
   - Quota остаётся Brand-level (restaurant_id) — S1-8 task.
 """
 
+# ruff: noqa: I001
 import hashlib
 import logging
 from datetime import datetime, timezone
@@ -45,7 +46,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from auth import TelegramUser, get_current_restaurant_admin, get_telegram_user
 from database import get_db
-from models import Location, ModifierGroup, ModifierOption, Order, OrderItem, OrderItemModifier, Product, ProductVariant, Restaurant, RestaurantTable, Subscription, SubscriptionPlan, UsageEvent, User
+from models import Location, Order, OrderItem, OrderItemModifier, Product, ProductVariant, Restaurant, RestaurantTable, Subscription, SubscriptionPlan, UsageEvent, User
 from schemas import OrderCreate, OrderKDSResponse, OrderResponse, OrderStatusUpdate
 from schemas.orders import WebOrderItemResponse, WebOrderResponse
 import handlers
@@ -190,7 +191,7 @@ def _validate_and_snapshot_modifiers(
                 )
         return []
 
-    # Строим map: option_id → (ModifierGroup, ModifierOption) для этого продукта.
+    # Строим map: option_id → (ModifierGroup) для этого продукта.
     # Только активные группы и активные опции.
     option_map: dict[int, tuple] = {}  # option_id → (group, option)
     active_groups = [g for g in product.modifier_groups if g.is_active]
