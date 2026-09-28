@@ -913,12 +913,11 @@ def get_table_by_number(request: Request, slug: str, table_number: str, db: Sess
                 detail="Ресторан не найден",
             )
 
-    # Phase 14: added is_active=True filter — inactive tables not resolvable via QR.
-    # Phase 11 original did not filter is_active (oversight corrected here).
+    # Phase 14: table_number lookup within identified location.
+    # Note: RestaurantTable has no is_active field (soft delete not implemented for tables).
     table = db.query(RestaurantTable).filter(
         RestaurantTable.location_id == location.id,
         RestaurantTable.table_number == table_number,
-        RestaurantTable.is_active == True,  # Phase 14: inactive tables return 404
     ).first()
     if not table:
         raise HTTPException(
