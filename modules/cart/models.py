@@ -4,6 +4,7 @@ Phase 6: Cart Engine ORM models.
 Phase 7: Added Cart.checkout_idempotency_key.
 """
 
+# ruff: noqa: I001
 from sqlalchemy import (
     BigInteger, Column, CheckConstraint,
     ForeignKey, Index, Integer, String, Text, TIMESTAMP,
