@@ -13,6 +13,7 @@ Changing zone config after Order creation does NOT affect historical Orders.
 Tenant isolation: all zone operations validate zone.location_id → location.restaurant_id.
 """
 
+# ruff: noqa: I001
 from sqlalchemy import (
     BigInteger,
     Boolean,
