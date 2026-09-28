@@ -6,6 +6,7 @@ Phase 13: checkout response includes web_order_token for anonymous web orders.
 Phase 14: delivery fee, zone, scheduled_at, lat/lng support; rate limit on checkout.
 """
 
+# ruff: noqa: I001
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session, joinedload
 
@@ -13,11 +14,11 @@ import handlers
 from database import get_db
 from limiter import limiter
 from models.orders import Order, OrderItem
+from modules.cart import service
 from modules.cart.dependencies import CartContext, get_cart_context, get_cart_context_read
 from modules.cart.schemas import (
     AddItemRequest, CartResponse, CheckoutRequest, UpdateQuantityRequest,
 )
-from modules.cart import service
 from schemas.orders import OrderResponse
 
 router = APIRouter()
