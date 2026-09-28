@@ -14,9 +14,11 @@ Mutations use regular FOR UPDATE (short wait OK).
 PostgreSQL NOWAIT failure → sqlalchemy.exc.OperationalError pgcode '55P03' → HTTP 409.
 """
 
+# ruff: noqa: I001
 import hashlib
 import logging
 import secrets
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import HTTPException, status
@@ -24,10 +26,7 @@ from sqlalchemy import text as sa_text
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session, joinedload
 
-from datetime import datetime, timedelta, timezone
-from typing import Optional as _Optional
-
-from models import Location, ModifierGroup, ModifierOption, Product, ProductVariant
+from models import Location, ModifierGroup, Product, ProductVariant
 from models.delivery_zones import DeliveryZone
 from models.operations import RestaurantTable
 from models.orders import Order, OrderItem, OrderItemModifier
@@ -57,8 +56,8 @@ def resolve_delivery_fee(
     db: Session,
     location: Location,
     order_type: str,
-    zone_id: _Optional[int],
-) -> tuple[int, _Optional[int]]:
+    zone_id: Optional[int],
+) -> tuple[int, Optional[int]]:
     """
     Returns (delivery_fee, resolved_zone_id).
 
@@ -78,7 +77,7 @@ def resolve_delivery_fee(
         zone = db.query(DeliveryZone).filter(
             DeliveryZone.id == zone_id,
             DeliveryZone.location_id == location.id,
-            DeliveryZone.is_active == True,
+            DeliveryZone.is_active,
         ).first()
         if not zone:
             raise HTTPException(
@@ -94,7 +93,7 @@ def resolve_delivery_fee(
 def resolve_effective_min_order(
     db: Session,
     location: Location,
-    zone_id: _Optional[int],
+    zone_id: Optional[int],
 ) -> int:
     """
     Returns effective minimum order amount (tiyins) for delivery.
@@ -103,14 +102,14 @@ def resolve_effective_min_order(
     if zone_id is not None:
         zone = db.query(DeliveryZone).filter(
             DeliveryZone.id == zone_id,
-            DeliveryZone.is_active == True,
+            DeliveryZone.is_active,
         ).first()
         if zone and zone.min_order > 0:
             return zone.min_order
     return location.min_order_amount or 0
 
 
-def validate_scheduled_at(scheduled_at: _Optional[datetime]) -> None:
+def validate_scheduled_at(scheduled_at: Optional[datetime]) -> None:
     """
     Validates scheduled_at against approved bounds-only rules (OD-01).
     Raises HTTP 422 if out of bounds.
