@@ -4,8 +4,9 @@ Phase 7: Added Order.currency — immutable snapshot of Location.currency at che
 Flow: Location.currency → Cart.currency → Order.currency
 """
 
+# ruff: noqa: I001
 from sqlalchemy import (
-    BigInteger, Boolean, Column, CheckConstraint, Float,
+    BigInteger, Column, CheckConstraint, Float,
     ForeignKey, Index, Integer, String, Text, TIMESTAMP,
 )
 from sqlalchemy.orm import relationship
