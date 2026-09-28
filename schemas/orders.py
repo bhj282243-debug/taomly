@@ -7,6 +7,7 @@ Phase 13: Added web_order_token to OrderResponse (anonymous web order tracking).
           Added WebOrderItemResponse and WebOrderResponse (public-safe schema).
 """
 
+# ruff: noqa: I001
 from datetime import datetime
 from typing import List, Literal, Optional
 
