@@ -397,6 +397,8 @@ class TestCheckE:
         mock_order.address = None
         mock_order.table_id = None
         mock_order.comment = None
+        # Phase 14: notify_new_order читает delivery_fee (int в Order) — у MagicMock задаём реальное число.
+        mock_order.delivery_fee = 0
 
         # dispatcher_id = None → функция вернётся после warning, не отправит сообщение
         # Проверяем только что функция не падает с ошибкой при location=KZT
