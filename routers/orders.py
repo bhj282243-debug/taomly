@@ -34,6 +34,7 @@ routers/orders.py — Taomly Platform
   - Quota остаётся Brand-level (restaurant_id) — S1-8 task.
 """
 
+# ruff: noqa: I001
 import hashlib
 import logging
 from datetime import datetime, timezone
@@ -45,7 +46,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from auth import TelegramUser, get_current_restaurant_admin, get_telegram_user
 from database import get_db
-from models import Location, ModifierGroup, ModifierOption, Order, OrderItem, OrderItemModifier, Product, ProductVariant, Restaurant, RestaurantTable, Subscription, SubscriptionPlan, UsageEvent, User
+from models import Location, Order, OrderItem, OrderItemModifier, Product, ProductVariant, Restaurant, RestaurantTable, Subscription, SubscriptionPlan, UsageEvent, User
 from schemas import OrderCreate, OrderKDSResponse, OrderResponse, OrderStatusUpdate
 from schemas.orders import WebOrderItemResponse, WebOrderResponse
 import handlers
@@ -190,7 +191,7 @@ def _validate_and_snapshot_modifiers(
                 )
         return []
 
-    # Строим map: option_id → (ModifierGroup, ModifierOption) для этого продукта.
+    # Строим map: option_id → (ModifierGroup) для этого продукта.
     # Только активные группы и активные опции.
     option_map: dict[int, tuple] = {}  # option_id → (group, option)
     active_groups = [g for g in product.modifier_groups if g.is_active]
@@ -510,25 +511,43 @@ def create_order(
             "modifier_snapshots": modifier_snapshots,
         })
 
-    # S1-7: min_order_amount и currency берутся из Location (source of truth).
-    # location уже resolved выше и tenant-изолирован.
-    _min_order = location.min_order_amount or 0
+    # S1-7: currency берётся из Location (source of truth).
     _cur = location.currency or "UZS"
+
+    # Phase 14: subtotal = items only (server-computed, client cannot supply).
+    subtotal = total
+
+    # Phase 14: delivery fee — server-authoritative via shared helper.
+    # resolve_delivery_fee raises HTTP 404 for invalid/inactive/cross-tenant zone_id.
+    from modules.cart.service import (
+        resolve_delivery_fee, resolve_effective_min_order, validate_scheduled_at,
+    )
+    delivery_fee, resolved_zone_id = resolve_delivery_fee(
+        db, location, data.order_type, data.zone_id,
+    )
+    total = subtotal + delivery_fee
+
+    # Phase 14: min_order check against subtotal (items only, not total_amount).
+    # zone min_order takes priority if zone provided.
+    _min_order = resolve_effective_min_order(db, location, resolved_zone_id)
 
     # Проверка минимальной суммы заказа для доставки
     if (
         data.order_type == "delivery"
         and _min_order
-        and total < _min_order
+        and subtotal < _min_order
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
                 f"Минимальная сумма заказа для доставки: "
                 f"{_fmt_price(_min_order, _cur)}. "
-                f"Ваш заказ: {_fmt_price(total, _cur)}."
+                f"Ваш заказ: {_fmt_price(subtotal, _cur)}."
             ),
         )
+
+    # Phase 14: scheduled_at bounds validation (OD-01: bounds-only).
+    validate_scheduled_at(data.scheduled_at)
 
     # Ищем User запись по telegram_id чтобы заполнить client_id (FK на users.id).
     # Гостевой пользователь (tg_user.id == 0) не имеет записи в users — client_id = NULL.
@@ -540,6 +559,9 @@ def create_order(
         ).first()
         if user_row:
             client_db_id = user_row[0]
+
+    # Phase 14: scheduled orders start at 'new' (not visible in KDS until activation).
+    _initial_status = "new" if data.scheduled_at is not None else "accepted"
 
     # S1-3: Order создаётся с location_id (canonical operational scope).
     # Legacy compat: restaurant_id = location.restaurant_id заполняется
@@ -554,12 +576,18 @@ def create_order(
         client_phone=data.client_phone,
         order_type=data.order_type,
         address=data.address,
+        location_lat=data.location_lat,
+        location_lng=data.location_lng,
         table_id=data.table_id,
         comment=data.comment,
-        total_amount=total,
+        subtotal=subtotal,                  # Phase 14: items-only amount
+        delivery_fee=delivery_fee,          # Phase 14: fee snapshot
+        total_amount=total,                 # Phase 14: subtotal + delivery_fee
+        delivery_zone_id=resolved_zone_id,  # Phase 14: nullable FK
+        scheduled_at=data.scheduled_at,     # Phase 14: None for immediate orders
         # Phase 7: currency NOT NULL column — take from Location (authoritative source).
         currency=location.currency or "UZS",
-        status="accepted",
+        status=_initial_status,
     )
     db.add(order)
     db.flush()
@@ -630,12 +658,23 @@ def create_order(
         restaurant,
         location,   # S1-7: currency берётся из Location
     )
-    background_tasks.add_task(
-        handlers.notify_client_accepted,
-        order_with_items,
-        restaurant,
-        location,   # S1-8: language/currency из Location
-    )
+
+    # Phase 14 (BLOCK-01): scheduled orders get notify_client_scheduled() at creation.
+    # notify_client_accepted() fires at activation loop (new→accepted).
+    if order_with_items.scheduled_at is None:
+        background_tasks.add_task(
+            handlers.notify_client_accepted,
+            order_with_items,
+            restaurant,
+            location,   # S1-8: language/currency из Location
+        )
+    else:
+        background_tasks.add_task(
+            handlers.notify_client_scheduled,
+            order_with_items,
+            restaurant,
+            location,
+        )
 
     logger.info(
         "Заказ создан: order_id=%s restaurant_id=%s tg_user=%s total=%s",

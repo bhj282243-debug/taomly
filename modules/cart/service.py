@@ -14,9 +14,11 @@ Mutations use regular FOR UPDATE (short wait OK).
 PostgreSQL NOWAIT failure → sqlalchemy.exc.OperationalError pgcode '55P03' → HTTP 409.
 """
 
+# ruff: noqa: I001
 import hashlib
 import logging
 import secrets
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import HTTPException, status
@@ -24,7 +26,8 @@ from sqlalchemy import text as sa_text
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session, joinedload
 
-from models import Location, ModifierGroup, ModifierOption, Product, ProductVariant
+from models import Location, ModifierGroup, Product, ProductVariant
+from models.delivery_zones import DeliveryZone
 from models.operations import RestaurantTable
 from models.orders import Order, OrderItem, OrderItemModifier
 from modules.cart.models import Cart, CartItem, CartItemModifier
@@ -35,6 +38,109 @@ logger = logging.getLogger(__name__)
 
 _EMPTY_MODIFIERS_HASH = hashlib.sha256(b"").hexdigest()
 _PG_LOCK_NOT_AVAILABLE = "55P03"
+
+# Phase 14: Scheduled order validation constants (OD-01: bounds-only, no working-hours check).
+_SCHEDULED_MIN_ADVANCE_MINUTES: int = 30   # minimum lead time
+_SCHEDULED_MAX_HORIZON_DAYS: int    = 7    # maximum scheduling horizon
+
+# Phase 14: Scheduled order activation constants (BLOCK-02 resolution, Option A).
+# NULL preparation_time_minutes fallback = 0 (documented: migration 0028 comment).
+SCHEDULED_ACTIVATION_BUFFER_MINUTES: int = 5
+
+
+# ── PHASE 14: SHARED DELIVERY FEE HELPER ──────────────────────────
+# Used by both checkout paths: modules/cart/service.py and routers/orders.py.
+# Server-authoritative: client cannot supply fee or subtotal.
+
+def resolve_delivery_fee(
+    db: Session,
+    location: Location,
+    order_type: str,
+    zone_id: Optional[int],
+) -> tuple[int, Optional[int]]:
+    """
+    Returns (delivery_fee, resolved_zone_id).
+
+    For non-delivery orders: always (0, None).
+    For delivery:
+      - zone_id provided and valid → (zone.fee, zone.id)
+      - zone_id provided but invalid/inactive/wrong tenant → HTTP 404
+      - zone_id None → fallback to location.delivery_fee (may be 0)
+
+    fee is in tiyins (same unit as Order.total_amount).
+    Client-provided fee is never used.
+    """
+    if order_type != "delivery":
+        return (0, None)
+
+    if zone_id is not None:
+        zone = db.query(DeliveryZone).filter(
+            DeliveryZone.id == zone_id,
+            DeliveryZone.location_id == location.id,
+            DeliveryZone.is_active,
+        ).first()
+        if not zone:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Delivery zone not found or inactive.",
+            )
+        return (zone.fee, zone.id)
+
+    # Fallback: location-level fee (backward compat, also covers "no zones" scenario)
+    return (location.delivery_fee or 0, None)
+
+
+def resolve_effective_min_order(
+    db: Session,
+    location: Location,
+    zone_id: Optional[int],
+) -> int:
+    """
+    Returns effective minimum order amount (tiyins) for delivery.
+    Zone min_order takes priority over location min_order_amount when > 0.
+    """
+    if zone_id is not None:
+        zone = db.query(DeliveryZone).filter(
+            DeliveryZone.id == zone_id,
+            DeliveryZone.is_active,
+        ).first()
+        if zone and zone.min_order > 0:
+            return zone.min_order
+    return location.min_order_amount or 0
+
+
+def validate_scheduled_at(scheduled_at: Optional[datetime]) -> None:
+    """
+    Validates scheduled_at against approved bounds-only rules (OD-01).
+    Raises HTTP 422 if out of bounds.
+    Does NOT check working hours (OD-01: structured hours deferred to future Phase).
+    """
+    if scheduled_at is None:
+        return
+    if scheduled_at.tzinfo is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="scheduled_at must be timezone-aware (include UTC offset).",
+        )
+    now_utc = datetime.now(timezone.utc)
+    min_time = now_utc + timedelta(minutes=_SCHEDULED_MIN_ADVANCE_MINUTES)
+    max_time = now_utc + timedelta(days=_SCHEDULED_MAX_HORIZON_DAYS)
+    if scheduled_at < min_time:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"Scheduled time must be at least {_SCHEDULED_MIN_ADVANCE_MINUTES} "
+                f"minutes from now."
+            ),
+        )
+    if scheduled_at > max_time:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"Scheduled time cannot be more than {_SCHEDULED_MAX_HORIZON_DAYS} "
+                f"days in advance."
+            ),
+        )
 
 
 # ── INTERNAL: CART ROW LOCK ────────────────────────────────────────
@@ -499,6 +605,11 @@ def checkout_cart(
     comment: Optional[str],
     idempotency_key: Optional[str],
     display_name: str,
+    # Phase 14 additions:
+    zone_id: Optional[int] = None,
+    scheduled_at: Optional[datetime] = None,
+    location_lat: Optional[float] = None,
+    location_lng: Optional[float] = None,
 ) -> Order:
     """
     Convert active Cart into immutable Order.
@@ -508,9 +619,13 @@ def checkout_cart(
       → idempotency check (replay if same key)
       → validate not empty
       → fresh availability validation
-      → calculate total (CartItem.unit_price snapshots)
+      → calculate subtotal (CartItem.unit_price snapshots)
+      → resolve delivery_fee (Phase 14: server-side, zone or location fallback)
+      → total_amount = subtotal + delivery_fee
+      → validate min_order against subtotal
+      → validate scheduled_at bounds (Phase 14)
       → INSERT Order + OrderItems + OrderItemModifiers
-      → UPDATE cart status='checked_out', checkout_idempotency_key=key
+      → UPDATE cart: status='checked_out', checkout_idempotency_key=key, order_id=order.id
       → COMMIT
 
     Failure: ROLLBACK → Cart remains active, no Order created.
@@ -650,24 +765,32 @@ def checkout_cart(
                         detail=f"Modifier option '{cart_mod.name}' is currently unavailable.",
                     )
 
-    # Step 7: Server-authoritative total (ADR-P7-PRICE + ADR-P7-1)
-    total_amount = sum(item.unit_price * item.quantity for item in items)
+    # Step 7: Server-authoritative subtotal (ADR-P7-PRICE + ADR-P7-1).
+    # subtotal = items only; delivery_fee added separately below.
+    # Client cannot supply subtotal, fee, or total_amount.
+    subtotal = sum(item.unit_price * item.quantity for item in items)
 
-    # Step 7b: Phase 13 — minimum order amount backend enforcement (OD-05).
-    # Applies to delivery orders only (consistent with legacy path in routers/orders.py).
-    # Frontend validation is UX only; this check is the authoritative gate.
-    # Cart remains active on failure — no DB mutation occurs before this point.
-    _min_order = location.min_order_amount or 0
+    # Step 7a: Phase 14 — delivery fee (server-side, zone or location fallback).
+    # resolve_delivery_fee raises HTTP 404 for invalid/inactive/cross-tenant zone_id.
+    delivery_fee, resolved_zone_id = resolve_delivery_fee(db, location, order_type, zone_id)
+    total_amount = subtotal + delivery_fee
+
+    # Step 7b: minimum order check against subtotal (items only, not total_amount).
+    # Phase 14: zone min_order takes priority over location min_order_amount.
+    _min_order = resolve_effective_min_order(db, location, resolved_zone_id)
     _currency = cart.currency or "UZS"
-    if order_type == "delivery" and _min_order > 0 and total_amount < _min_order:
+    if order_type == "delivery" and _min_order > 0 and subtotal < _min_order:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
                 f"Минимальная сумма заказа для доставки: "
                 f"{_fmt_price(_min_order, _currency)}. "
-                f"Ваш заказ: {_fmt_price(total_amount, _currency)}."
+                f"Ваш заказ: {_fmt_price(subtotal, _currency)}."
             ),
         )
+
+    # Step 7c: Phase 14 — scheduled order validation (OD-01: bounds-only).
+    validate_scheduled_at(scheduled_at)
 
     # Step 8: order_type business rules
     if order_type == "delivery" and not address:
@@ -715,6 +838,10 @@ def checkout_cart(
         _raw_web_token = secrets.token_urlsafe(32)  # ~43 chars, 256-bit entropy
         _token_hash = hashlib.sha256(_raw_web_token.encode()).hexdigest()  # 64-char hex
 
+    # Phase 14: scheduled orders start as 'new' (not visible in KDS until activation).
+    # Immediate orders start as 'accepted' (existing behaviour unchanged).
+    _initial_status = "new" if scheduled_at is not None else "accepted"
+
     order = Order(
         restaurant_id=restaurant_id,
         location_id=location.id,
@@ -725,10 +852,16 @@ def checkout_cart(
         address=address,
         table_id=table_id,
         comment=comment,
-        total_amount=total_amount,
-        currency=cart.currency,  # immutable snapshot
-        status="accepted",       # compatible with legacy flow + notifications
-        web_order_token_hash=_token_hash,  # None for Telegram orders
+        subtotal=subtotal,                  # Phase 14: items-only amount
+        delivery_fee=delivery_fee,          # Phase 14: fee snapshot (0 for non-delivery)
+        total_amount=total_amount,          # Phase 14: subtotal + delivery_fee
+        delivery_zone_id=resolved_zone_id,  # Phase 14: FK to zone (nullable)
+        scheduled_at=scheduled_at,          # Phase 14: None for immediate orders
+        currency=cart.currency,             # immutable snapshot
+        status=_initial_status,
+        web_order_token_hash=_token_hash,   # None for Telegram orders
+        location_lat=location_lat,          # Phase 14: optional coordinates
+        location_lng=location_lng,          # Phase 14: optional coordinates
     )
     db.add(order)
     db.flush()
@@ -758,9 +891,11 @@ def checkout_cart(
                 price_adjustment=cart_mod.price_adjustment,
             ))
 
-    # Step 11: Mark Cart checked_out + store idempotency key (atomic)
+    # Step 11: Mark Cart checked_out + store idempotency key + order_id link (atomic).
+    # cart.order_id set here (same transaction as status='checked_out') — Phase 14 SEC-03.
     cart.status = "checked_out"
     cart.checkout_idempotency_key = idempotency_key
+    cart.order_id = order.id  # Phase 14: direct FK for safe idempotency replay
 
     # Step 12: Commit
     try:
@@ -791,10 +926,19 @@ def _find_order_for_checked_out_cart(
     restaurant_id: int,
 ) -> Optional[Order]:
     """
-    Best-effort lookup for idempotency replay.
-    Finds most recent Order for this restaurant with same currency.
-    Note: direct cart_id→order_id mapping deferred to Phase 8+.
+    Safe idempotency replay via direct cart.order_id FK (Phase 14, SEC-03).
+    Falls back to heuristic for pre-Phase-14 carts (order_id is NULL).
     """
+    # Phase 14: O(1) direct lookup — guaranteed correct, no cross-cart risk.
+    if cart.order_id is not None:
+        return db.query(Order).filter(Order.id == cart.order_id).first()
+
+    # Legacy fallback for pre-Phase-14 carts (order_id=NULL).
+    # Phase 15+: remove once all active carts have order_id.
+    logger.debug(
+        "_find_order_for_checked_out_cart: cart %s has no order_id, using legacy lookup",
+        cart.id,
+    )
     return (
         db.query(Order)
         .filter(

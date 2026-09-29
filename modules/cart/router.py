@@ -3,19 +3,22 @@ modules/cart/router.py — Taomly Platform
 Phase 6: Cart Engine HTTP endpoints.
 Phase 7: Added POST /api/cart/checkout.
 Phase 13: checkout response includes web_order_token for anonymous web orders.
+Phase 14: delivery fee, zone, scheduled_at, lat/lng support; rate limit on checkout.
 """
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+# ruff: noqa: I001
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session, joinedload
 
 import handlers
 from database import get_db
+from limiter import limiter
 from models.orders import Order, OrderItem
+from modules.cart import service
 from modules.cart.dependencies import CartContext, get_cart_context, get_cart_context_read
 from modules.cart.schemas import (
     AddItemRequest, CartResponse, CheckoutRequest, UpdateQuantityRequest,
 )
-from modules.cart import service
 from schemas.orders import OrderResponse
 
 router = APIRouter()
@@ -104,7 +107,9 @@ def clear_cart(
 
 
 @router.post("/checkout", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")  # Phase 14: SEC-02 rate limit
 def checkout(
+    request:          Request,
     body:             CheckoutRequest,
     background_tasks: BackgroundTasks,
     ctx:              CartContext = Depends(get_cart_context),
@@ -117,6 +122,9 @@ def checkout(
     - Availability validated fresh from DB
     - Prices from CartItem.unit_price (snapshot, never re-read from menu)
     - Currency from Cart.currency = Location.currency at cart creation
+    - Phase 14: delivery_fee server-computed from zone or location
+    - Phase 14: total_amount = subtotal + delivery_fee
+    - Phase 14: scheduled_at bounds validated server-side
     - Notifications sent AFTER commit via BackgroundTasks
     """
     order = service.checkout_cart(
@@ -133,6 +141,11 @@ def checkout(
         comment=body.comment,
         idempotency_key=body.idempotency_key,
         display_name=ctx.tg_user.display_name,
+        # Phase 14:
+        zone_id=body.zone_id,
+        scheduled_at=body.scheduled_at,
+        location_lat=body.location_lat,
+        location_lng=body.location_lng,
     )
 
     # Load with items for response and notifications (after commit)
@@ -150,12 +163,24 @@ def checkout(
         ctx.tg_user.restaurant,
         ctx.location,
     )
-    background_tasks.add_task(
-        handlers.notify_client_accepted,
-        order_with_items,
-        ctx.tg_user.restaurant,
-        ctx.location,
-    )
+
+    # Phase 14 (BLOCK-01): scheduled orders get notify_client_scheduled() at creation,
+    # NOT notify_client_accepted(). notify_client_accepted() fires at activation (new→accepted).
+    # Immediate orders behave as before.
+    if order_with_items.scheduled_at is None:
+        background_tasks.add_task(
+            handlers.notify_client_accepted,
+            order_with_items,
+            ctx.tg_user.restaurant,
+            ctx.location,
+        )
+    else:
+        background_tasks.add_task(
+            handlers.notify_client_scheduled,
+            order_with_items,
+            ctx.tg_user.restaurant,
+            ctx.location,
+        )
 
     # Phase 13: inject raw web token into response for anonymous web orders.
     # The raw token is set transiently on the order object by checkout_cart().

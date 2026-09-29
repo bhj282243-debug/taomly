@@ -35,6 +35,11 @@
   let _view = 'menu';           // 'menu' | 'checkout' | 'confirmation'
   let _confirmationOrder = null;
 
+  // Phase 14: DINE_IN context (set from URL ?table= param on init)
+  let _dineInTableId = null;     // resolved DB table_id (from /api/restaurants/{slug}/table/{n})
+  let _dineInTableNum = null;    // human-readable table number (from URL param)
+  let _isDineIn = false;         // true when QR context detected
+
   /* ── SESSION ────────────────────────────────────────────────── */
   function getOrCreateSessionId() {
     let sid = localStorage.getItem(CART_SESSION_KEY);
@@ -125,7 +130,7 @@
   }
 
   /* ── CHECKOUT ────────────────────────────────────────────────── */
-  async function doCheckout(orderType, clientName, clientPhone, address, comment) {
+  async function doCheckout(orderType, clientName, clientPhone, address, comment, zoneId) {
     if (!_checkoutIdempotencyKey) {
       _checkoutIdempotencyKey = crypto.randomUUID();
     }
@@ -133,11 +138,13 @@
     const payload = {
       order_type: orderType,
       client_name: clientName || null,
-      client_phone: clientPhone || null,
+      client_phone: (orderType === 'dine_in') ? null : (clientPhone || null),
       address: orderType === 'delivery' ? (address || null) : null,
+      table_id: orderType === 'dine_in' ? _dineInTableId : null,  // Phase 14
       comment: comment || null,
       idempotency_key: _checkoutIdempotencyKey,
-      // NEVER include: total_amount, currency, restaurant_id, location_id
+      zone_id: zoneId || null,       // Phase 14: delivery zone hint
+      // NEVER include: total_amount, subtotal, delivery_fee, currency, restaurant_id, location_id
     };
 
     return apiFetch('/api/cart/checkout', {
@@ -294,15 +301,23 @@
       <div class="web-checkout">
         <div id="web-checkout-error" class="web-error" style="display:none"></div>
 
-        <div class="web-form-group">
-          <label>Тип заказа</label>
-          <select id="wc-order-type" onchange="WEB.onOrderTypeChange()">
-            <option value="takeaway">Самовывоз</option>
-            <option value="delivery">Доставка</option>
-          </select>
-        </div>
+        ${_isDineIn
+          ? `<div class="web-form-group">
+               <label>Тип заказа</label>
+               <div style="padding:8px 12px;background:var(--color-surface);border-radius:8px;font-weight:600">
+                 🪑 За столом (стол ${esc(_dineInTableNum || '')})
+               </div>
+             </div>`
+          : `<div class="web-form-group">
+               <label>Тип заказа</label>
+               <select id="wc-order-type" onchange="WEB.onOrderTypeChange()">
+                 <option value="takeaway">Самовывоз</option>
+                 <option value="delivery">Доставка</option>
+               </select>
+             </div>`
+        }
 
-        <div class="web-form-group">
+        ${!_isDineIn ? `<div class="web-form-group">
           <label>Ваше имя *</label>
           <input type="text" id="wc-name" placeholder="Имя" maxlength="100">
         </div>
@@ -310,7 +325,7 @@
         <div class="web-form-group">
           <label>Телефон *</label>
           <input type="tel" id="wc-phone" placeholder="+998 __ ___ __ __">
-        </div>
+        </div>` : ''}
 
         <div class="web-form-group" id="wc-address-group" style="display:none">
           <label>Адрес доставки *</label>
@@ -329,9 +344,16 @@
               <span>${fmtPrice(i.unit_price * i.quantity, cur)}</span>
             </div>`
           ).join('')}
-          <div class="web-confirmation__row">
+          ${deliveryFee > 0 ? `<div class="web-confirmation__row" id="wc-fee-row">
+            <span>Доставка</span>
+            <span id="wc-fee-val">${fmtPrice(deliveryFee, cur)}</span>
+          </div>` : `<div id="wc-fee-row" style="display:none">
+            <span>Доставка</span>
+            <span id="wc-fee-val">0</span>
+          </div>`}
+          <div class="web-confirmation__row" style="font-weight:600">
             <span>Итого</span>
-            <span>${fmtPrice(total, cur)}</span>
+            <span id="wc-total-val">${fmtPrice(total, cur)}</span>
           </div>
         </div>
 
@@ -365,7 +387,7 @@
           </div>
           <div class="web-confirmation__row">
             <span>Тип</span>
-            <span>${o.order_type === 'delivery' ? 'Доставка' : 'Самовывоз'}</span>
+            <span>${o.order_type === 'delivery' ? 'Доставка' : o.order_type === 'dine_in' ? 'В зале' : 'Самовывоз'}</span>
           </div>
           ${o.items.map(i =>
             `<div class="web-confirmation__row">
@@ -431,23 +453,44 @@
     },
 
     onOrderTypeChange() {
-      const t = document.getElementById('wc-order-type').value;
+      const t = (document.getElementById('wc-order-type') || {}).value || 'takeaway';
       const ag = document.getElementById('wc-address-group');
       if (ag) ag.style.display = t === 'delivery' ? '' : 'none';
+      // Phase 14: toggle delivery fee display
+      const feeRow = document.getElementById('wc-fee-row');
+      const feeVal = document.getElementById('wc-fee-val');
+      const totalVal = document.getElementById('wc-total-val');
+      if (feeRow && feeVal && totalVal && _restaurant) {
+        const cur = _restaurant.currency || 'UZS';
+        const subtotal = _cartItems.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+        if (t === 'delivery' && (_restaurant.delivery_fee || 0) > 0) {
+          const fee = _restaurant.delivery_fee;
+          feeRow.style.display = '';
+          feeVal.textContent = fmtPrice(fee, cur);
+          if (totalVal) totalVal.textContent = fmtPrice(subtotal + fee, cur);
+        } else {
+          feeRow.style.display = 'none';
+          if (totalVal) totalVal.textContent = fmtPrice(subtotal, cur);
+        }
+      }
     },
 
     async submitCheckout() {
       const btn = document.getElementById('wc-submit-btn');
       const errEl = document.getElementById('web-checkout-error');
-      const orderType = document.getElementById('wc-order-type').value;
-      const name = (document.getElementById('wc-name').value || '').trim();
-      const phone = (document.getElementById('wc-phone').value || '').trim();
-      const address = (document.getElementById('wc-address') || {}).value || '';
-      const comment = (document.getElementById('wc-comment').value || '').trim();
+      // Phase 14: dine_in is fixed from QR context; otherwise use selector
+      const orderType = _isDineIn
+        ? 'dine_in'
+        : (document.getElementById('wc-order-type') || {}).value || 'takeaway';
+      const name = ((document.getElementById('wc-name') || {}).value || '').trim();
+      const phone = ((document.getElementById('wc-phone') || {}).value || '').trim();
+      const address = ((document.getElementById('wc-address') || {}).value || '').trim();
+      const comment = ((document.getElementById('wc-comment') || {}).value || '').trim();
 
       // Frontend validation (UX only — backend is authoritative)
-      if (!name) { showFormError(errEl, 'Укажите ваше имя.'); return; }
-      if (!phone) { showFormError(errEl, 'Укажите телефон.'); return; }
+      // dine_in: name/phone not required (operational context)
+      if (!_isDineIn && !name) { showFormError(errEl, 'Укажите ваше имя.'); return; }
+      if (!_isDineIn && !phone) { showFormError(errEl, 'Укажите телефон.'); return; }
       if (orderType === 'delivery' && !address.trim()) {
         showFormError(errEl, 'Укажите адрес доставки.'); return;
       }
@@ -457,7 +500,7 @@
       if (errEl) errEl.style.display = 'none';
 
       try {
-        const order = await doCheckout(orderType, name, phone, address, comment);
+        const order = await doCheckout(orderType, name, phone, address, comment, null);
 
         // Store raw token in localStorage (token returned only once)
         if (order.web_order_token) {
@@ -502,6 +545,25 @@
       return;
     }
     const slug = meta.slug;
+
+    // Phase 14: detect QR-based DINE_IN context from URL ?table= param
+    const _urlP = new URLSearchParams(window.location.search);
+    const _tableParam = _urlP.get('table');
+    if (_tableParam) {
+      try {
+        const tData = await apiFetch(
+          `/api/restaurants/${encodeURIComponent(slug)}/table/${encodeURIComponent(_tableParam)}`
+        );
+        if (tData && tData.table_id) {
+          _dineInTableId  = tData.table_id;
+          _dineInTableNum = tData.table_number || _tableParam;
+          _isDineIn       = true;
+        }
+      } catch (e) {
+        // Table not found or inactive — silently fall through to normal ordering
+        console.warn('[web_order] table resolve failed:', e.message);
+      }
+    }
 
     // Hide SSR content block (JS has taken over)
     const ssrBlock = document.getElementById('web-ssr-content');

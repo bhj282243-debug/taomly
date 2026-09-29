@@ -247,5 +247,6 @@
   "admin.months.9": "Сентябрь",
   "admin.months.10": "Октябрь",
   "admin.months.11": "Ноябрь",
-  "admin.months.12": "Декабрь"
+  "admin.months.12": "Декабрь",
+  "telegram.order_scheduled": "📅 Ваш заказ принят! #{{id}}\n⏰ Запланировано на: {{scheduled_at}}\n💰 Итого: {{amount}}"
 }

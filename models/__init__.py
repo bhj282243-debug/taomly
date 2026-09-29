@@ -64,6 +64,9 @@ from modules.cart.models import Cart, CartItem, CartItemModifier
 # ── Payments (Phase 8 — зависит от tenant и orders) ───────────────────────────
 from .payments import Payment, PaymentAttempt, RestaurantPaymentConfig
 
+# Phase 14
+from .delivery_zones import DeliveryZone
+
 # ── Public API ────────────────────────────────────────────────────────────────
 __all__ = [
     # constants
@@ -107,4 +110,6 @@ __all__ = [
     "Payment",
     "PaymentAttempt",
     "RestaurantPaymentConfig",
+    # Phase 14
+    "DeliveryZone",
 ]

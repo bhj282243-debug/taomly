@@ -28,8 +28,9 @@ handlers.py — Taomly Platform
   - BOT_CACHE: задокументировано ограничение multi-worker.
 """
 
+# ruff: noqa: I001
 import logging
-from typing import Dict, Optional
+from typing import Dict
 
 from config import settings
 
@@ -315,13 +316,18 @@ if platform_bot:
 # ──────────────────────────────────────────
 # УВЕДОМЛЕНИЕ ДИСПЕТЧЕРУ — новый заказ
 # ──────────────────────────────────────────
-def notify_new_order(order, items, restaurant, location=None) -> None:
+def notify_new_order(order, items, restaurant, location=None, table_number=None) -> None:
     """
     Отправляет уведомление диспетчеру ресторана о новом заказе.
 
     S1-8: dispatcher_id и бот берутся из Location (source of truth).
     Если location не передан — fallback на restaurant для backward compat
     со старыми вызовами (legacy тесты).
+
+    Phase 14: добавлены поля:
+      - table_number (human-readable, вместо table_id)
+      - delivery_fee отдельной строкой (если > 0)
+      - scheduled_at (для запланированных заказов)
 
     Вызывается через BackgroundTasks — не блокирует HTTP-ответ.
     """
@@ -355,8 +361,11 @@ def notify_new_order(order, items, restaurant, location=None) -> None:
     location_text = ""
     if order.order_type == "delivery" and order.address:
         location_text = f"📍 Manzil: {order.address}\n"
-    elif order.order_type == "dine_in" and order.table_id:
-        location_text = f"🪑 Stol: #{order.table_id}\n"
+    elif order.order_type == "dine_in":
+        # Phase 14: use table_number (human-readable) instead of table_id (DB ID)
+        _tnum = table_number or (f"#{order.table_id}" if order.table_id else None)
+        if _tnum:
+            location_text = f"🪑 Stol: {_tnum}\n"
 
     comment_text = f"💬 Izoh: {order.comment}\n" if order.comment else ""
 
@@ -366,17 +375,42 @@ def notify_new_order(order, items, restaurant, location=None) -> None:
     if order.client_phone:
         client_text += f"📞 {order.client_phone}\n"
 
+    # Phase 14: scheduled_at display
+    scheduled_text = ""
+    if getattr(order, "scheduled_at", None):
+        try:
+            import pytz
+            tz_str = getattr(_src, "timezone", None) or "Asia/Tashkent"
+            tz = pytz.timezone(tz_str)
+            local_time = order.scheduled_at.astimezone(tz)
+            scheduled_text = f"⏰ Vaqt: {local_time.strftime('%d.%m %H:%M')}\n"
+        except Exception:
+            scheduled_text = f"⏰ Vaqt: {order.scheduled_at.strftime('%d.%m %H:%M')}\n"
+
+    # Phase 14: delivery fee breakdown (subtotal + fee if fee > 0)
+    _subtotal = getattr(order, "subtotal", order.total_amount)
+    _fee = getattr(order, "delivery_fee", 0) or 0
+    if _fee > 0:
+        financial_text = (
+            f"💰 Buyurtma: {_fmt_price(_subtotal, _cur)}\n"
+            f"🚗 Yetkazish: {_fmt_price(_fee, _cur)}\n"
+            f"💰 Jami: {_fmt_price(int(order.total_amount), _cur)}"
+        )
+    else:
+        financial_text = f"💰 Jami: {_fmt_price(int(order.total_amount), _cur)}"
+
     text = (
         f"🔔 YANGI BUYURTMA #{order.id}\n"
         f"{'─' * 28}\n"
         f"{type_label}\n"
         f"{client_text}"
         f"{location_text}"
+        f"{scheduled_text}"
         f"{comment_text}"
         f"{'─' * 28}\n"
         f"{items_text}"
         f"{'─' * 28}\n"
-        f"💰 Jami: {_fmt_price(int(order.total_amount), _cur)}"
+        f"{financial_text}"
     )
 
     try:
@@ -547,3 +581,105 @@ def notify_client_cancelled(order, restaurant, comment: str = "", location=None)
         reason=reason,
     )
     _notify_client(order, restaurant, text, "notify_client_cancelled", location)
+
+
+# ──────────────────────────────────────────
+# Phase 14: SCHEDULED ORDER CONFIRMATION
+# ──────────────────────────────────────────
+
+def notify_client_scheduled(order, restaurant, location=None) -> None:
+    """
+    Phase 14 (BLOCK-01): Confirmation notification for scheduled orders.
+    Sent at creation (status=new). notify_client_accepted() sent at activation.
+    Uses existing notification architecture (_notify_client, _t, i18n).
+    Displays scheduled_at in local timezone.
+    """
+    _src = location if location is not None else restaurant
+    lang = getattr(_src, "language", "uz") or "uz"
+    _cur = getattr(_src, "currency", None) or "UZS"
+
+    # Format scheduled_at in location's timezone
+    scheduled_local = ""
+    if getattr(order, "scheduled_at", None):
+        try:
+            import pytz
+            tz_str = getattr(_src, "timezone", None) or "Asia/Tashkent"
+            tz = pytz.timezone(tz_str)
+            local_time = order.scheduled_at.astimezone(tz)
+            scheduled_local = local_time.strftime("%d.%m %H:%M")
+        except Exception:
+            if order.scheduled_at:
+                scheduled_local = order.scheduled_at.strftime("%d.%m %H:%M")
+
+    # Use i18n key if exists, else fallback text
+    try:
+        text = _t(
+            "telegram.order_scheduled",
+            lang,
+            id=order.id,
+            scheduled_at=scheduled_local,
+            amount=_fmt_price(int(order.total_amount), _cur),
+        )
+    except Exception:
+        # Graceful fallback if i18n key not yet added
+        text = (
+            f"📅 Buyurtmangiz qabul qilindi! #{order.id}\n"
+            f"⏰ Rejadagi vaqt: {scheduled_local}\n"
+            f"💰 Jami: {_fmt_price(int(order.total_amount), _cur)}"
+        )
+
+    _notify_client(order, restaurant, text, "notify_client_scheduled", location)
+
+
+# ──────────────────────────────────────────
+# Phase 14: WAITER CALL NOTIFICATION
+# ──────────────────────────────────────────
+
+def notify_waiter_call(call, table, location) -> None:
+    """
+    Phase 14: Sends waiter call notification to restaurant dispatcher.
+    Called via BackgroundTasks — does not block HTTP response.
+
+    Source of truth for bot: location (ADR-001: 1 Location = 1 Bot).
+    Graceful failure: logs warning, never raises (non-critical notification).
+    """
+    dispatcher_id = getattr(location, "telegram_dispatcher_id", None)
+    if not dispatcher_id:
+        logger.warning(
+            "notify_waiter_call: dispatcher_id не настроен location_id=%s call_id=%s",
+            getattr(location, "id", "?"),
+            getattr(call, "id", "?"),
+        )
+        return
+
+    # Human-readable table number (not DB ID)
+    table_number = getattr(table, "table_number", None) or f"#{getattr(call, 'table_id', '?')}"
+
+    from datetime import datetime as _dt
+    now_str = _dt.now().strftime("%H:%M")
+
+    text = (
+        f"🔔 STOL CHAQIRUVI\n"
+        f"{'─' * 28}\n"
+        f"🪑 Stol: {table_number}\n"
+        f"🕐 Vaqt: {now_str}\n"
+        f"ID: #{getattr(call, 'id', '?')}"
+    )
+
+    try:
+        bot = get_location_bot(location)
+        bot.send_message(dispatcher_id, text)
+        logger.info(
+            "notify_waiter_call: call_id=%s table=%s dispatcher=%s location_id=%s",
+            getattr(call, "id", "?"),
+            table_number,
+            dispatcher_id,
+            location.id,
+        )
+    except ValueError as e:
+        logger.warning("notify_waiter_call: %s", e)
+    except Exception:
+        logger.exception(
+            "notify_waiter_call: ошибка отправки call_id=%s",
+            getattr(call, "id", "?"),
+        )

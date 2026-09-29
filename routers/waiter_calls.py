@@ -15,10 +15,11 @@ routers/waiter_calls.py — Taomly Platform
   - Логирование через logger.exception с контекстом
 """
 
+# ruff: noqa: I001
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -43,6 +44,7 @@ from status_transitions import WAITER_CALL_STATUS_TRANSITIONS as VALID_STATUS_TR
 def create_waiter_call(
     request: Request,
     data: WaiterCallCreate,
+    background_tasks: BackgroundTasks,
     tg_user: TelegramUser = Depends(get_telegram_user),
     db: Session = Depends(get_db),
 ):
@@ -51,12 +53,18 @@ def create_waiter_call(
 
     restaurant берётся из TelegramUser — клиент не передаёт restaurant_id.
 
+    Phase 14 additions:
+      - is_waiter_call_enabled check (SEC-05): 403 if disabled for location
+      - notify_waiter_call() sent via BackgroundTasks after commit
+
     Защита от Race Condition:
       SELECT FOR UPDATE блокирует строки с активными вызовами для этого стола
       до завершения транзакции. Если два запроса придут одновременно —
       второй будет ждать пока первый завершит commit, и затем найдёт
       уже существующий активный вызов и вернёт 400.
     """
+    import handlers as _handlers
+
     restaurant = tg_user.restaurant
 
     # Проверяем что стол принадлежит этому ресторану
@@ -70,8 +78,20 @@ def create_waiter_call(
             detail="Стол не найден в этом ресторане",
         )
 
+    # Phase 14 (SEC-05): load location for is_waiter_call_enabled check and notification.
+    location = db.query(Location).filter(Location.id == table.location_id).first()
+    if not location:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Локация не найдена",
+        )
+    if not location.is_waiter_call_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Вызов официанта не включён для этой локации.",
+        )
+
     # SELECT FOR UPDATE — блокируем строки на время транзакции.
-    # Конкурентный запрос будет ждать здесь пока мы не сделаем commit/rollback.
     existing = (
         db.execute(
             select(WaiterCall)
@@ -91,11 +111,10 @@ def create_waiter_call(
             detail="Для этого стола уже есть активный вызов",
         )
 
-    # S1-4: location_id берётся из table.location_id (стол привязан к Location в S1-2).
-    # Не требует X-Location-Id header — стол однозначно определяет локацию.
+    # S1-4: location_id берётся из table.location_id.
     call = WaiterCall(
         restaurant_id=restaurant.id,
-        location_id=table.location_id,  # S1-4 canonical
+        location_id=table.location_id,
         table_id=data.table_id,
         status="active",
     )
@@ -120,6 +139,10 @@ def create_waiter_call(
         "Вызов официанта создан: call_id=%s table_id=%s restaurant_id=%s location_id=%s",
         call.id, data.table_id, restaurant.id, table.location_id,
     )
+
+    # Phase 14: Telegram notification to dispatcher (non-blocking BackgroundTask).
+    background_tasks.add_task(_handlers.notify_waiter_call, call, table, location)
+
     return call
 
 

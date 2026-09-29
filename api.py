@@ -49,6 +49,7 @@ api.py — Taomly Platform
     Существующие /api/* endpoints продолжают работать без изменений.
 """
 
+# ruff: noqa: I001
 import hmac
 import logging
 import os
@@ -71,7 +72,7 @@ import models
 import telebot
 from config import settings
 from database import SessionLocal, engine
-from routers import agency, analytics, billing, menu_public, menu_admin, orders, public_web, reservations, restaurants, waiter_calls, ai, superadmin
+from routers import agency, analytics, billing, delivery_zones, menu_public, menu_admin, orders, public_web, reservations, restaurants, waiter_calls, ai, superadmin
 from modules.cart.router import router as cart_router
 from modules.payments.router import router as payments_router
 
@@ -356,7 +357,24 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("BOT_TOKEN не задан — платформенный бот отключён")
 
+    # Phase 14: Start scheduled order activation loop.
+    import asyncio as _asyncio
+    from modules.scheduled.activation import run_scheduled_activation_loop
+    from database import get_db as _get_db
+    _activation_task = _asyncio.create_task(
+        run_scheduled_activation_loop(_get_db, handlers.notify_client_accepted)
+    )
+    logger.info("Scheduled activation loop task created")
+
     yield
+
+    # Phase 14: Stop scheduled activation loop.
+    if _activation_task and not _activation_task.done():
+        _activation_task.cancel()
+        try:
+            await _activation_task
+        except asyncio.CancelledError:
+            logger.info("Scheduled activation task stopped cleanly")
 
     if handlers.platform_bot:
         try:
@@ -524,6 +542,7 @@ app.include_router(restaurants.router)
 app.include_router(agency.router)
 app.include_router(ai.router)
 app.include_router(superadmin.router)
+app.include_router(delivery_zones.router)  # Phase 14
 
 # ──────────────────────────────────────────
 # STATIC
