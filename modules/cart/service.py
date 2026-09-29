@@ -924,7 +924,7 @@ def _find_order_for_checked_out_cart(
     db: Session,
     cart: Cart,
     restaurant_id: int,
-) -> _Optional[Order]:
+) -> Optional[Order]:
     """
     Safe idempotency replay via direct cart.order_id FK (Phase 14, SEC-03).
     Falls back to heuristic for pre-Phase-14 carts (order_id is NULL).
