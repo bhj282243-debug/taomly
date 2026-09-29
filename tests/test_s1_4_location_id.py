@@ -13,6 +13,8 @@ tests/test_s1_4_location_id.py — S1-4: location_id на reservations, waiter_c
   Исправлено в test_tenant_isolation.py отдельно.
 """
 
+from unittest.mock import patch
+
 import pytest
 from sqlalchemy.exc import IntegrityError
 
@@ -257,7 +259,11 @@ class TestCheckK:
     def test_create_waiter_call_sets_location_id_from_table(
         self, client, db, restaurant, location, table
     ):
-        resp = client.post("/api/waiter-calls/", json={"table_id": table.id})
+        # Phase 14 (SEC-05): вызов официанта требует включённого флага у локации.
+        location.is_waiter_call_enabled = True
+        db.flush()
+        with patch("handlers.notify_waiter_call"):
+            resp = client.post("/api/waiter-calls/", json={"table_id": table.id})
         assert resp.status_code == 201, f"K FAIL: {resp.status_code} {resp.text}"
         data = resp.json()
         assert data["location_id"] == table.location_id
@@ -425,15 +431,23 @@ class TestCheckT:
     def test_duplicate_active_waiter_call_rejected(
         self, client, db, restaurant, location, table
     ):
-        resp1 = client.post("/api/waiter-calls/", json={"table_id": table.id})
-        assert resp1.status_code == 201, f"T FAIL: первый вызов: {resp1.status_code} {resp1.text}"
+        # Phase 14 (SEC-05): вызов официанта требует включённого флага у локации.
+        location.is_waiter_call_enabled = True
+        db.flush()
+        with patch("handlers.notify_waiter_call"):
+            resp1 = client.post("/api/waiter-calls/", json={"table_id": table.id})
+            assert resp1.status_code == 201, f"T FAIL: первый вызов: {resp1.status_code} {resp1.text}"
 
-        resp2 = client.post("/api/waiter-calls/", json={"table_id": table.id})
+            resp2 = client.post("/api/waiter-calls/", json={"table_id": table.id})
         assert resp2.status_code == 400, f"T FAIL: дубль должен быть 400, got {resp2.status_code}"
 
     def test_waiter_call_location_id_from_table(
         self, client, db, restaurant, location, table
     ):
-        resp = client.post("/api/waiter-calls/", json={"table_id": table.id})
+        # Phase 14 (SEC-05): вызов официанта требует включённого флага у локации.
+        location.is_waiter_call_enabled = True
+        db.flush()
+        with patch("handlers.notify_waiter_call"):
+            resp = client.post("/api/waiter-calls/", json={"table_id": table.id})
         assert resp.status_code == 201, f"T2 FAIL: {resp.status_code} {resp.text}"
         assert resp.json()["location_id"] == table.location_id
