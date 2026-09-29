@@ -328,6 +328,8 @@ class TestCheckF:
         mock_order.address = None
         mock_order.table_id = None
         mock_order.comment = None
+        # Phase 14: notify_new_order читает delivery_fee (int в Order) — у MagicMock задаём реальное число.
+        mock_order.delivery_fee = 0
 
         sent_to = []
 
@@ -947,6 +949,8 @@ class TestCheckO:
         mock_order.address = "ул. Навои, 1"
         mock_order.table_id = None
         mock_order.comment = "Без лука"
+        # Phase 14: notify_new_order читает delivery_fee (int в Order) — у MagicMock задаём реальное число.
+        mock_order.delivery_fee = 0
 
         mock_item = MagicMock()
         mock_item.name = "Плов"
@@ -993,6 +997,8 @@ class TestCheckO:
         mock_order.address = None
         mock_order.table_id = None
         mock_order.comment = None
+        # Phase 14: notify_new_order читает delivery_fee (int в Order) — у MagicMock задаём реальное число.
+        mock_order.delivery_fee = 0
 
         mock_item = MagicMock()
         mock_item.name = "Лагман"
