@@ -373,7 +373,7 @@ async def lifespan(app: FastAPI):
         _activation_task.cancel()
         try:
             await _activation_task
-        except asyncio.CancelledError:
+        except _asyncio.CancelledError:
             logger.info("Scheduled activation task stopped cleanly")
 
     if handlers.platform_bot:
