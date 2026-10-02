@@ -115,6 +115,18 @@ class TelegramUser:
     restaurant_id: int = field(default=0)
     restaurant: Optional[Restaurant] = field(default=None, repr=False)
 
+    @property
+    def is_guest(self) -> bool:
+        """
+        True для гостя (запрос без initData: браузер / PWA).
+
+        Гость создаётся в get_telegram_user с id=0. Реальный Telegram user id
+        всегда положительный, поэтому id=0 однозначно означает «не верифицирован».
+        Невалидная initData гостем не становится — get_telegram_user отвечает 401.
+        Phase 15 (MC-07): явный признак вместо неявной проверки id==0 в роутерах.
+        """
+        return self.id == 0
+
     @classmethod
     def from_dict(cls, data: dict, restaurant: Restaurant) -> "TelegramUser":
         return cls(

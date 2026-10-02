@@ -173,6 +173,18 @@ class _Settings:
 
     MAX_INIT_DATA_AGE_SECONDS: int = int(os.getenv("MAX_INIT_DATA_AGE_SECONDS", "3600"))
 
+    # Phase 15 / MC-07: гостевые лимиты бронирования (на пару «телефон только из цифр + Location»).
+    # Единственное место, где заданы значения; в остальном коде не дублируются.
+    #   CREATED_PER_60_MIN — максимум созданных броней за последние 60 минут (включая отменённые);
+    #   ACTIVE             — максимум активных броней (requested/confirmed).
+    # Применяются только к запросу Guest. Verified Telegram user этим лимитам не подчиняется.
+    RESERVATION_GUEST_MAX_CREATED_PER_60_MIN: int = int(
+        os.getenv("RESERVATION_GUEST_MAX_CREATED_PER_60_MIN", "5")
+    )
+    RESERVATION_GUEST_MAX_ACTIVE: int = int(
+        os.getenv("RESERVATION_GUEST_MAX_ACTIVE", "3")
+    )
+
     WEBHOOK_SECRET: str = _load_webhook_secret(SECRET_KEY)
 
     ALLOWED_ORIGINS: list[str] = [

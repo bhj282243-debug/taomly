@@ -7,10 +7,21 @@ from sqlalchemy import (
     BigInteger, Column, CheckConstraint, ForeignKey,
     Index, Integer, String, Text, TIMESTAMP, UniqueConstraint,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, validates
 from sqlalchemy.sql import func
 
 from database import Base
+
+
+def phone_digits(value) -> str:
+    """
+    Телефон → только цифры 0-9 (Phase 15, MC-07).
+
+    Других преобразований нет (например, код страны не добавляется):
+    '+998 (90) 123-45-67' → '998901234567'. ASCII-диапазон явный, чтобы
+    результат совпадал с SQL backfill в миграции 0030 (regexp_replace '[^0-9]').
+    """
+    return "".join(ch for ch in (value or "") if "0" <= ch <= "9")
 
 
 # ──────────────────────────────────────────
@@ -64,6 +75,11 @@ class Reservation(Base):
         ),
         CheckConstraint("guests_count > 0", name="check_reservation_guests"),
         Index("ix_reservations_restaurant_time", "restaurant_id", "reservation_time"),
+        # Phase 15 (MC-07): подсчёт гостевых лимитов по паре (телефон + Location).
+        Index(
+            "ix_reservations_location_phone_created",
+            "location_id", "client_phone_digits", "created_at",
+        ),
     )
 
     id               = Column(BigInteger, primary_key=True)
@@ -85,6 +101,9 @@ class Reservation(Base):
     )
     client_name      = Column(String(255), nullable=False)
     client_phone     = Column(String(50), nullable=False)
+    # Phase 15 (MC-07): digits-only представление client_phone для подсчёта лимитов в БД.
+    # NULL допустим только у строк, созданных до деплоя (их добирает миграция 0031).
+    client_phone_digits = Column(String(50), nullable=True)
     guests_count     = Column(Integer, nullable=False)
     reservation_time = Column(TIMESTAMP(timezone=True), nullable=False)
     comment          = Column(Text)
@@ -100,8 +119,18 @@ class Reservation(Base):
     restaurant = relationship("Restaurant", back_populates="reservations", lazy="select")
     location   = relationship("Location", lazy="select")
 
+    @validates("client_phone")
+    def _sync_phone_digits(self, key, value):
+        """
+        Любая запись client_phone автоматически обновляет client_phone_digits.
+        Новая бронь (из API, сервиса или фикстуры) не может появиться без
+        корректного digits-значения (Phase 15, MC-07).
+        """
+        self.client_phone_digits = phone_digits(value)
+        return value
+
     def __repr__(self) -> str:
-        return f"<Reservation id={self.id} client={self.client_name!r} status={self.status!r}>"
+        return f"<Reservation id{self.id} client={self.client_name!r} status={self.status!r}>"
 
 
 # ──────────────────────────────────────────

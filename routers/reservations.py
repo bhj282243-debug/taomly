@@ -27,6 +27,7 @@ from auth import TelegramUser, get_current_restaurant_admin, get_telegram_user
 from database import get_db
 from limiter import limiter
 from models import Location, Reservation, Restaurant
+from modules.reservations.service import create_reservation as create_reservation_service
 from schemas import ReservationCreate, ReservationResponse, ReservationStatusUpdate
 
 logger = logging.getLogger(__name__)
@@ -57,53 +58,19 @@ def create_reservation(
     S1-4: X-Location-Id обязателен. Location резолвится из БД и валидируется:
       location.restaurant_id == restaurant.id — защита от cross-brand injection.
       location.is_active == True — деактивированная Location не принимает брони.
+
+    Phase 15 (MC-07): для Guest (запрос без initData) действуют лимиты
+    5 созданных броней за 60 минут (429) и 3 активные (409) на пару
+    (телефон + Location). Verified user им не подчиняется. Логика — в
+    modules/reservations/service.py. IP-лимит 10/мин (декоратор) сохранён.
     """
-    restaurant = tg_user.restaurant
-
-    # ── S1-4: Resolve and validate Location ───────────────────────────────
-    location = db.query(Location).filter(
-        Location.id == x_location_id,
-        Location.restaurant_id == restaurant.id,
-        Location.is_active == True,  # noqa: E712
-    ).first()
-    if not location:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Location не найдена или недоступна для этого ресторана",
-        )
-
-    reservation = Reservation(
-        restaurant_id=restaurant.id,
-        location_id=location.id,        # S1-4 canonical
-        client_name=data.client_name,
-        client_phone=data.client_phone,
-        guests_count=data.guests_count,
-        reservation_time=data.reservation_time,
-        comment=data.comment,
-        status="new",
+    # Бизнес-логика (Location, гостевые лимиты MC-07, INSERT) — в service layer.
+    return create_reservation_service(
+        db,
+        tg_user=tg_user,
+        location_id=x_location_id,
+        data=data,
     )
-    db.add(reservation)
-
-    try:
-        db.commit()
-        db.refresh(reservation)
-    except Exception:
-        logger.exception(
-            "Ошибка при создании брони: restaurant_id=%s client=%s",
-            restaurant.id,
-            data.client_name,
-        )
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка при создании брони",
-        )
-
-    logger.info(
-        "Бронь создана: reservation_id=%s restaurant_id=%s location_id=%s client=%s",
-        reservation.id, restaurant.id, location.id, data.client_name,
-    )
-    return reservation
 
 
 # ──────────────────────────────────────────
