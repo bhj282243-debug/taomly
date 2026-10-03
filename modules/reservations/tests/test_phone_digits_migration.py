@@ -13,11 +13,11 @@ from datetime import UTC, datetime, timedelta
 import importlib.util
 from pathlib import Path
 
-from alembic.config import Config
-from alembic.script import ScriptDirectory
 import pytest
 from sqlalchemy import text
 
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from models import Reservation
 from models.operations import phone_digits
 
