@@ -21,10 +21,9 @@ MC-07 — гостевые лимиты (утверждены Owner), тольк
 Существующий IP-лимит 10/мин (slowapi) остаётся в router и не заменяется.
 """
 
+from datetime import UTC, datetime, timedelta
 import hashlib
 import logging
-from datetime import datetime, timedelta, timezone
-from typing import Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, text
@@ -65,7 +64,7 @@ def guest_limit_lock_key(location_id: int, digits: str) -> int:
     Разные пары дают разные ключи и друг друга не блокируют; случайная коллизия
     ключей приводит лишь к лишней сериализации, но не к нарушению лимитов.
     """
-    raw = f"taomly:reservation_guest_limit:{location_id}:{digits}".encode("utf-8")
+    raw = f"taomly:reservation_guest_limit:{location_id}:{digits}".encode()
     return int.from_bytes(hashlib.sha256(raw).digest()[:8], "big", signed=True)
 
 
@@ -94,7 +93,7 @@ def enforce_guest_limits(
     *,
     location_id: int,
     digits: str,
-    now: Optional[datetime] = None,
+    now: datetime | None = None,
 ) -> None:
     """
     Проверяет оба гостевых лимита для пары (location_id, digits).
@@ -107,7 +106,7 @@ def enforce_guest_limits(
     если превышены оба, возвращается 429.
     Ответы не раскрывают числовые значения лимитов и данные других броней.
     """
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     _acquire_guest_limit_lock(db, location_id, digits)
 
     window_start = now - GUEST_LIMIT_WINDOW
@@ -155,7 +154,7 @@ def create_reservation(
     tg_user: TelegramUser,
     location_id: int,
     data: ReservationCreate,
-    now: Optional[datetime] = None,
+    now: datetime | None = None,
 ) -> Reservation:
     """
     Создаёт бронь. Поведение для Verified-запроса и ответы при ошибках Location /
@@ -202,7 +201,7 @@ def create_reservation(
     try:
         db.commit()
         db.refresh(reservation)
-    except Exception:
+    except Exception as exc:
         logger.exception(
             "Ошибка при создании брони: restaurant_id=%s client=%s",
             restaurant.id,
@@ -212,7 +211,7 @@ def create_reservation(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка при создании брони",
-        )
+        ) from exc
 
     logger.info(
         "Бронь создана: reservation_id=%s restaurant_id=%s location_id=%s client=%s",

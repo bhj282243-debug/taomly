@@ -9,13 +9,13 @@ Spec v3.2 §17 DB-09: backfill существующих строк (цифры �
 уже применил 0030/0031 к тестовой БД.
 """
 
+from datetime import UTC, datetime, timedelta
 import importlib.util
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-import pytest
 from alembic.config import Config
 from alembic.script import ScriptDirectory
+import pytest
 from sqlalchemy import text
 
 from models import Reservation
@@ -23,7 +23,6 @@ from models.operations import phone_digits
 
 ROOT = Path(__file__).resolve().parents[3]
 VERSIONS = ROOT / "alembic" / "versions"
-UTC = timezone.utc
 
 # Старый формат данных: разные написания телефона, как у реальных броней до Phase 15.
 LEGACY_PHONES = [

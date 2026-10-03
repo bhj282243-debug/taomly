@@ -18,14 +18,14 @@ Phase 15 — MC-07: гостевые лимиты бронирования (Spec
     готовят состояние прямыми INSERT и делают один POST.
 """
 
+from datetime import UTC, datetime, timedelta
 import os
 import threading
 import time
 import uuid
-from datetime import datetime, timedelta, timezone
 
-import pytest
 from fastapi import HTTPException
+import pytest
 from sqlalchemy import create_engine, func, text
 from sqlalchemy.orm import sessionmaker
 
@@ -41,7 +41,6 @@ pytestmark = pytest.mark.postgres   # MC-09: на SQLite-job пропускаю�
 
 PHONE = "+998901234567"
 OTHER_PHONE = "+998933334455"
-UTC = timezone.utc
 
 
 # ──────────────────────────────────────────
