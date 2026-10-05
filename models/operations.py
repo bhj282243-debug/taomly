@@ -5,7 +5,7 @@ Operations: RestaurantTable, Reservation, WaiterCall.
 
 from sqlalchemy import (
     BigInteger, Column, CheckConstraint, ForeignKey,
-    Index, Integer, String, Text, TIMESTAMP, UniqueConstraint,
+    Index, Integer, String, Text, TIMESTAMP, UniqueConstraint, text,
 )
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy.sql import func
@@ -69,8 +69,10 @@ class RestaurantTable(Base):
 class Reservation(Base):
     __tablename__ = "reservations"
     __table_args__ = (
+        # Phase 15 (Slice B, R1): TRANSITIONAL набор — legacy 'new' ещё допустим.
+        # Финальный набор без 'new' вводит R2 (миграция 0033).
         CheckConstraint(
-            "status IN ('new','confirmed','completed','cancelled')",
+            "status IN ('new','requested','confirmed','seated','completed','cancelled','no_show')",
             name="check_reservation_status",
         ),
         CheckConstraint("guests_count > 0", name="check_reservation_guests"),
@@ -79,6 +81,15 @@ class Reservation(Base):
         Index(
             "ix_reservations_location_phone_created",
             "location_id", "client_phone_digits", "created_at",
+        ),
+        # Phase 15 (Slice B, OD-1 = Option B): Idempotency-Key уникален в пределах Location.
+        # Partial: строки без ключа индексом не затрагиваются. Совпадает с миграцией 0032.
+        Index(
+            "uq_reservations_idempotency",
+            "location_id", "idempotency_key",
+            unique=True,
+            postgresql_where=text("idempotency_key IS NOT NULL"),
+            sqlite_where=text("idempotency_key IS NOT NULL"),
         ),
     )
 
@@ -107,7 +118,31 @@ class Reservation(Base):
     guests_count     = Column(Integer, nullable=False)
     reservation_time = Column(TIMESTAMP(timezone=True), nullable=False)
     comment          = Column(Text)
-    status           = Column(String(20), default="new", nullable=False)
+    # Phase 15 (Slice B, R1): новая бронь начинается со статуса 'requested' (ORM-default).
+    # DB server_default остаётся 'new' (0001) до R2 / миграции 0033; в модели его нет,
+    # статус всегда задаётся приложением. Legacy 'new' допустим только как transitional.
+    status           = Column(String(20), default="requested", nullable=False)
+    # Phase 15 (Slice B): стол брони. Nullable; ON DELETE SET NULL — бронь исторический
+    # документ и не удаляется вместе со столом. Назначение стола и проверка
+    # table.location_id == reservation.location_id — scope следующего среза (R1 не пишет table_id).
+    table_id         = Column(
+        BigInteger,
+        ForeignKey("restaurant_tables.id", ondelete="SET NULL", name="fk_reservations_table_id"),
+        nullable=True,
+        index=True,
+    )
+    # Phase 15 (Slice B): Telegram ID только для Verified-клиента (id > 0); Guest = NULL.
+    # Без FK: отдельной identity-системы нет.
+    client_telegram_id = Column(BigInteger, nullable=True)
+    # Phase 15 (Slice B, Option B): уникален в пределах Location, см. uq_reservations_idempotency.
+    idempotency_key  = Column(String(64), nullable=True)
+    # Phase 15 (Slice B): lifecycle timestamps. NULL до перехода; ставит service (UTC),
+    # write-once. Server defaults и actor-полей нет.
+    confirmed_at     = Column(TIMESTAMP(timezone=True), nullable=True)
+    seated_at        = Column(TIMESTAMP(timezone=True), nullable=True)
+    completed_at     = Column(TIMESTAMP(timezone=True), nullable=True)
+    cancelled_at     = Column(TIMESTAMP(timezone=True), nullable=True)
+    no_show_at       = Column(TIMESTAMP(timezone=True), nullable=True)
     created_at       = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
     updated_at       = Column(
         TIMESTAMP(timezone=True),
