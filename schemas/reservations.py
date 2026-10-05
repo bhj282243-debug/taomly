@@ -55,12 +55,25 @@ class ReservationResponse(BaseModel):
     comment: Optional[str] = None
     created_at: datetime
     location_id: int  # S1-4
+    # Phase 15 (Slice B): стол и lifecycle timestamps. Все необязательные: NULL до
+    # соответствующего перехода. Служебные поля client_telegram_id и idempotency_key
+    # в публичный ответ НЕ входят (см. Spec v2 §14.2).
+    table_id: Optional[int] = None
+    confirmed_at: Optional[datetime] = None
+    seated_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    cancelled_at: Optional[datetime] = None
+    no_show_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
 
 
 class ReservationStatusUpdate(BaseModel):
-    status: Literal["new", "confirmed", "completed", "cancelled"]
+    # Phase 15 (Slice B): целевые статусы PATCH. 'new' и 'requested' целью быть не могут
+    # (в 'requested' перехода нет) — это 422 на уровне схемы. Допустимость самого
+    # перехода определяет status_transitions.py / service, а не эта схема.
+    status: Literal["confirmed", "seated", "completed", "cancelled", "no_show"]
 
 
 # ──────────────────────────────────────────
