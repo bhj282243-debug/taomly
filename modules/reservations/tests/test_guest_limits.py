@@ -419,10 +419,18 @@ def test_regression_guest_normal_create_keeps_contract(db, client, restaurant, l
     body = r.json()
     assert body["status"] == "new"
     assert body["location_id"] == location.id
-    assert set(body) == {
+    # Прежний контракт ответа (9 полей) сохраняется...
+    legacy_fields = {
         "id", "status", "client_name", "client_phone", "guests_count",
         "reservation_time", "comment", "created_at", "location_id",
     }
+    # ...C-5 (Slice B, Spec v2 §14.2): ответ расширен 7 необязательными полями.
+    slice_b_fields = {
+        "table_id", "confirmed_at", "seated_at", "completed_at",
+        "cancelled_at", "no_show_at", "updated_at",
+    }
+    assert legacy_fields <= set(body)
+    assert set(body) == legacy_fields | slice_b_fields
 
 
 def test_regression_location_isolation_and_inactive_location(db, client, restaurant, location, location2):
