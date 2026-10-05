@@ -247,6 +247,11 @@ class Location(Base):
 
     is_waiter_call_enabled = Column(Boolean, default=False, nullable=False)
 
+    # Phase 15 (Slice B): бронирование включено для Location. RD-02 = A: TRUE для
+    # существующих и новых Locations. FALSE блокирует только создание НОВЫХ броней;
+    # существующие брони продолжают управляться. Не зависит от is_waiter_call_enabled.
+    is_reservation_enabled = Column(Boolean, default=True, nullable=False, server_default="true")
+
     # Phase 14: estimated kitchen preparation time in minutes.
     # NULL = not configured (activation fallback = 0 min, i.e. activate at scheduled_at - BUFFER).
     # Used for: (1) ETA display in notifications; (2) scheduled order activation formula.
