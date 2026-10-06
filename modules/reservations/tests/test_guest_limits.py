@@ -417,7 +417,7 @@ def test_regression_guest_normal_create_keeps_contract(db, client, restaurant, l
 
     assert r.status_code == 201
     body = r.json()
-    assert body["status"] == "new"
+    assert body["status"] == "requested"   # C-3 (Slice B): новая бронь начинается с requested
     assert body["location_id"] == location.id
     # Прежний контракт ответа (9 полей) сохраняется...
     legacy_fields = {
@@ -443,7 +443,7 @@ def test_regression_location_isolation_and_inactive_location(db, client, restaur
 
 def test_regression_verified_create_keeps_contract(db, client, location):
     r = _post(client, location)
-    assert r.status_code == 201 and r.json()["status"] == "new"
+    assert r.status_code == 201 and r.json()["status"] == "requested"   # C-3 (Slice B)
 
 
 # ══════════════════════════════════════════
