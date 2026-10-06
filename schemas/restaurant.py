@@ -248,6 +248,7 @@ class LocationCreate(BaseModel):
     currency:                str   = Field("UZS", max_length=10)
     language:                str   = Field("uz", max_length=5)
     is_waiter_call_enabled:  bool  = False
+    is_reservation_enabled:  bool  = True  # Phase 15: по умолчанию бронирование включено (RD-02)
 
     @field_validator("slug")
     @classmethod
@@ -291,6 +292,7 @@ class LocationUpdate(BaseModel):
     currency:                Optional[str]   = Field(None, max_length=10)
     language:                Optional[str]   = Field(None, max_length=5)
     is_waiter_call_enabled:  Optional[bool]  = None
+    is_reservation_enabled:  bool | None     = None
 
     @field_validator("slug")
     @classmethod
@@ -337,6 +339,7 @@ class LocationResponse(BaseModel):
     currency:                str
     language:                str
     is_waiter_call_enabled:  bool
+    is_reservation_enabled:  bool
     created_at:              datetime
     updated_at:              datetime
 
