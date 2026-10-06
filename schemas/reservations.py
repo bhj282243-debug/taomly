@@ -58,13 +58,13 @@ class ReservationResponse(BaseModel):
     # Phase 15 (Slice B): стол и lifecycle timestamps. Все необязательные: NULL до
     # соответствующего перехода. Служебные поля client_telegram_id и idempotency_key
     # в публичный ответ НЕ входят (см. Spec v2 §14.2).
-    table_id: Optional[int] = None
-    confirmed_at: Optional[datetime] = None
-    seated_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    cancelled_at: Optional[datetime] = None
-    no_show_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    table_id: int | None = None
+    confirmed_at: datetime | None = None
+    seated_at: datetime | None = None
+    completed_at: datetime | None = None
+    cancelled_at: datetime | None = None
+    no_show_at: datetime | None = None
+    updated_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
