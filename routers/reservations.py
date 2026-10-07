@@ -8,6 +8,16 @@ routers/reservations.py — Taomly Platform
   - GET /restaurant/{restaurant_id}: фильтр по restaurant_id сохранён (brand-level admin).
   - PATCH /{reservation_id}/status: без изменений (tenant-изоляция по restaurant_id).
 
+Изменения v4 (Phase 15, Slice B, R1 — подключение service):
+  - POST /: необязательный header Idempotency-Key (^[A-Za-z0-9_-]{8,64}$, иначе 422).
+    Новая бронь -> 201; точный повтор -> 200 + Idempotent-Replayed: true; повтор с иными
+    данными -> 409. Создание — modules/reservations/service.create_reservation_idempotent.
+  - PATCH /{reservation_id}/status: логика переходов — service.transition_status;
+    недопустимый переход -> 409 (было 400); цели new/requested -> 422 (схема).
+    Principal restaurant admin (actor_ref = restaurant_admin:<restaurant_id>) строится
+    из токена; доступ проверяет modules.access.assert_location_access внутри service.
+  - GET /restaurant/{restaurant_id}: без изменений (list_reservations в R1 не вводится).
+
 Предыдущие изменения (v2):
   - POST /: добавлен get_telegram_user — restaurant берётся из TelegramUser,
     restaurant_id убран из схемы ReservationCreate
@@ -20,21 +30,23 @@ routers/reservations.py — Taomly Platform
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from sqlalchemy.orm import Session
 
 from auth import TelegramUser, get_current_restaurant_admin, get_telegram_user
 from database import get_db
 from limiter import limiter
 from models import Location, Reservation, Restaurant
-from modules.reservations.service import create_reservation as create_reservation_service
+from modules.access import restaurant_admin_principal
+from modules.reservations.service import create_reservation_idempotent, transition_status
 from schemas import ReservationCreate, ReservationResponse, ReservationStatusUpdate
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-from status_transitions import RESERVATION_STATUS_TRANSITIONS as VALID_STATUS_TRANSITIONS
+# Phase 15 (Slice B): формат Idempotency-Key (Spec v2 §14.1). Нарушение -> 422.
+_IDEMPOTENCY_KEY_PATTERN = r"^[A-Za-z0-9_-]{8,64}$"
 
 
 # ──────────────────────────────────────────
@@ -44,33 +56,47 @@ from status_transitions import RESERVATION_STATUS_TRANSITIONS as VALID_STATUS_TR
 @limiter.limit("10/minute")
 def create_reservation(
     request: Request,
+    response: Response,
     data: ReservationCreate,
     tg_user: TelegramUser = Depends(get_telegram_user),
     db: Session = Depends(get_db),
     x_location_id: int = Header(..., alias="X-Location-Id"),
+    idempotency_key: str | None = Header(
+        None, alias="Idempotency-Key", pattern=_IDEMPOTENCY_KEY_PATTERN
+    ),
 ):
     """
     Создаёт бронь стола.
 
-    restaurant берётся из TelegramUser (верифицирован через initData).
-    restaurant_id убран из тела запроса — клиент не может указать чужой ресторан.
+    restaurant берётся из TelegramUser (верифицирован через initData),
+    restaurant_id в теле запроса нет — клиент не может указать чужой ресторан.
 
-    S1-4: X-Location-Id обязателен. Location резолвится из БД и валидируется:
-      location.restaurant_id == restaurant.id — защита от cross-brand injection.
-      location.is_active == True — деактивированная Location не принимает брони.
+    S1-4: X-Location-Id обязателен. Location резолвится из БД и валидируется
+    (чужая / неактивная -> 404).
 
     Phase 15 (MC-07): для Guest (запрос без initData) действуют лимиты
     5 созданных броней за 60 минут (429) и 3 активные (409) на пару
-    (телефон + Location). Verified user им не подчиняется. Логика — в
-    modules/reservations/service.py. IP-лимит 10/мин (декоратор) сохранён.
+    (телефон + Location). Verified user им не подчиняется. IP-лимит 10/мин сохранён.
+
+    Phase 15 (Slice B): Idempotency-Key (header, необязателен).
+      - новая бронь -> 201;
+      - точный повтор (тот же Location + ключ + те же 6 полей) -> 200 и заголовок
+        Idempotent-Replayed: true, существующая бронь, новая не создаётся;
+      - ключ занят, но данные иные -> 409;
+      - is_reservation_enabled = false -> 403 (для новой брони).
+    Вся бизнес-логика — в modules/reservations/service.py.
     """
-    # Бизнес-логика (Location, гостевые лимиты MC-07, INSERT) — в service layer.
-    return create_reservation_service(
+    result = create_reservation_idempotent(
         db,
         tg_user=tg_user,
         location_id=x_location_id,
         data=data,
+        idempotency_key=idempotency_key,
     )
+    if result.replayed:
+        response.status_code = status.HTTP_200_OK
+        response.headers["Idempotent-Replayed"] = "true"
+    return result.reservation
 
 
 # ──────────────────────────────────────────
@@ -131,50 +157,18 @@ def update_status(
     db: Session = Depends(get_db),
 ):
     """
-    Меняет статус брони.
-    Tenant-изоляция: бронь ищется только среди броней ресторана из токена.
-    Проверяется допустимость перехода статуса.
+    Меняет статус брони (админка).
+
+    Tenant-изоляция и доступ (Restaurant -> Location -> Object) проверяются в
+    service.transition_status через modules.access.assert_location_access: чужая бронь /
+    чужой ресторан -> 404, Location вне location_scope -> 403.
+    Недопустимый или повторный переход -> 409. Цели new / requested схема отклоняет (422).
+    Principal строится из токена (actor_ref = restaurant_admin:<restaurant_id>);
+    actor от клиента не принимается.
     """
-    reservation = db.query(Reservation).filter(
-        Reservation.id == reservation_id,
-        # Tenant-изоляция — нельзя менять статус чужой брони
-        Reservation.restaurant_id == restaurant.id,
-    ).first()
-
-    if not reservation:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Бронь не найдена",
-        )
-
-    allowed = VALID_STATUS_TRANSITIONS.get(reservation.status, [])
-    if data.status not in allowed:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"Переход «{reservation.status}» → «{data.status}» невозможен. "
-                f"Допустимые: {allowed if allowed else 'нет (финальный статус)'}"
-            ),
-        )
-
-    old_status = reservation.status
-    reservation.status = data.status
-
-    try:
-        db.commit()
-        db.refresh(reservation)
-    except Exception:
-        logger.exception(
-            "Ошибка при обновлении статуса брони: reservation_id=%s", reservation_id
-        )
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка при обновлении статуса",
-        )
-
-    logger.info(
-        "Статус брони изменён: reservation_id=%s %s → %s restaurant_id=%s",
-        reservation_id, old_status, data.status, restaurant.id,
+    return transition_status(
+        db,
+        restaurant_admin_principal(restaurant),
+        reservation_id,
+        data.status,
     )
-    return reservation
