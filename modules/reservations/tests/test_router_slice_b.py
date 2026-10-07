@@ -7,7 +7,6 @@ modules/reservations/tests/test_router_slice_b.py — Phase 15, Slice B (R1), Fi
 """
 
 from datetime import UTC, datetime, timedelta
-import logging
 
 import pytest
 
@@ -16,6 +15,7 @@ from auth import TelegramUser, get_current_restaurant_admin, get_telegram_user
 from models import Reservation
 from modules.access import Principal
 from modules.reservations import service as res_service
+from routers import reservations as reservations_router
 
 pytestmark = pytest.mark.postgres   # MC-09: как MC-07 — на SQLite-job пропускаются
 
@@ -183,11 +183,19 @@ def test_actor_ref_for_guest_and_verified_telegram(restaurant):
     assert res_service._client_principal(verified).actor_ref == "telegram:123456789"
 
 
-def test_actor_ref_for_restaurant_admin_is_taken_from_token(client, restaurant, caplog):
+def test_actor_ref_for_restaurant_admin_is_taken_from_token(client, restaurant, monkeypatch):
     reservation_id = _post(client).json()["id"]
-    with caplog.at_level(logging.INFO, logger="modules.reservations.service"):
-        assert _patch(client, reservation_id, "confirmed").status_code == 200
-    assert f"actor=restaurant_admin:{restaurant.id}" in caplog.text
+    seen = {}
+    real_transition = reservations_router.transition_status
+
+    def spy(db_, principal, reservation_id_, target, **kwargs):
+        seen["principal"] = principal
+        return real_transition(db_, principal, reservation_id_, target, **kwargs)
+
+    monkeypatch.setattr(reservations_router, "transition_status", spy)
+    assert _patch(client, reservation_id, "confirmed").status_code == 200
+    assert seen["principal"].actor_ref == f"restaurant_admin:{restaurant.id}"
+    assert seen["principal"].location_scope is None
 
 
 def test_out_of_scope_location_returns_403(client, restaurant, location, monkeypatch):
