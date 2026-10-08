@@ -713,6 +713,7 @@ def create_location(
         currency=data.currency,
         language=data.language,
         is_waiter_call_enabled=data.is_waiter_call_enabled,
+        is_reservation_enabled=data.is_reservation_enabled,   # Phase 15 (Slice B)
         is_active=True,
     )
     db.add(loc)
