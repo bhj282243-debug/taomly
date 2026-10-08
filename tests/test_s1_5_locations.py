@@ -440,3 +440,62 @@ class TestWaiterCallLocationFilter:
             f"/api/waiter-calls/restaurant/{restaurant.id}?location_id={location2.id}"
         )
         assert resp.status_code == 404, resp.text
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Phase 15 (Slice B, R1): is_reservation_enabled — create contract и PATCH
+# ══════════════════════════════════════════════════════════════════════════════
+
+@pytest.mark.postgres   # MC-09: fixtures этого модуля падают на SQLite-job (baseline errors)
+class TestLocationReservationFlag:
+    BASE_URL = "/api/restaurants/me/locations"
+
+    @staticmethod
+    def _payload(slug: str, **extra) -> dict:
+        body = {
+            "name": "Flag test",
+            "slug": slug,
+            "timezone": "Asia/Tashkent",
+            "delivery_fee": 0,
+            "min_order_amount": 0,
+            "currency": "UZS",
+            "language": "uz",
+        }
+        body.update(extra)
+        return body
+
+    def test_create_with_flag_true_persists_true(self, client, db):
+        body = self._payload("res-flag-true", is_reservation_enabled=True)
+        resp = client.post(self.BASE_URL, json=body)
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["is_reservation_enabled"] is True
+        db.expire_all()
+        assert db.get(Location, resp.json()["id"]).is_reservation_enabled is True
+
+    def test_create_with_flag_false_persists_false(self, client, db):
+        body = self._payload("res-flag-false", is_reservation_enabled=False)
+        resp = client.post(self.BASE_URL, json=body)
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["is_reservation_enabled"] is False
+        db.expire_all()
+        assert db.get(Location, resp.json()["id"]).is_reservation_enabled is False
+
+    def test_create_without_flag_defaults_to_true(self, client, db):
+        resp = client.post(self.BASE_URL, json=self._payload("res-flag-default"))
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["is_reservation_enabled"] is True
+        db.expire_all()
+        assert db.get(Location, resp.json()["id"]).is_reservation_enabled is True
+
+    def test_patch_flag_off_and_on(self, client, db, location):
+        off = client.patch(f"{self.BASE_URL}/{location.id}", json={"is_reservation_enabled": False})
+        assert off.status_code == 200, off.text
+        assert off.json()["is_reservation_enabled"] is False
+        db.expire_all()
+        assert db.get(Location, location.id).is_reservation_enabled is False
+
+        on = client.patch(f"{self.BASE_URL}/{location.id}", json={"is_reservation_enabled": True})
+        assert on.status_code == 200, on.text
+        assert on.json()["is_reservation_enabled"] is True
+        db.expire_all()
+        assert db.get(Location, location.id).is_reservation_enabled is True
