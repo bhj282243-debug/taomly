@@ -226,6 +226,32 @@ class TestCORS:
             f"X-Location-Id отсутствует в Access-Control-Allow-Headers: {allow_headers!r}"
         )
 
+    def test_cors6_idempotency_key_in_allow_headers(self):
+        """CORS-6: Idempotency-Key разрешён в preflight (POST /api/reservations/, Phase 15)."""
+        resp = client_no_db.options(
+            "/api/reservations/",
+            headers={
+                "Origin": "https://example.com",
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "Idempotency-Key,X-Location-Id,Content-Type",
+            },
+        )
+        assert resp.status_code in (200, 204)
+        allow_headers = resp.headers.get("access-control-allow-headers", "").lower()
+        assert "idempotency-key" in allow_headers, (
+            f"Idempotency-Key отсутствует в Access-Control-Allow-Headers: {allow_headers!r}"
+        )
+
+    def test_cors7_idempotent_replayed_is_exposed(self):
+        """CORS-7: Idempotent-Replayed доступен браузерному клиенту; Authorization — нет."""
+        resp = client_no_db.get("/health", headers={"Origin": "https://example.com"})
+        assert resp.status_code == 200
+        exposed = resp.headers.get("access-control-expose-headers", "").lower()
+        assert "idempotent-replayed" in exposed, (
+            f"Idempotent-Replayed отсутствует в Access-Control-Expose-Headers: {exposed!r}"
+        )
+        assert "authorization" not in exposed
+
 
 # ═══════════════════════════════════════════════════════════════════
 # RATE LIMITING
