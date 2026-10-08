@@ -436,7 +436,10 @@ app.add_middleware(
         "X-Restaurant-Id",
         "X-Location-Id",
         "X-Cart-Session",
+        "Idempotency-Key",       # Phase 15 (Slice B): POST /api/reservations/
     ],
+    # Phase 15 (Slice B): браузерный клиент должен прочитать признак replay (200 вместо 201).
+    expose_headers=["Idempotent-Replayed"],
 )
 
 # ──────────────────────────────────────────
